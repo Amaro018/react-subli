@@ -13,16 +13,39 @@ generator client {
 // --------------------------------------
 
 model User {
-  id             Int      @id @default(autoincrement())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  name           String?
-  email          String   @unique
-  hashedPassword String?
-  role           String   @default("USER")
+  id               Int       @id @default(autoincrement())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  email            String    @unique
+  hashedPassword   String?
+  role             String    @default("USER")
+  isAdmin          Boolean   @default(false)
+  isShopMode       Boolean   @default(false)
+  isShopRegistered Boolean   @default(false)
+  profileImage     String?
+  tokens           Token[]
+  sessions         Session[]
 
-  tokens   Token[]
-  sessions Session[]
+  personalInfo PersonalInfo?
+}
+
+model PersonalInfo {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  firstName   String
+  lastName    String
+  middleName  String?
+  birthDate   DateTime
+  phoneNumber String?
+  street      String
+  city        String
+  region      String
+  country     String
+  zipCode     String
+  userId      Int      @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Session {

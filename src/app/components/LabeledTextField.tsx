@@ -1,6 +1,6 @@
 import { forwardRef, PropsWithoutRef } from "react"
 import { useField, useFormikContext, ErrorMessage } from "formik"
-
+import { TextField } from "@mui/material"
 export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElements["input"]> {
   /** Field name. */
   name: string
@@ -37,6 +37,7 @@ export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldPro
             flex-direction: column;
             align-items: start;
             font-size: 1rem;
+            width: 100%;
           }
           input {
             font-size: 1rem;
@@ -45,6 +46,7 @@ export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldPro
             border: 1px solid purple;
             appearance: none;
             margin-top: 0.5rem;
+            width: 100%;
           }
         `}</style>
       </div>
