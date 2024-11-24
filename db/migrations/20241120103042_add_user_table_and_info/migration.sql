@@ -3,10 +3,32 @@ CREATE TABLE "User" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    "name" TEXT,
     "email" TEXT NOT NULL,
     "hashedPassword" TEXT,
-    "role" TEXT NOT NULL DEFAULT 'USER'
+    "role" TEXT NOT NULL DEFAULT 'USER',
+    "isAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "isShopMode" BOOLEAN NOT NULL DEFAULT false,
+    "isShopRegistered" BOOLEAN NOT NULL DEFAULT false,
+    "profileImage" TEXT
+);
+
+-- CreateTable
+CREATE TABLE "PersonalInfo" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    "firstName" TEXT NOT NULL,
+    "lastName" TEXT NOT NULL,
+    "middleName" TEXT,
+    "birthDate" DATETIME NOT NULL,
+    "phoneNumber" TEXT,
+    "street" TEXT NOT NULL,
+    "city" TEXT NOT NULL,
+    "region" TEXT NOT NULL,
+    "country" TEXT NOT NULL,
+    "zipCode" TEXT NOT NULL,
+    "userId" INTEGER NOT NULL,
+    CONSTRAINT "PersonalInfo_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -39,6 +61,9 @@ CREATE TABLE "Token" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PersonalInfo_userId_key" ON "PersonalInfo"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Session_handle_key" ON "Session"("handle");

@@ -1,45 +1,258 @@
 "use client"
+import React, { useState } from "react"
 import { LabeledTextField } from "src/app/components/LabeledTextField"
 import { Form, FORM_ERROR } from "src/app/components/Form"
 import signup from "../mutations/signup"
-import { Signup } from "../validations"
 import { useMutation } from "@blitzjs/rpc"
 import { useRouter } from "next/navigation"
+import {
+  Box,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  Typography,
+  Paper,
+  TextField,
+} from "@mui/material"
+import { Signup } from "../validations"
 
 type SignupFormProps = {
   onSuccess?: () => void
 }
 
 export const SignupForm = (props: SignupFormProps) => {
+  const steps = [
+    {
+      label: "Account Credentials",
+      content: (
+        <>
+          <LabeledTextField name="email" label="Email" placeholder="Email" required />
+          <LabeledTextField
+            name="password"
+            label="Password"
+            placeholder="Password"
+            type="password"
+            required
+          />
+        </>
+      ),
+    },
+    {
+      label: "Personal Information",
+      content: (
+        <>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 w-full">
+              <TextField
+                name="firstName"
+                label="First Name"
+                placeholder="First Name"
+                required
+                variant="outlined"
+                fullWidth
+              />
+              <TextField
+                name="middleName"
+                label="Middle Name"
+                placeholder="Middle Name"
+                variant="outlined"
+                fullWidth
+              />
+              <TextField
+                name="lastName"
+                label="Last Name"
+                placeholder="Last Name"
+                type="text"
+                required
+                variant="outlined"
+                fullWidth
+              />
+            </div>
+
+            <TextField
+              name="phoneNumber"
+              label="Contact Number"
+              placeholder="Contact Number"
+              type="text"
+              required
+              variant="outlined"
+              fullWidth
+            />
+            <TextField
+              name="birthDate"
+              placeholder="Date of Birth"
+              type="date"
+              required
+              variant="outlined"
+              fullWidth
+              InputLabelProps={{
+                shrink: true, // ensures the label shrinks when the input is focused or filled
+              }}
+            />
+            <div className="flex gap-2">
+              <TextField
+                name="street"
+                label="Street"
+                placeholder="Street"
+                type="text"
+                required
+                variant="outlined"
+                fullWidth
+              />
+              <TextField
+                name="city"
+                label="City"
+                placeholder="City"
+                type="text"
+                required
+                variant="outlined"
+                fullWidth
+              />
+            </div>
+            <div className="flex gap-2">
+              <TextField
+                name="region"
+                label="Region"
+                placeholder="Region"
+                type="text"
+                required
+                variant="outlined"
+                fullWidth
+              />
+
+              <TextField
+                name="country"
+                label="Country"
+                placeholder="Country"
+                type="text"
+                required
+                variant="outlined"
+                fullWidth
+              />
+            </div>
+
+            <TextField
+              name="zipCode"
+              label="Zipcode"
+              placeholder="Zipcode"
+              type="text"
+              required
+              variant="outlined"
+              fullWidth
+            />
+          </div>
+        </>
+      ),
+    },
+    {
+      label: "Create an Ad",
+      content: (
+        <Typography>
+          Try out different ad text to see what brings in the most customers, and learn how to
+          enhance your ads using features like ad extensions. If you run into any problems with your
+          ads, find out how to tell if e running and how to resolve approval issues.
+        </Typography>
+      ),
+    },
+  ]
+
   const [signupMutation] = useMutation(signup)
   const router = useRouter()
+  const [activeStep, setActiveStep] = useState(0)
+
+  const handleNext = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1)
+  }
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1)
+  }
+
+  const handleReset = () => {
+    setActiveStep(0)
+  }
+
+  const handleSubmit = async (values: any) => {
+    try {
+      // Handle birthDate as a string and convert to Date object
+      const birthDate = values.birthDate ? new Date(values.birthDate) : new Date()
+
+      await signupMutation({
+        ...values,
+        birthDate: birthDate,
+      })
+      props.onSuccess?.()
+      router.push("/")
+      alert("Signup successful!")
+    } catch (error: any) {
+      return { [FORM_ERROR]: error.toString() }
+    }
+  }
 
   return (
-    <div>
-      <h1>Create an Account</h1>
-
+    <div className="w-1/4">
+      <div className="flex items-center justify-center bg-slate-600 p-2 rounded-t-lg">
+        REGISTER A NEW ACCOUNT
+      </div>
       <Form
-        submitText="Create Account"
         schema={Signup}
-        initialValues={{ email: "", password: "" }}
-        onSubmit={async (values) => {
-          try {
-            await signupMutation(values)
-            router.refresh()
-            router.push("/")
-          } catch (error: any) {
-            if (error.code === "P2002" && error.meta?.target?.includes("email")) {
-              // This error comes from Prisma
-              return { email: "This email is already being used" }
-            } else {
-              return { [FORM_ERROR]: error.toString() }
-            }
-          }
+        initialValues={{
+          email: "",
+          password: "",
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          birthDate: "",
+          phoneNumber: "",
+          street: "",
+          city: "",
+          region: "",
+          country: "",
+          zipCode: "",
         }}
+        onSubmit={handleSubmit}
+        className="p-4 border border-gray-300 rounded-b-lg w-full"
       >
-        <LabeledTextField name="email" label="Email" placeholder="Email" />
-        <LabeledTextField name="password" label="Password" placeholder="Password" type="password" />
+        <Box sx={{ maxWidth: 400 }}>
+          <Stepper activeStep={activeStep} orientation="vertical">
+            {steps.map((step, index) => (
+              <Step key={step.label}>
+                <StepLabel>{step.label}</StepLabel>
+                <StepContent>
+                  <Box sx={{ mb: 2 }}>{step.content}</Box>
+                  <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
+                    <Button variant="contained" onClick={handleNext} sx={{ mt: 1, mr: 1 }}>
+                      {index === steps.length - 1 ? "Finish" : "Continue"}
+                    </Button>
+                    <Button disabled={index === 0} onClick={handleBack} sx={{ mt: 1, mr: 1 }}>
+                      Back
+                    </Button>
+                  </Box>
+                </StepContent>
+              </Step>
+            ))}
+          </Stepper>
+          {activeStep === steps.length && (
+            <Paper
+              square
+              elevation={0}
+              sx={{ p: 3, display: "flex", flexDirection: "column", alignContent: "center" }}
+            >
+              <Typography className="text-center">All steps completed</Typography>
+              <Button onClick={handleReset} sx={{ mt: 1, mr: 1 }}>
+                Reset
+              </Button>
+              <Button type="submit" variant="contained" sx={{ mt: 1 }}>
+                Register
+              </Button>
+            </Paper>
+          )}
+        </Box>
       </Form>
     </div>
   )
 }
+
+export default SignupForm
