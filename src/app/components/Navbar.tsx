@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from "react"
 import { LogoutButton } from "../(auth)/components/LogoutButton"
+import Link from "next/link"
 
 const Navbar = (props) => {
   const currentUser = props.currentUser
@@ -32,7 +33,7 @@ const Navbar = (props) => {
           }`}
         >
           <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-            <a href="#home">Home</a>
+            <Link href="./">Home</Link>
           </li>
           <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
             <a href="#about">About</a>
@@ -76,6 +77,9 @@ const Navbar = (props) => {
               </li>
             </>
           )}
+          <li>
+            <button onClick={handleClick}>test</button>
+          </li>
         </ul>
       </div>
     </nav>

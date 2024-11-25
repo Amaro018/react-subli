@@ -27,6 +27,30 @@ model User {
   sessions         Session[]
 
   personalInfo PersonalInfo?
+  shop         Shop?
+}
+
+model Shop {
+  id             Int      @id @default(autoincrement())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Define `fields` and `references` here
+  userId         Int      @unique
+  shopName       String
+  tradeName      String
+  email          String
+  address        String
+  contact        String
+  status         String   @default("pending")
+  bio            String?
+  imageProfile   String?
+  imageBg        String?
+  documentDTI    String?
+  dtiStatus      String   @default("pending")
+  documentPermit String?
+  permitStatus   String   @default("pending")
+  documentTax    String?
+  taxStatus      String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model PersonalInfo {
