@@ -15,7 +15,7 @@ const Navbar = (props) => {
   }
 
   return (
-    <nav className="bg-gray-800 text-white sticky top-0 z-10">
+    <nav className="bg-gray-800 text-white fixed top-0 z-10 w-full">
       <div className="container mx-auto flex justify-between items-center px-4 py-3">
         <h1 className="text-2xl font-bold">MyApp</h1>
         {/* Hamburger Menu Button */}
