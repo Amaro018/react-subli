@@ -21,7 +21,7 @@ export default async function Page() {
       <Navbar currentUser={currentUser} />
       <main className="flex flex-row gap-2">
         <div className="w-64 ">
-          <Sidebar />
+          <Sidebar currentUser={currentUser} />
         </div>
         <div className="w-full px-16">
           <FormShopRegister currentUser={currentUser} />
