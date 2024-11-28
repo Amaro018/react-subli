@@ -8,8 +8,8 @@ export const metadata = {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await useAuthenticatedBlitzContext({
     redirectTo: "/login",
-    role: ["USER"],
-    redirectAuthenticatedTo: "/",
+    role: ["ADMIN"],
+    redirectAuthenticatedTo: "/admin",
   })
   return <>{children}</>
 }
