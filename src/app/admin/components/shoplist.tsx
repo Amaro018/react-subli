@@ -6,6 +6,9 @@ import CancelIcon from "@mui/icons-material/Cancel"
 import PendingIcon from "@mui/icons-material/Pending"
 import React from "react"
 import { Box, Modal } from "@mui/material"
+import Link from "next/link"
+import updateShopStatus from "../../mutations/updateShopStatus"
+import { useMutation } from "@blitzjs/rpc"
 
 const style = {
   position: "absolute" as "absolute",
@@ -23,6 +26,7 @@ const style = {
 // eslint-disable-next-line react-hooks/rules-of-hooks
 
 export default function ShopList() {
+  const [updateStatusMutation] = useMutation(updateShopStatus)
   const [shops, { refetch }] = useQuery(getShops, null)
   const [open, setOpen] = React.useState(false)
   const [selectedShop, setSelectedShop] = React.useState(null)
@@ -31,6 +35,23 @@ export default function ShopList() {
     setOpen(true)
   }
   const handleClose = () => setOpen(false)
+
+  const handleUpdateStatus = async (documentType: string, status: string) => {
+    try {
+      const updatedShop = await updateStatusMutation({
+        shopId: selectedShop.id,
+        documentType,
+        status,
+      })
+      handleClose()
+      alert(`Successfully updated to ${status}`)
+
+      console.log(updatedShop)
+    } catch (error) {
+      console.error("Failed to update status:", error)
+      alert("Error updating status")
+    }
+  }
 
   return (
     <>
@@ -131,57 +152,119 @@ export default function ShopList() {
               <th>Shop Name</th>
               <th>File</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
             <tr>
-              <td>{selectedShop?.shopName}</td>
-              <td>
-                {" "}
+              <td className="text-center font-bold p-2">DTI</td>
+              <td className="text-center font-bold p-2">
                 <div>
                   {selectedShop?.documentDTI ? (
-                    <a
+                    <Link
                       href={`/uploads/dti/${selectedShop.documentDTI}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 underline"
                     >
-                      View or Download DTI Document
-                    </a>
+                      View or Download Document
+                    </Link>
                   ) : (
                     <p>No document passed.</p>
                   )}
                 </div>
               </td>
-              <td>{selectedShop?.dtiStatus}</td>
+              <td className="text-center font-bold p-2">{selectedShop?.dtiStatus}</td>
+              <td className="text-center font-bold p-2">
+                <div className="flex flex-row gap-2 justify-center">
+                  <button
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                    onClick={() => handleUpdateStatus("DTI", "approved")}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                    onClick={() => handleUpdateStatus("DTI", "rejected")}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </td>
             </tr>
+
             <tr>
-              <td>{selectedShop?.shopName}</td>
-              <td>{selectedShop?.documentPermit}</td>
-              <td>{selectedShop?.permitStatus}</td>
+              <td className="text-center font-bold p-2">PERMIT</td>
+              <td className="text-center font-bold p-2">
+                <div>
+                  {selectedShop?.documentPermit ? (
+                    <Link
+                      href={`/uploads/permit/${selectedShop.documentPermit}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 underline"
+                    >
+                      View or Download Document
+                    </Link>
+                  ) : (
+                    <p>No document passed.</p>
+                  )}
+                </div>
+              </td>
+              <td className="text-center font-bold p-2">{selectedShop?.permitStatus}</td>
+              <td className="text-center font-bold p-2">
+                <div className="flex flex-row gap-2 justify-center">
+                  <button
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                    onClick={() => handleUpdateStatus("PERMIT", "approved")}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                    onClick={() => handleUpdateStatus("PERMIT", "rejected")}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </td>
             </tr>
+
             <tr>
-              <td>{selectedShop?.shopName}</td>
-              <td>{selectedShop?.documentTax}</td>
-              <td>{selectedShop?.taxStatus}</td>
+              <td className="text-center font-bold p-2">TAX CLEARANCE</td>
+              <td className="text-center font-bold p-2">
+                <div>
+                  {selectedShop?.documentTax ? (
+                    <Link
+                      href={`/uploads/tax/${selectedShop.documentTax}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 underline"
+                    >
+                      View or Download Document
+                    </Link>
+                  ) : (
+                    <p>No document passed.</p>
+                  )}
+                </div>
+              </td>
+              <td className="text-center font-bold p-2">{selectedShop?.taxStatus}</td>
+              <td className="text-center font-bold p-2">
+                <div className="flex flex-row gap-2 justify-center">
+                  <button
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                    onClick={() => handleUpdateStatus("TAX_CLEARANCE", "approved")}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                    onClick={() => handleUpdateStatus("TAX_CLEARANCE", "rejected")}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </td>
             </tr>
           </table>
-
-          {/* <div className="flex flex-col gap-4">
-            <div>
-                <h3 className="text-lg font-semibold">DTI</h3>
-                {selectedShop?.documentDTI ? (
-                <a
-                    href={`/uploads/dti/${selectedShop.documentDTI}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 underline"
-                >
-                    View or Download DTI Document
-                </a>
-                ) : (
-                <p>No document available.</p>
-                )}
-            </div>
-        </div> */}
         </Box>
       </Modal>
     </>
