@@ -7,9 +7,12 @@ import getColors from "../../queries/getColors"
 import { MenuItem, TextField } from "@mui/material"
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
 import uploadShopBg from "../../mutations/uploadShopBg"
-const CreateProductForm = () => {
+import createProduct from "../../mutations/createProduct"
+const CreateProductForm = (props: { currentUser: any }) => {
+  const currentUser = props.currentUser
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
   const [formData, setFormData] = useState({
+    shopId: currentUser.shop.id,
     productName: "",
     category: "",
     productDescription: "",
@@ -80,34 +83,26 @@ const CreateProductForm = () => {
     }
   }
 
-  // // Handle image file input
-  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   if (e.target.files) {
-  //     const files = Array.from(e.target.files);
-  //     const uniqueFileName = `${Date.now()}-${file.name}`
-  //     console.log(files.map((file) => file.name));
-  //     setFormData((prev) => ({ ...prev, productImages: files }));
-  //   }
-  // };
-
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (formData.productImages instanceof File) {
-      console.log("file baga ine")
+    try {
+      const product = await createProduct(formData)
+      console.log("Product created:", product)
+      alert("Product created successfully!")
+    } catch (error) {
+      console.error("Error creating product:", error)
+      alert("Failed to create product!")
     }
-
-    console.log("Form Data:", formData)
-
-    // Perform mutation or API call here
-    // Example: await createProductMutation(formData);
-    alert("Product created successfully!")
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Product Name, Category, and Delivery Option */}
+      <div>
+        <p className="text-2xl font-bold">ADDING NEW PRODUCT</p>
+      </div>
       <div className="flex flex-row gap-2">
         <TextField
           required

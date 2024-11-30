@@ -13,7 +13,7 @@ export default async function Page() {
       </div>
       <div className="ml-36 p-16 w-full">
         <div>
-          <ProductList />
+          <ProductList currentUser={currentUser} />
         </div>
       </div>
     </div>

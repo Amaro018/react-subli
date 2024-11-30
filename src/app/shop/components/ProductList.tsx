@@ -28,7 +28,8 @@ const style = {
   borderRadius: "10px",
 }
 
-const ProductList = () => {
+const ProductList = (props) => {
+  const currentUser = props.currentUser
   const [products, { isLoading, isError, error }] = useQuery(getProducts, null)
   const [open, setOpen] = React.useState(false)
   if (isLoading) return <CircularProgress />
@@ -92,7 +93,7 @@ const ProductList = () => {
             maxHeight: "calc(100vh - 200px)",
           }}
         >
-          <CreateProductForm />
+          <CreateProductForm currentUser={currentUser} />
         </Box>
       </Modal>
     </>
