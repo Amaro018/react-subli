@@ -37,6 +37,11 @@ export default resolver.pipe(
       },
     })
 
+    await db.user.update({
+      where: { id: input.userId },
+      data: { isShopRegistered: true },
+    })
+
     return shop
   }
 )
