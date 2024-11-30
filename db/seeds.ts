@@ -25,6 +25,52 @@ const seed = async () => {
     })
   }
 
+  // Seed Categories
+  const categories = [
+    { name: "Electronics" },
+    { name: "Fashion" },
+    { name: "Home & Garden" },
+    { name: "Sports" },
+    { name: "Books" },
+  ]
+
+  for (const category of categories) {
+    await db.category.upsert({
+      where: { name: category.name },
+      update: {},
+      create: {
+        name: category.name,
+      },
+    })
+  }
+
+  const colors = [
+    { name: "Red", hexCode: "#FF0000" },
+    { name: "Green", hexCode: "#00FF00" },
+    { name: "Blue", hexCode: "#0000FF" },
+    { name: "Black", hexCode: "#000000" },
+    { name: "White", hexCode: "#FFFFFF" },
+    { name: "Yellow", hexCode: "#FFFF00" },
+    { name: "Purple", hexCode: "#800080" },
+    { name: "Cyan", hexCode: "#00FFFF" },
+    { name: "Magenta", hexCode: "#FF00FF" },
+    { name: "Gray", hexCode: "#808080" },
+  ]
+
+  for (const color of colors) {
+    await db.color.upsert({
+      where: { name: color.name },
+      update: {},
+      create: {
+        name: color.name,
+        hexCode: color.hexCode,
+      },
+    })
+  }
+
+  console.log("Colors seeded!")
+
+  console.log("Categories seeded!")
   console.log("Seed completed!")
 }
 
