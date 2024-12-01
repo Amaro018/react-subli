@@ -24,6 +24,17 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
     where: {
       shopId: shop.id, // Use the shop's ID to match products
     },
+    include: {
+      variants: {
+        include: {
+          color: true, // Include the associated Color for each variant
+        },
+      },
+      category: true,
+
+      images: true,
+      shop: true,
+    },
     orderBy: {
       createdAt: "desc",
     },

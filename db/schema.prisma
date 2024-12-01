@@ -128,7 +128,8 @@ model Product {
   updatedAt      DateTime         @updatedAt
   variants       ProductVariant[] // Relationship with ProductVariant
   images         ProductImage[]
-  categories     Category[]       @relation("ProductCategories") // Many-to-Many relationship with Category
+  category       Category         @relation("ProductCategories", fields: [categoryid], references: [id]) // Many-to-Many relationship with Category
+  categoryid     Int
 }
 
 model ProductVariant {
@@ -136,7 +137,8 @@ model ProductVariant {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId Int // Foreign key to Product
   size      String // Size (e.g., "S", "M", "L")
-  color     String // Color (e.g., "Red", "Blue")
+  color     Color    @relation(fields: [colorId], references: [id], onDelete: Cascade) // Relation with Color
+  colorId   Int // Foreign key to Color
   quantity  Int // Quantity available for this size and color combination
   price     Float
   createdAt DateTime @default(now())
@@ -164,4 +166,6 @@ model Color {
   hexCode   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  ProductVariant ProductVariant[]
 }
