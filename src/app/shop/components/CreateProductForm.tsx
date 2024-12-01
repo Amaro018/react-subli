@@ -15,7 +15,7 @@ const CreateProductForm = (props: { currentUser: any }) => {
     shopId: currentUser.shop.id,
     productName: "",
     category: "",
-    productDescription: "",
+    description: "",
     deliveryOption: "",
     productImages: [],
     variants: [{ size: "", color: "", quantity: 0, price: 0 }],
@@ -151,10 +151,10 @@ const CreateProductForm = (props: { currentUser: any }) => {
         multiline
         rows={4}
         id="productDescription"
-        name="productDescription"
+        name="description"
         label="Product Description"
         fullWidth
-        value={formData.productDescription}
+        value={formData.description}
         onChange={handleInputChange}
       />
 
@@ -189,11 +189,11 @@ const CreateProductForm = (props: { currentUser: any }) => {
               onChange={(e) => handleVariantChange(index, "color", e.target.value)}
             >
               {colors.map((color) => (
-                <MenuItem key={color.id} value={color.name}>
+                <MenuItem key={color.id} value={color.id}>
                   <div className="flex items-center gap-2">
                     <div
                       className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: color.name }}
+                      style={{ backgroundColor: color.hexCode }}
                     ></div>
                     {color.name}
                   </div>

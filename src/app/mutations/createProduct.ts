@@ -1,4 +1,5 @@
 import db from "db"
+import { connect } from "http2"
 import { z } from "zod"
 
 // Zod schema for input validation
@@ -12,7 +13,7 @@ const CreateProductInput = z.object({
   variants: z.array(
     z.object({
       size: z.string().optional(),
-      color: z.string().optional(),
+      color: z.number().int().optional(),
       quantity: z.number().min(0, "Quantity must be a positive number"),
       price: z.number().min(0, "Price must be a positive number"),
     })
@@ -25,19 +26,26 @@ export default async function createProduct(input: z.infer<typeof CreateProductI
 
   const product = await db.product.create({
     data: {
-      shopId: data.shopId,
       name: data.productName,
       description: data.description,
       status: data.status ?? "active",
       deliveryOption: data.deliveryOption,
       images: {
-        create: data.productImages.map((url) => ({ url })), // Replace createMany with create
+        create: data.productImages.map((url) => ({ url })), // Create associated images
       },
       variants: {
-        create: data.variants, // Replace createMany with create
+        create: data.variants.map((variant) => ({
+          size: variant.size,
+          colorId: variant.color, // Associate color with colorId
+          quantity: variant.quantity,
+          price: variant.price,
+        })), // Create associated variants
       },
-      categories: {
-        connect: { id: data.category },
+      category: {
+        connect: { id: data.category }, // Connect category via its ID
+      },
+      shop: {
+        connect: { id: data.shopId },
       },
     },
   })

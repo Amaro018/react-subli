@@ -32,7 +32,7 @@ const Navbar = (props) => {
           }`}
         >
           <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-            <a href="#home">Home</a>
+            <a href="/">Home</a>
           </li>
           <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
             <a href="#about">About</a>
