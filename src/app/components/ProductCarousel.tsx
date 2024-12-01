@@ -34,7 +34,7 @@ const ProductCarousel = ({ product }) => {
             <div key={index} className="w-full flex-shrink-0 flex justify-center items-center">
               <Image
                 src={`/uploads/products/${image.url}`}
-                alt={image.name}
+                alt={image.id}
                 width={400}
                 height={400}
                 className="object-cover"

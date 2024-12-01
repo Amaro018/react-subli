@@ -1,0 +1,101 @@
+// schema.prisma
+
+model User {
+  id               Int       @id @default(autoincrement())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  email            String    @unique
+  hashedPassword   String?
+  role             String    @default("USER")
+  isAdmin          Boolean   @default(false)
+  isShopMode       Boolean   @default(false)
+  isShopRegistered Boolean   @default(false)
+  profileImage     String?
+  tokens           Token[]  
+  sessions         Session[]
+
+  personalInfo PersonalInfo?
+  shop         Shop?
+  carts        Cart[]   // User can have multiple carts
+  orders       Order[]  // User can have multiple orders
+}
+
+model Shop {
+  id             Int       @id @default(autoincrement())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int       @unique
+  shopName       String
+  email          String
+  street         String
+  city           String
+  region         String
+  country        String
+  zipCode        String
+  contact        String
+  status         String    @default("pending")
+  description    String?
+  imageProfile   String?
+  imageBg        String?
+  documentDTI    String?
+  dtiStatus      String    @default("pending")
+  documentPermit String?
+  permitStatus   String    @default("pending")
+  documentTax    String?
+  taxStatus      String    @default("pending")
+  linkFacebook   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  products       Product[]
+}
+
+model Cart {
+  id        Int          @id @default(autoincrement())
+  userId    Int
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  items     CartItem[]   // Cart contains multiple CartItems
+}
+
+model CartItem {
+  id            Int            @id @default(autoincrement())
+  cartId        Int
+  cart          Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productVariantId Int
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity      Int
+  price         Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Order {
+  id          Int        @id @default(autoincrement())
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalPrice  Float
+  status      OrderStatus
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  items       OrderItem[] // Order contains multiple OrderItems
+}
+
+model OrderItem {
+  id              Int            @id @default(autoincrement())
+  orderId         Int
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariantId Int
+  productVariant  ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity        Int
+  price           Float
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}

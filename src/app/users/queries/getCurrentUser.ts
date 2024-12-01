@@ -7,7 +7,8 @@ export default async function getCurrentUser(_: null, ctx: Ctx) {
     where: { id: ctx.session.userId },
     include: {
       personalInfo: true, // Assumes a relation named 'profileInfo' exists
-      shop: true, // Assumes a relation named 'shop' exists
+      shop: true,
+      cartItems: true, // Assumes a relation named 'shop' exists
     },
     // select: { id: true, email: true, role: true },
   })

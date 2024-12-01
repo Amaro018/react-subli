@@ -28,6 +28,7 @@ model User {
 
   personalInfo PersonalInfo?
   shop         Shop?
+  cartItems    CartItem[] // Relation to CartItem
 }
 
 model Shop {
@@ -130,19 +131,21 @@ model Product {
   images         ProductImage[]
   category       Category         @relation("ProductCategories", fields: [categoryid], references: [id]) // Many-to-Many relationship with Category
   categoryid     Int
+  cartItems      CartItem[]
 }
 
 model ProductVariant {
-  id        Int      @id @default(autoincrement())
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        Int        @id @default(autoincrement())
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId Int // Foreign key to Product
   size      String // Size (e.g., "S", "M", "L")
-  color     Color    @relation(fields: [colorId], references: [id], onDelete: Cascade) // Relation with Color
+  color     Color      @relation(fields: [colorId], references: [id], onDelete: Cascade) // Relation with Color
   colorId   Int // Foreign key to Color
   quantity  Int // Quantity available for this size and color combination
   price     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cartItems CartItem[]
 }
 
 model ProductImage {
@@ -168,4 +171,19 @@ model Color {
   updatedAt DateTime @updatedAt
 
   ProductVariant ProductVariant[]
+}
+
+model CartItem {
+  id        Int            @id @default(autoincrement())
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int // Foreign key to User
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int // Foreign key to Product
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId Int // Foreign key to ProductVariant
+  quantity  Int            @default(1) // Quantity of the product in the cart
+  startDate DateTime? // Optional rental start date
+  endDate   DateTime? // Optional rental end date
 }

@@ -22,7 +22,7 @@ export default function ProductList() {
           {products.length > 0 ? (
             products.map((product) => (
               <Link href={`/product/${product.id}`} key={product.id}>
-                <div className="w-64 h-80 bg-white rounded shadow-lg flex flex-col items-center overflow-hidden">
+                <div className="w-64 h-80 bg-white rounded shadow-lg flex flex-col items-center overflow-hidden py-2">
                   {/* Image Section */}
                   <div className="w-full h-2/3 flex items-center justify-center bg-gray-100">
                     <Image
@@ -36,7 +36,12 @@ export default function ProductList() {
 
                   {/* Text Section */}
                   <div className="w-full h-1/3 px-4 py-2 flex flex-col justify-center items-center">
-                    <h2 className="font-bold text-xl text-center text-black">{product.name}</h2>
+                    <h2
+                      className="font-bold text-xl text-center text-black truncate max-w-[200px]"
+                      title={product.name}
+                    >
+                      {product.name}
+                    </h2>
                     <p className="text-gray-600 text-sm text-center mt-1">
                       {product.category.name}
                     </p>
