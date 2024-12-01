@@ -1,0 +1,54 @@
+import * as React from 'react';
+import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
+import { LocalizationProvider } from '@mui/x-date-pickers-pro/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers-pro/AdapterDayjs';
+import { DateRangePicker } from '@mui/x-date-pickers-pro/DateRangePicker';
+import dayjs, { Dayjs } from 'dayjs';
+
+export default function BasicDateRangePicker() {
+  const [value, setValue] = React.useState<[Dayjs, Dayjs] | null>(null);
+
+  // Define unavailable dates (e.g., from your database or business logic)
+  const unavailableDates = [
+    dayjs().add(1, 'day'), // Tomorrow
+    dayjs().add(3, 'day'), // Another blocked date
+  ];
+
+  // Disable specific dates (grayed out)
+  const shouldDisableDate = (date: Dayjs) => {
+    return unavailableDates.some((unavailableDate) => date.isSame(unavailableDate, 'day'));
+  };
+
+  // Validate selected range
+  const isRangeValid = (range) => {
+    const [start, end] = range;
+    if (!start || !end) return true; // No range selected yet
+    return !unavailableDates.some((unavailableDate) =>
+      unavailableDate.isBetween(start, end, 'day', '[]') // Check if any unavailable date is in the range
+    );
+  };
+
+  const handleChange = (newRange: [Dayjs, Dayjs] | null) => {
+    if (newRange && !isRangeValid(newRange)) {
+      alert('The selected range includes unavailable dates. Please select another range.');
+      setValue(null);
+    } else {
+      setValue(newRange);
+    }
+  };
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <DemoContainer components={['DateRangePicker']}>
+        <DateRangePicker
+          localeText={{ start: 'Check-in', end: 'Check-out' }}
+          shouldDisableDate={shouldDisableDate} // Disable individual dates
+          value={value}
+          onChange={handleChange}
+
+        />
+      </DemoContainer>
+    </LocalizationProvider>
+  );
+}
+
