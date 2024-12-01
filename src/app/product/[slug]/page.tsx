@@ -2,8 +2,7 @@
 import { invoke, useQuery } from "@blitzjs/rpc"
 import getProductById from "../../queries/getProductById" // You'll need a query to fetch product details
 import ProductCarousel from "../../components/ProductCarousel"
-import Navbar from "../../components/Navbar"
-import getCurrentUser from "../../users/queries/getCurrentUser"
+
 import GetTheNavBar from "../../components/GetTheNavBar"
 import React from "react"
 
@@ -15,6 +14,9 @@ const ProductPage = ({ params }: any) => {
   const [product] = useQuery(getProductById, { id: Number(id) })
 
   const [selectedVariant, setSelectedVariant] = React.useState<number | null>(null)
+
+  const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
+  const [selectedSize, setSelectedSize] = React.useState<string | null>(null)
 
   // Memoize unique colors to prevent unnecessary recalculation
   const uniqueColors = React.useMemo(() => {
@@ -37,36 +39,54 @@ const ProductPage = ({ params }: any) => {
         <div className="w-1/2 bg-gray-50 p-12">
           <h1 className="text-2xl font-bold capitalize">{product.name}</h1>
           <p>{product.description}</p>
-
-          {/* Render unique colors */}
           <div className="flex gap-2 mt-4">
-            {uniqueColors.map((color) => (
-              <div key={color.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedVariant(color.id)}
-                  className={`w-10 h-10 rounded-full border-2 ${
-                    selectedVariant === color.id ? "border-blue-500" : "border-transparent"
-                  } hover:scale-110`}
-                  style={{ backgroundColor: color.hexCode }}
-                ></button>
+            <div className="flex flex-col">
+              <p>Available Colors : </p>
+              <div className="flex flex-row gap-2">
+                {/* Render unique colors */}
+                {uniqueColors.map((color) => (
+                  <div key={color.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedColor(color.id)} // Update selected color
+                      className={`w-10 h-10 rounded-full border-2 ${
+                        selectedColor === color.id ? "border-blue-500" : "border-transparent"
+                      } hover:scale-110`}
+                      style={{ backgroundColor: color.hexCode }}
+                    ></button>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-          <div>
-            {uniqueSizes.map((size) => (
-              <div key={size}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedVariant(size)}
-                  className={`border-2 ${
-                    selectedVariant === size ? "border-blue-500" : "border-transparent"
-                  } hover:scale-110`}
-                >
-                  {size}
-                </button>
-              </div>
-            ))}
+
+          <div className="flex flex-row gap-2 mt-4">
+            {/* Render unique sizes */}
+            {uniqueSizes.map((size) => {
+              // Check if the size is valid for the selected color
+              const isDisabled =
+                selectedColor &&
+                !product.variants.some(
+                  (variant) => variant.colorId === selectedColor && variant.size === size
+                )
+
+              return (
+                <div key={size}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSize(size)} // Update selected size
+                    className={`border-2 ${
+                      selectedSize === size ? "border-blue-500" : "border-transparent"
+                    } hover:scale-110 w-10 h-10 bg-slate-400 rounded-full text-white ${
+                      isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    disabled={isDisabled} // Disable button if size is not valid for the selected color
+                  >
+                    {size}
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
