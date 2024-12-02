@@ -2,6 +2,7 @@
 import { invoke, useQuery } from "@blitzjs/rpc"
 import getProductById from "../../queries/getProductById" // You'll need a query to fetch product details
 import ProductCarousel from "../../components/ProductCarousel"
+import Image from "next/image"
 
 import GetTheNavBar from "../../components/GetTheNavBar"
 import React, { useState } from "react"
@@ -18,6 +19,7 @@ import addToCart from "../../mutations/addToCart"
 import CheckOutDrawer from "../../components/CheckOutDrawer"
 
 import getAllCartItem from "../../queries/getAllCartItem"
+import CalendarEvent from "../../components/CalendarEvent"
 
 const ProductPage = ({ params }: any) => {
   const { slug } = params
@@ -181,6 +183,7 @@ const ProductPage = ({ params }: any) => {
     <Box
       sx={{
         width: 400,
+        height: "100vh",
         flexShrink: 0,
         "& .MuiDrawer-paper": {
           width: 250,
@@ -189,13 +192,52 @@ const ProductPage = ({ params }: any) => {
       }}
       role="presentation"
       onClick={toggleDrawer(false)}
+      className="bg-slate-600"
     >
-      <div className="p-12">
+      <div className="p-12 text-white">
         <p>items here</p>
         {cartItems && cartItems.length > 0 ? (
           cartItems.map((item) => (
-            <div>
-              <p>{item.product.name}</p>
+            <div className="flex flex-col justify-stretch">
+              <div>
+                <div className="flex items-center space-x-4">
+                  <Image
+                    src={`/uploads/products/${item.product.images[0]?.url}`}
+                    alt={item.product.name}
+                    width={50}
+                    height={50}
+                    className="w-24 h-24 object-cover"
+                  />
+                  <div className="text-sm truncate">
+                    <p className="text-white">{item.product.name}</p>
+                    <p className="text-gray-400">
+                      {item.variant.size} - {item.variant.color.name}
+                    </p>
+                  </div>
+                </div>
+                <p>{item.product.name}</p>
+                <p>{item.quantity}</p>
+                <p>
+                  {new Intl.DateTimeFormat("en-US", {
+                    month: "long",
+                    day: "2-digit",
+                    year: "numeric",
+                  }).format(new Date(item.startDate))}
+                </p>
+                <p>
+                  {new Intl.DateTimeFormat("en-US", {
+                    month: "long",
+                    day: "2-digit",
+                    year: "numeric",
+                  }).format(new Date(item.endDate))}
+                </p>
+                <p>{item.variant.size}</p>
+                <p>{item.variant.color.name}</p>
+                <p>{item.variant.price}</p>
+              </div>
+              <div>
+                <button>checkout</button>
+              </div>
             </div>
           ))
         ) : (
@@ -296,8 +338,12 @@ const ProductPage = ({ params }: any) => {
                 </div>
               </div>
             </div>
-            <div className="w-full bg-red-900 mt-4">
-              <p>Available Schedule:</p>
+            <div className="w-full mt-4 flex flex-col">
+              <p className="font-bold text-center">Available Schedule:</p>
+              <div className="">
+                <CalendarEvent />
+                im gonna use full calendarjs
+              </div>
             </div>
           </div>
 
