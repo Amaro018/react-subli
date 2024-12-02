@@ -10,16 +10,22 @@ import ProductSchedule from "../../components/ProductSchedule"
 import { DateRangePicker } from "@nextui-org/date-picker"
 import { q } from "@blitzjs/auth/dist/index-0ecbee46"
 import getCurrentUser from "../../users/queries/getCurrentUser"
+import Box from "@mui/material/Box"
+import Drawer from "@mui/material/Drawer"
+import Button from "@mui/material/Button"
 
 import addToCart from "../../mutations/addToCart"
 import CheckOutDrawer from "../../components/CheckOutDrawer"
+
+import getAllCartItem from "../../queries/getAllCartItem"
 
 const ProductPage = ({ params }: any) => {
   const { slug } = params
   //   const  id  = params.params.slug;
   const id = slug
 
-  const [product] = useQuery(getProductById, { id: Number(id) })
+  const [product, { refetch }] = useQuery(getProductById, { id: Number(id) })
+  const [cartItems] = useQuery(getAllCartItem, {})
 
   const [selectedVariant, setSelectedVariant] = React.useState<number | null>(null)
 
@@ -87,11 +93,11 @@ const ProductPage = ({ params }: any) => {
     try {
       await invoke(addToCart, formData)
       alert("Successfully added to cart")
+      refetch()
     } catch (error) {
       console.error("Error adding to cart:", error)
       alert("Error adding to cart")
     }
-
     // Perform your action here, like calling an API or adding to the cart
     // For example: invoke(addToCart, formData);
   }
@@ -165,6 +171,40 @@ const ProductPage = ({ params }: any) => {
     }
   }
 
+  const [open, setOpen] = React.useState(false)
+
+  const toggleDrawer = (newOpen: boolean) => () => {
+    setOpen(newOpen)
+  }
+
+  const DrawerList = (
+    <Box
+      sx={{
+        width: 400,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: 250,
+          boxSizing: "border-box",
+        },
+      }}
+      role="presentation"
+      onClick={toggleDrawer(false)}
+    >
+      <div className="p-12">
+        <p>items here</p>
+        {cartItems && cartItems.length > 0 ? (
+          cartItems.map((item) => (
+            <div>
+              <p>{item.product.name}</p>
+            </div>
+          ))
+        ) : (
+          <p className="text-center">No items in cart</p>
+        )}
+      </div>
+    </Box>
+  )
+
   return (
     <>
       {/* <GetTheNavBar /> */}
@@ -179,77 +219,85 @@ const ProductPage = ({ params }: any) => {
             <p>{product.description}</p>
           </div>
 
-          <div className="mt-4">
-            <p>
-              Price:
-              {selectedColor &&
-              selectedSize &&
-              product.variants.some(
-                (variant) => variant.color.id === selectedColor && variant.size === selectedSize
-              )
-                ? `₱${
-                    product.variants.find(
-                      (variant) =>
-                        variant.color.id === selectedColor && variant.size === selectedSize
-                    )?.price
-                  }`
-                : `₱${Math.min(...product.variants.map((variant) => variant.price))} - ₱${Math.max(
-                    ...product.variants.map((variant) => variant.price)
-                  )}`}
-            </p>
-          </div>
+          {/* form and calendar */}
+          <div className="flex flex-row gap-2">
+            <div className="flex flex-col w-1/4">
+              <div className="mt-4">
+                <p>
+                  Price:
+                  {selectedColor &&
+                  selectedSize &&
+                  product.variants.some(
+                    (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+                  )
+                    ? `₱${
+                        product.variants.find(
+                          (variant) =>
+                            variant.color.id === selectedColor && variant.size === selectedSize
+                        )?.price
+                      }`
+                    : `₱${Math.min(
+                        ...product.variants.map((variant) => variant.price)
+                      )} - ₱${Math.max(...product.variants.map((variant) => variant.price))}`}
+                </p>
+              </div>
 
-          <div className="flex gap-2 mt-4">
-            <div className="flex flex-col">
-              <p>Available Colors : </p>
-              <div className="flex flex-row gap-2 mt-4">
-                {/* Render unique colors */}
-                {uniqueColors.map((color) => (
-                  <div key={color.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleChangeColor(color.id)} // Update selected color
-                      className={`w-10 h-10 rounded-full border-2 ${
-                        selectedColor === color.id ? "border-blue-500" : "border-transparent"
-                      } hover:scale-110`}
-                      style={{ backgroundColor: color.hexCode }}
-                    ></button>
+              <div className="flex gap-2 mt-4">
+                <div className="flex flex-col">
+                  <p>Available Colors : </p>
+                  <div className="flex flex-row gap-2 mt-4">
+                    {/* Render unique colors */}
+                    {uniqueColors.map((color) => (
+                      <div key={color.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleChangeColor(color.id)} // Update selected color
+                          className={`w-10 h-10 rounded-full border-4 ${
+                            selectedColor === color.id ? "border-blue-500" : "border-transparent"
+                          } hover:scale-110`}
+                          style={{ backgroundColor: color.hexCode }}
+                        ></button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 mt-4">
+                <p>Available Sizes : </p>
+                {/* Render unique sizes */}
+
+                <div className="flex flex-row gap-2">
+                  {uniqueSizes.map((size) => {
+                    // Check if the size is valid for the selected color
+                    const isDisabled =
+                      selectedColor &&
+                      !product.variants.some(
+                        (variant) => variant.colorId === selectedColor && variant.size === size
+                      )
+
+                    return (
+                      <div key={size}>
+                        <button
+                          type="button"
+                          onClick={() => handleChangeSize(size)} // Update selected size
+                          className={`border-4 ${
+                            selectedSize === size ? "border-blue-500" : "border-transparent"
+                          } hover:scale-110 w-10 h-10 bg-slate-600 rounded-full text-white ${
+                            isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                          disabled={isDisabled} // Disable button if size is not valid for the selected color
+                        >
+                          {size}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-2 mt-4">
-            <p>Available Sizes : </p>
-            {/* Render unique sizes */}
-
-            <div className="flex flex-row gap-2">
-              {uniqueSizes.map((size) => {
-                // Check if the size is valid for the selected color
-                const isDisabled =
-                  selectedColor &&
-                  !product.variants.some(
-                    (variant) => variant.colorId === selectedColor && variant.size === size
-                  )
-
-                return (
-                  <div key={size}>
-                    <button
-                      type="button"
-                      onClick={() => handleChangeSize(size)} // Update selected size
-                      className={`border-2 ${
-                        selectedSize === size ? "border-blue-500" : "border-transparent"
-                      } hover:scale-110 w-10 h-10 bg-slate-600 rounded-full text-white ${
-                        isDisabled ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                      disabled={isDisabled} // Disable button if size is not valid for the selected color
-                    >
-                      {size}
-                    </button>
-                  </div>
-                )
-              })}
+            <div className="w-full bg-red-900 mt-4">
+              <p>Available Schedule:</p>
             </div>
           </div>
 
@@ -316,14 +364,24 @@ const ProductPage = ({ params }: any) => {
             </button>
 
             <div>
-              <CheckOutDrawer />
+              <div>
+                <button
+                  onClick={toggleDrawer(true)}
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Rent
+                </button>
+                <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
+                  {DrawerList}
+                </Drawer>
+              </div>
             </div>
-            <button
+            {/* <button
               type="button"
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
               Rent
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
