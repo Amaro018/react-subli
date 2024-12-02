@@ -1,12 +1,15 @@
-import * as React from "react"
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
-import { DateCalendar } from "@mui/x-date-pickers/DateCalendar"
+import FullCalendar from "@fullcalendar/react"
+import dayGridPlugin from "@fullcalendar/daygrid" // a plugin!
 
-export default function BasicDateCalendar() {
+export default function Calendar() {
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs} s>
-      <DateCalendar />
-    </LocalizationProvider>
+    <FullCalendar
+      plugins={[dayGridPlugin]}
+      initialView="dayGridMonth"
+      events={[
+        { title: "event 1", date: "2024-12-01" },
+        { title: "event 2", date: "2024-12-02" },
+      ]}
+    />
   )
 }
