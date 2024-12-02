@@ -1,34 +1,32 @@
 "use client"
+
 import { invoke, useQuery } from "@blitzjs/rpc"
 import getProductById from "../../queries/getProductById" // You'll need a query to fetch product details
 import ProductCarousel from "../../components/ProductCarousel"
-
 import GetTheNavBar from "../../components/GetTheNavBar"
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { set } from "zod"
 import ProductSchedule from "../../components/ProductSchedule"
 import { DateRangePicker } from "@nextui-org/date-picker"
 import { q } from "@blitzjs/auth/dist/index-0ecbee46"
-import getCurrentUser from "../../users/queries/getCurrentUser"
+//import getCurrentUser from "../../users/queries/getCurrentUser"
 import Box from "@mui/material/Box"
 import Drawer from "@mui/material/Drawer"
 import Button from "@mui/material/Button"
-
 import addToCart from "../../mutations/addToCart"
 import CheckOutDrawer from "../../components/CheckOutDrawer"
-
 import getAllCartItem from "../../queries/getAllCartItem"
+import getUser from "@/src/app/utils/getCurrentUser"
+import Navbar from "@/src/app/components/Navbar"
 
 const ProductPage = ({ params }: any) => {
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const { slug } = params
   //   const  id  = params.params.slug;
   const id = slug
-
   const [product, { refetch }] = useQuery(getProductById, { id: Number(id) })
   const [cartItems] = useQuery(getAllCartItem, {})
-
   const [selectedVariant, setSelectedVariant] = React.useState<number | null>(null)
-
   const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
   const [selectedSize, setSelectedSize] = React.useState<string | null>(null)
 
@@ -45,12 +43,11 @@ const ProductPage = ({ params }: any) => {
       const selectedV = product.variants.find(
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
       )
-      setSelectedVariant(selectedV.id)
+      setSelectedVariant(selectedV?.id || 0)
     }
   }
 
   const handleClickCart = async () => {
-    const currentUser = await invoke(getCurrentUser, null)
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
       alert("Please select a color and size")
@@ -125,7 +122,7 @@ const ProductPage = ({ params }: any) => {
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
       )
       setQuantity((prev) => prev - 1)
-      console.log(selectedVariant.quantity)
+      console.log(selectedVariant?.quantity)
     }
   }
 
@@ -136,14 +133,14 @@ const ProductPage = ({ params }: any) => {
       const selectedVariant = product.variants.find(
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
       )
-      if (quantity === selectedVariant.quantity) {
+      if (quantity === selectedVariant?.quantity) {
         alert("You cannot increase the count above the available quantity")
       } else setQuantity((prev) => prev + 1)
     }
   }
 
-  const [startDate, setStartDate] = useState(null)
-  const [endDate, setEndDate] = useState(null)
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
 
   const handleStartDateChange = (date: any) => {
     // Convert the string to a Date object
@@ -163,11 +160,13 @@ const ProductPage = ({ params }: any) => {
     const dateObject = new Date(date)
 
     // Check if the selected date is in the future
-    if (dateObject < new Date() || dateObject <= startDate) {
-      alert("mali")
-      setEndDate(null) // Reset the date value to null if invalid
-    } else {
-      setEndDate(dateObject) // Set the valid date
+    if (startDate) {
+      if (dateObject < new Date() || dateObject <= startDate) {
+        alert("mali")
+        setEndDate(null) // Reset the date value to null if invalid
+      } else {
+        setEndDate(dateObject) // Set the valid date
+      }
     }
   }
 
@@ -193,8 +192,8 @@ const ProductPage = ({ params }: any) => {
       <div className="p-12">
         <p>items here</p>
         {cartItems && cartItems.length > 0 ? (
-          cartItems.map((item) => (
-            <div>
+          cartItems.map((item, index) => (
+            <div key={index}>
               <p>{item.product.name}</p>
             </div>
           ))
@@ -205,8 +204,20 @@ const ProductPage = ({ params }: any) => {
     </Box>
   )
 
+  const getCurrentUser = async () => {
+    const user = await getUser()
+    setCurrentUser(user)
+  }
+
+  useEffect(() => {
+    getCurrentUser()
+  }, [])
+
   return (
     <>
+      {currentUser && (
+        <Navbar currentUser={currentUser} />
+      )}
       {/* <GetTheNavBar /> */}
       <div className="w-full flex flex-row p-24">
         <div className="w-1/2">
@@ -270,11 +281,11 @@ const ProductPage = ({ params }: any) => {
                 <div className="flex flex-row gap-2">
                   {uniqueSizes.map((size) => {
                     // Check if the size is valid for the selected color
-                    const isDisabled =
-                      selectedColor &&
+                    const isDisabled: boolean =
+                      selectedColor ?
                       !product.variants.some(
                         (variant) => variant.colorId === selectedColor && variant.size === size
-                      )
+                      ) : false
 
                     return (
                       <div key={size}>
