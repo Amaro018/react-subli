@@ -342,7 +342,6 @@ const ProductPage = ({ params }: any) => {
               <p className="font-bold text-center">Available Schedule:</p>
               <div className="">
                 <CalendarEvent />
-                im gonna use full calendarjs
               </div>
             </div>
           </div>
