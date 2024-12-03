@@ -43,5 +43,5 @@ next-env.d.ts
 /public/uploads
 
 # Database files
-/db/db_test.sqlite
-/db/subli-react.sqlite
+/db/db_test.sqlite/
+/db/subli-react.sqlite/

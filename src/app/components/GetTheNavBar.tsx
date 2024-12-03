@@ -1,5 +1,5 @@
 import { invoke } from "@blitzjs/rpc"
-import getCurrentUser from "../users/queries/getCurrentUser"
+import getCurrentUser from "../utils/getCurrentUser"
 import Navbar from "./Navbar"
 
 export default async function GetTheNavBar() {

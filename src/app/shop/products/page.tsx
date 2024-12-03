@@ -1,6 +1,6 @@
 import { Sidebar } from "./../components/sidebar"
 import { invoke } from "./../../blitz-server"
-import getCurrentUser from "./../../users/queries/getCurrentUser"
+import getCurrentUser from "../../users/queries/getCurrentUser"
 import CreateProductForm from "./../components/CreateProductForm"
 import ProductList from "../components/ProductList"
 

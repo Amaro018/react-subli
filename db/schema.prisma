@@ -29,6 +29,7 @@ model User {
   personalInfo PersonalInfo?
   shop         Shop?
   cartItems    CartItem[] // Relation to CartItem
+  rents        Rent[]
 }
 
 model Shop {
@@ -146,6 +147,7 @@ model ProductVariant {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   cartItems CartItem[]
+  rentItems RentItem[] // Relationship with RentItem
 }
 
 model ProductImage {
@@ -186,4 +188,27 @@ model CartItem {
   quantity  Int            @default(1) // Quantity of the product in the cart
   startDate DateTime? // Optional rental start date
   endDate   DateTime? // Optional rental end date
+}
+
+model Rent {
+  id         Int        @id @default(autoincrement())
+  userId     Int
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalPrice Float
+  status     String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  items      RentItem[] // Order contains multiple OrderItems
+}
+
+model RentItem {
+  id               Int            @id @default(autoincrement())
+  rentId           Int
+  rent             Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  productVariantId Int
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity         Int
+  price            Float
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }

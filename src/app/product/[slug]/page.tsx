@@ -5,12 +5,13 @@ import ProductCarousel from "../../components/ProductCarousel"
 import Image from "next/image"
 
 import GetTheNavBar from "../../components/GetTheNavBar"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { set } from "zod"
 import ProductSchedule from "../../components/ProductSchedule"
 import { DateRangePicker } from "@nextui-org/date-picker"
 import { q } from "@blitzjs/auth/dist/index-0ecbee46"
-import getCurrentUser from "../../users/queries/getCurrentUser"
+import getUser from "@/src/app/utils/getUser"
+import Navbar from "@/src/app/components/Navbar"
 import Box from "@mui/material/Box"
 import Drawer from "@mui/material/Drawer"
 import Button from "@mui/material/Button"
@@ -20,8 +21,20 @@ import CheckOutDrawer from "../../components/CheckOutDrawer"
 
 import getAllCartItem from "../../queries/getAllCartItem"
 import CalendarEvent from "../../components/CalendarEvent"
+import { TextField } from "@mui/material"
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
 
 const ProductPage = ({ params }: any) => {
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
+  const getCurrentUser = async () => {
+    const user = await getUser()
+    setCurrentUser(user)
+  }
+  useEffect(() => {
+    getCurrentUser()
+  }, [])
+
   const { slug } = params
   //   const  id  = params.params.slug;
   const id = slug
@@ -44,15 +57,14 @@ const ProductPage = ({ params }: any) => {
   const handleChangeSize = (size: string) => {
     setSelectedSize(size)
     if (selectedColor !== null && selectedSize !== null) {
-      const selectedV = product.variants.find(
+      const selectedVariant = product.variants.find(
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
       )
-      setSelectedVariant(selectedV.id)
+      setSelectedVariant(selectedVariant.id)
     }
   }
 
   const handleClickCart = async () => {
-    const currentUser = await invoke(getCurrentUser, null)
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
       alert("Please select a color and size")
@@ -127,7 +139,7 @@ const ProductPage = ({ params }: any) => {
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
       )
       setQuantity((prev) => prev - 1)
-      console.log(selectedVariant.quantity)
+      console.log(selectedVariant.id)
     }
   }
 
@@ -179,6 +191,7 @@ const ProductPage = ({ params }: any) => {
     setOpen(newOpen)
   }
 
+  // Drawer
   const DrawerList = (
     <Box
       sx={{
@@ -195,10 +208,9 @@ const ProductPage = ({ params }: any) => {
       className="bg-slate-600"
     >
       <div className="p-12 text-white">
-        <p>items here</p>
         {cartItems && cartItems.length > 0 ? (
           cartItems.map((item) => (
-            <div className="flex flex-col justify-stretch">
+            <div className="flex flex-col justify-stretch" key={item.id}>
               <div>
                 <div className="flex items-center space-x-4">
                   <Image
@@ -247,10 +259,12 @@ const ProductPage = ({ params }: any) => {
     </Box>
   )
 
+  // END OF DRAWER
+
   return (
     <>
-      {/* <GetTheNavBar /> */}
-      <div className="w-full flex flex-row p-24">
+      <Navbar currentUser={currentUser} />
+      <div className="w-full flex flex-col md:flex-row lg:flex-row p-24">
         <div className="w-1/2">
           <ProductCarousel product={product} />
         </div>
@@ -263,7 +277,7 @@ const ProductPage = ({ params }: any) => {
 
           {/* form and calendar */}
           <div className="flex flex-row gap-2">
-            <div className="flex flex-col w-1/4">
+            <div className="flex flex-col w-1/3">
               <div className="mt-4">
                 <p>
                   Price:
@@ -287,7 +301,7 @@ const ProductPage = ({ params }: any) => {
               <div className="flex gap-2 mt-4">
                 <div className="flex flex-col">
                   <p>Available Colors : </p>
-                  <div className="flex flex-row gap-2 mt-4">
+                  <div className="flex flex-row flex-wrap gap-2 mt-4">
                     {/* Render unique colors */}
                     {uniqueColors.map((color) => (
                       <div key={color.id}>
@@ -309,7 +323,7 @@ const ProductPage = ({ params }: any) => {
                 <p>Available Sizes : </p>
                 {/* Render unique sizes */}
 
-                <div className="flex flex-row gap-2">
+                <div className="flex flex-row flex-wrap gap-2">
                   {uniqueSizes.map((size) => {
                     // Check if the size is valid for the selected color
                     const isDisabled =
@@ -337,67 +351,80 @@ const ProductPage = ({ params }: any) => {
                   })}
                 </div>
               </div>
+
+              {/* schedule */}
+              <div className="flex flex-col gap-2 mt-4">
+                <div className="flex flex-col gap-2 mt-4">
+                  <p>Select Schedule:</p>
+                  <div className="flex flex-col gap-2">
+                    <TextField
+                      type="date"
+                      variant="outlined"
+                      fullWidth
+                      value={startDate ? startDate.toISOString().split("T")[0] : ""}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      helperText="Please select a start date"
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                    />
+                    <TextField
+                      type="date"
+                      variant="outlined"
+                      fullWidth
+                      value={endDate ? endDate.toISOString().split("T")[0] : ""}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
+                      helperText="Please select an end date"
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* schedule */}
+
+              {/* quantity here */}
+              <div className="flex flex-col gap-2 mt-4">
+                <div>
+                  <p>Quantity:</p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                    disabled={quantity <= 1}
+                    onClick={handleCountMinus}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    id="quantity"
+                    name="quantity"
+                    min="1"
+                    max="10"
+                    value={quantity}
+                    className="w-20 p-2 border border-gray-300 rounded-md"
+                  />
+                  <button
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                    onClick={handleCountPlus}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              {/* end of quantity */}
             </div>
-            <div className="w-full mt-4 flex flex-col">
-              <p className="font-bold text-center">Available Schedule:</p>
-              <div className="">
+            <div className="w-2/3 mt-4 flex flex-col ">
+              <p className="font-bold">Available Schedule:</p>
+              <div className="w-full">
                 <CalendarEvent />
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col gap-2 mt-4">
-            <div className="flex flex-col gap-2 mt-4">
-              <p>Select Schedule:</p>
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={startDate ? startDate.toISOString().split("T")[0] : ""}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                />
-                <input
-                  type="date"
-                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={endDate ? endDate.toISOString().split("T")[0] : ""}
-                  onChange={(e) => handleEndDateChange(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* quantity here */}
-          <div className="flex flex-col gap-2 mt-4">
-            <div>
-              <p>Quantity:</p>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
-                disabled={quantity <= 1}
-                onClick={handleCountMinus}
-              >
-                -
-              </button>
-              <input
-                type="number"
-                id="quantity"
-                name="quantity"
-                min="1"
-                max="10"
-                value={quantity}
-                className="w-20 p-2 border border-gray-300 rounded-md"
-              />
-              <button
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
-                onClick={handleCountPlus}
-              >
-                +
-              </button>
-            </div>
-          </div>
-          {/* end of quantity */}
+          {/* form and calendar */}
 
           <div className="w-full flex flex-row justify-end gap-2">
             <button

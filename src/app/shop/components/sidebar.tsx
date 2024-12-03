@@ -13,7 +13,7 @@ export const Sidebar = (props: { currentUser: any }) => {
   const router = useRouter()
 
   return (
-    <div className="fixed top-30 left-0 h-screen w-48 bg-gray-800 p-4">
+    <div className="fixed top-30 left-0 h-screen w-48 bg-gray-800 p-4 z-40">
       <ul className="flex flex-col gap-4">
         <li className="py-4">
           <div className="flex flex-col justify-center items-center">
