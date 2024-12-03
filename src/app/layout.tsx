@@ -15,13 +15,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={inter.className}>
         <BlitzProvider>
-          <>{children}</>
+          <>
+            <main className="h-[100vh]">{children}</main>
+          </>
         </BlitzProvider>
-        <div className="w-full relative mt-16">
+        {/* <div className="w-full relative">
           <div className="absolute bottom-0 w-full">
             <Footer />
           </div>
-        </div>
+        </div> */}
       </body>
     </html>
   )

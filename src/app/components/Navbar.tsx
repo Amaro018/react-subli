@@ -2,7 +2,7 @@
 import React, { useState } from "react"
 import { LogoutButton } from "../(auth)/components/LogoutButton"
 
-const Navbar = (props) => {
+const Navbar = (props: any) => {
   const currentUser = props.currentUser
   const [isOpen, setIsOpen] = useState(false)
 

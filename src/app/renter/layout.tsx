@@ -11,5 +11,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     role: ["USER"],
     redirectAuthenticatedTo: "/",
   })
-  return <>{children}</>
+  return (
+    <>
+      <main className="h-[100vh]">{children}</main>
+    </>
+  )
 }
