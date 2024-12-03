@@ -39,8 +39,6 @@ next-env.d.ts
 
 .vscode
 
-#files
-/public/uploads
 
 # Database files
 /db/db_test.sqlite/

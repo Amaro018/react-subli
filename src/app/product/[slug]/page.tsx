@@ -47,6 +47,13 @@ const ProductPage = ({ params }: any) => {
   const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
   const [selectedSize, setSelectedSize] = React.useState<string | null>(null)
 
+  const [open, setOpen] = React.useState(false)
+
+  const toggleDrawer = (state: boolean) => () => {
+    setOpen(state) // Properly handle the state update
+    console.log("testing")
+  }
+
   const handleChangeColor = (colorId: number) => {
     setSelectedColor(colorId)
     setSelectedSize(null)
@@ -65,6 +72,59 @@ const ProductPage = ({ params }: any) => {
   }
 
   const handleClickCart = async () => {
+    // Ensure color and size are selected
+    if (!selectedColor || !selectedSize) {
+      alert("Please select a color and size")
+      return
+    }
+
+    // Find the selected variant based on the color and size
+    const selectedVariant = product.variants.find(
+      (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+    )
+
+    if (!selectedVariant) {
+      alert("Selected variant not found")
+      return
+    }
+
+    // Ensure start and end dates are selected and valid
+    if (!startDate || !endDate) {
+      alert("Please select both start and end dates")
+      return
+    }
+
+    if (endDate <= startDate) {
+      alert("End date must be after the start date")
+      return
+    }
+
+    // Create formData with all the necessary details
+    const formData = {
+      userId: currentUser.id,
+      productId: Number(id),
+      quantity: quantity,
+      variantId: selectedVariant.id, // Directly use the selected variant ID
+      startDate: startDate,
+      endDate: endDate,
+    }
+
+    console.log("Form Data:", formData)
+
+    try {
+      await invoke(addToCart, formData)
+      alert("Successfully added to cart")
+      refetch()
+    } catch (error) {
+      console.error("Error adding to cart:", error)
+      alert("Error adding to cart")
+    }
+    // Perform your action here, like calling an API or adding to the cart
+    // For example: invoke(addToCart, formData);
+  }
+
+  const handleClickRent = async () => {
+    setOpen(true)
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
       alert("Please select a color and size")
@@ -185,12 +245,6 @@ const ProductPage = ({ params }: any) => {
     }
   }
 
-  const [open, setOpen] = React.useState(false)
-
-  const toggleDrawer = (newOpen: boolean) => () => {
-    setOpen(newOpen)
-  }
-
   // Drawer
   const DrawerList = (
     <Box
@@ -263,7 +317,7 @@ const ProductPage = ({ params }: any) => {
 
   return (
     <>
-      <Navbar currentUser={currentUser} />
+      <Navbar currentUser={currentUser} toggleDrawer={toggleDrawer} />
       <div className="w-full flex flex-col md:flex-row lg:flex-row p-24">
         <div className="w-1/2">
           <ProductCarousel product={product} />
@@ -438,7 +492,7 @@ const ProductPage = ({ params }: any) => {
             <div>
               <div>
                 <button
-                  onClick={toggleDrawer(true)}
+                  onClick={handleClickRent}
                   className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                 >
                   Rent
