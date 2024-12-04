@@ -1,33 +1,37 @@
-import { Ctx, resolver } from "@blitzjs/rpc"
+import { resolver } from "@blitzjs/rpc"
 import db from "db"
 
-export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
+export default resolver.pipe(async (_, ctx: Ctx) => {
+  // Check if there's a userId in the session
   const userId = ctx.session.userId
 
+  // If no userId is found, return null immediately
   if (!userId) {
-    throw new Error("User not authenticated")
+    return null
   }
 
   // Retrieve all cart items for the current user
   const cartItems = await db.cartItem.findMany({
     where: {
-      userId, // Filter cart items by the current user's ID
+      userId, // Only query for cart items of the authenticated user
     },
     include: {
       product: {
         include: {
           variants: true,
-          images: true, // Include product images if needed
-          category: true, // Include category details if needed
+          images: true,
+          category: true,
         },
       },
       variant: {
         include: {
-          color: true, // Include color details for the variant
+          color: true,
         },
       },
     },
   })
 
-  return cartItems
+  // Return cart items, or null if no items are found
+  return cartItems.length > 0 ? cartItems : null
 })
+

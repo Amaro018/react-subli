@@ -8,7 +8,7 @@ const Navbar = (props: any) => {
   const currentUser = props.currentUser
   const { toggleDrawer } = props
   const [isOpen, setIsOpen] = useState(false)
-  const cartItems = useQuery(getAllCartItem, null)
+  const [cartItems] = useQuery(getAllCartItem, null)
 
   // const toggleTest = () => {
   //   // toggleDrawer(true)
@@ -88,7 +88,7 @@ const Navbar = (props: any) => {
         </ul>
         <div>
           <div className="relative">
-            <button onClick={toggleDrawer(true)}>
+            <button onClick={() => toggleDrawer(true)}>
               <ShoppingBagIcon />
             </button>
             <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
