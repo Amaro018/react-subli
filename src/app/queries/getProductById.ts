@@ -1,14 +1,10 @@
 import db from "db"
-import { Ctx } from "blitz"
 
-export default async function getProductById({ id }: { id: number }, ctx: Ctx) {
-  ctx.session.$authorize()
-
+export default async function getProductById({ id }: { id: number }) {
   const product = await db.product.findFirst({
     where: { id },
     include: {
       category: true,
-
       variants: {
         include: {
           color: true, // Include the associated Color for each variant
@@ -23,3 +19,4 @@ export default async function getProductById({ id }: { id: number }, ctx: Ctx) {
 
   return product
 }
+

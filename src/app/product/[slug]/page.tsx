@@ -72,6 +72,11 @@ const ProductPage = ({ params }: any) => {
   }
 
   const handleClickCart = async () => {
+
+      if (!currentUser){
+    alert ("please login first")
+     return
+      }
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
       alert("Please select a color and size")
@@ -322,7 +327,7 @@ const ProductPage = ({ params }: any) => {
         <div className="w-1/2">
           <ProductCarousel product={product} />
         </div>
-        <div className="w-1/2 bg-gray-50 p-12">
+        <div className="w-full bg-gray-50 p-12">
           <h1 className="text-2xl font-bold capitalize">{product.name}</h1>
 
           <div className="mt-4 border-t">
