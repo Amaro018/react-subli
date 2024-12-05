@@ -23,6 +23,7 @@ import getAllCartItem from "../../queries/getAllCartItem"
 import CalendarEvent from "../../components/CalendarEvent"
 import { TextField } from "@mui/material"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
+import DrawerCart from "../../components/DrawerCart"
 
 const ProductPage = ({ params }: any) => {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -49,11 +50,9 @@ const ProductPage = ({ params }: any) => {
 
   const [open, setOpen] = React.useState(false)
 
-
-
   const toggleDrawer = (state: boolean) => () => {
-      setOpen(state) // Properly handle the state update
-      console.log("testing")
+    setOpen(state) // Properly handle the state update
+    console.log("testing")
   }
 
   const handleChangeColor = (colorId: number) => {
@@ -74,11 +73,10 @@ const ProductPage = ({ params }: any) => {
   }
 
   const handleClickCart = async () => {
-
-      if (!currentUser){
-    alert ("please login first")
-     return
-      }
+    if (!currentUser) {
+      alert("please login first")
+      return
+    }
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
       alert("Please select a color and size")
@@ -131,18 +129,17 @@ const ProductPage = ({ params }: any) => {
   }
 
   const handleClickRent = async () => {
+    if (!currentUser) {
+      alert("please login first")
+      return
+    }
 
-      if (!currentUser){
-          alert ("please login first")
-          return
-      }
-
-      setOpen(true)
-      // Ensure color and size are selected
-      if (!selectedColor || !selectedSize) {
-          alert("Please select a color and size")
-          return
-      }
+    setOpen(true)
+    // Ensure color and size are selected
+    if (!selectedColor || !selectedSize) {
+      alert("Please select a color and size")
+      return
+    }
 
     // Find the selected variant based on the color and size
     const selectedVariant = product.variants.find(
@@ -258,79 +255,79 @@ const ProductPage = ({ params }: any) => {
     }
   }
 
-  // Drawer
-  const DrawerList = (
-    <Box
-      sx={{
-        width: 400,
-        height: "100vh",
-        flexShrink: 0,
-        "& .MuiDrawer-paper": {
-          width: 250,
-          boxSizing: "border-box",
-        },
-      }}
-      role="presentation"
-      onClick={toggleDrawer(false)}
-      className="bg-slate-600"
-    >
-      <div className="p-12 text-white">
-        {cartItems && cartItems.length > 0 ? (
-          cartItems.map((item) => (
-            <div className="flex flex-col justify-stretch" key={item.id}>
-              <div>
-                <div className="flex items-center space-x-4">
-                  <Image
-                    src={`/uploads/products/${item.product.images[0]?.url}`}
-                    alt={item.product.name}
-                    width={50}
-                    height={50}
-                    className="w-24 h-24 object-cover"
-                  />
-                  <div className="text-sm truncate">
-                    <p className="text-white">{item.product.name}</p>
-                    <p className="text-gray-400">
-                      {item.variant.size} - {item.variant.color.name}
-                    </p>
-                  </div>
-                </div>
-                <p>{item.product.name}</p>
-                <p>{item.quantity}</p>
-                <p>
-                  {new Intl.DateTimeFormat("en-US", {
-                    month: "long",
-                    day: "2-digit",
-                    year: "numeric",
-                  }).format(new Date(item.startDate))}
-                </p>
-                <p>
-                  {new Intl.DateTimeFormat("en-US", {
-                    month: "long",
-                    day: "2-digit",
-                    year: "numeric",
-                  }).format(new Date(item.endDate))}
-                </p>
-                <p>{item.variant.size}</p>
-                <p>{item.variant.color.name}</p>
-                <p>{item.variant.price}</p>
-              </div>
-              <div>
-                <button>checkout</button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-center">No items in cart</p>
-        )}
-      </div>
-    </Box>
-  )
+  // // Drawer
+  // const DrawerList = (
+  //   <Box
+  //     sx={{
+  //       width: 400,
+  //       height: "100vh",
+  //       flexShrink: 0,
+  //       "& .MuiDrawer-paper": {
+  //         width: 250,
+  //         boxSizing: "border-box",
+  //       },
+  //     }}
+  //     role="presentation"
+  //     onClick={toggleDrawer(false)}
+  //     className="bg-slate-600"
+  //   >
+  //     <div className="p-12 text-white">
+  //       {cartItems && cartItems.length > 0 ? (
+  //         cartItems.map((item) => (
+  //           <div className="flex flex-col justify-stretch" key={item.id}>
+  //             <div>
+  //               <div className="flex items-center space-x-4">
+  //                 <Image
+  //                   src={`/uploads/products/${item.product.images[0]?.url}`}
+  //                   alt={item.product.name}
+  //                   width={50}
+  //                   height={50}
+  //                   className="w-24 h-24 object-cover"
+  //                 />
+  //                 <div className="text-sm truncate">
+  //                   <p className="text-white">{item.product.name}</p>
+  //                   <p className="text-gray-400">
+  //                     {item.variant.size} - {item.variant.color.name}
+  //                   </p>
+  //                 </div>
+  //               </div>
+  //               <p>{item.product.name}</p>
+  //               <p>{item.quantity}</p>
+  //               <p>
+  //                 {new Intl.DateTimeFormat("en-US", {
+  //                   month: "long",
+  //                   day: "2-digit",
+  //                   year: "numeric",
+  //                 }).format(new Date(item.startDate))}
+  //               </p>
+  //               <p>
+  //                 {new Intl.DateTimeFormat("en-US", {
+  //                   month: "long",
+  //                   day: "2-digit",
+  //                   year: "numeric",
+  //                 }).format(new Date(item.endDate))}
+  //               </p>
+  //               <p>{item.variant.size}</p>
+  //               <p>{item.variant.color.name}</p>
+  //               <p>{item.variant.price}</p>
+  //             </div>
+  //             <div>
+  //               <button>checkout</button>
+  //             </div>
+  //           </div>
+  //         ))
+  //       ) : (
+  //         <p className="text-center">No items in cart</p>
+  //       )}
+  //     </div>
+  //   </Box>
+  // )
 
   // END OF DRAWER
 
   return (
     <>
-      <Navbar currentUser={currentUser}  toggleDrawer={toggleDrawer(true)}/>
+      <Navbar currentUser={currentUser} toggleDrawer={toggleDrawer(true)} />
       <div className="w-full flex flex-col md:flex-row lg:flex-row p-24">
         <div className="w-1/2">
           <ProductCarousel product={product} />
@@ -511,7 +508,7 @@ const ProductPage = ({ params }: any) => {
                   Rent
                 </button>
                 <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
-                  {DrawerList}
+                  <DrawerCart />
                 </Drawer>
               </div>
             </div>
