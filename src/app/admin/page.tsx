@@ -1,5 +1,5 @@
 import { invoke } from "./../blitz-server"
-import getCurrentUser from "./../queries/getCurrentUser"
+import getCurrentUser from "./../users/queries/getCurrentUser"
 import { Sidebar } from "./components/sidebar"
 import Navbar from "../components/Navbar"
 
