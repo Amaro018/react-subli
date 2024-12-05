@@ -4,16 +4,16 @@ import { LogoutButton } from "../(auth)/components/LogoutButton"
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag"
 import getAllCartItem from "../queries/getAllCartItem"
 import { useQuery } from "@blitzjs/rpc"
-const Navbar = (props: any) => {
-  const currentUser = props.currentUser
-  const { toggleDrawer } = props
+const Navbar = ({currentUser, toggleDrawer}) => {
+//  const currentUser = props.currentUser
+ //  const {toggleDrawer} = props
   const [isOpen, setIsOpen] = useState(false)
   const [cartItems] = useQuery(getAllCartItem, null)
 
-  // const toggleTest = () => {
-  //   // toggleDrawer(true)
-  //   console.log("test")
-  // }
+  const toggleTest = () => {
+     toggleDrawer(true)
+     console.log("test")
+   }
 
   const toggleMenu = () => {
     setIsOpen(!isOpen)
@@ -88,7 +88,7 @@ const Navbar = (props: any) => {
         </ul>
         <div>
           <div className="relative">
-            <button onClick={() => toggleDrawer(true)}>
+            <button onClick={toggleDrawer}>
               <ShoppingBagIcon />
             </button>
             <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">

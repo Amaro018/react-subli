@@ -49,9 +49,11 @@ const ProductPage = ({ params }: any) => {
 
   const [open, setOpen] = React.useState(false)
 
+
+
   const toggleDrawer = (state: boolean) => () => {
-    setOpen(state) // Properly handle the state update
-    console.log("testing")
+      setOpen(state) // Properly handle the state update
+      console.log("testing")
   }
 
   const handleChangeColor = (colorId: number) => {
@@ -129,12 +131,18 @@ const ProductPage = ({ params }: any) => {
   }
 
   const handleClickRent = async () => {
-    setOpen(true)
-    // Ensure color and size are selected
-    if (!selectedColor || !selectedSize) {
-      alert("Please select a color and size")
-      return
-    }
+
+      if (!currentUser){
+          alert ("please login first")
+          return
+      }
+
+      setOpen(true)
+      // Ensure color and size are selected
+      if (!selectedColor || !selectedSize) {
+          alert("Please select a color and size")
+          return
+      }
 
     // Find the selected variant based on the color and size
     const selectedVariant = product.variants.find(
@@ -322,7 +330,7 @@ const ProductPage = ({ params }: any) => {
 
   return (
     <>
-      <Navbar currentUser={currentUser} toggleDrawer={toggleDrawer} />
+      <Navbar currentUser={currentUser}  toggleDrawer={toggleDrawer(true)}/>
       <div className="w-full flex flex-col md:flex-row lg:flex-row p-24">
         <div className="w-1/2">
           <ProductCarousel product={product} />
