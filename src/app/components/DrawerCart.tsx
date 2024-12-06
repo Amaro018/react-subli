@@ -183,7 +183,7 @@ export default function DrawerCart() {
           },
         }}
         role="presentation"
-        className="bg-slate-600"
+        className="bg-slate-600 h-full"
       >
         <div className="p-8 text-white flex flex-col gap-2 w-full">
           {cartItems && cartItems.length > 0 ? (
