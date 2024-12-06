@@ -1,6 +1,7 @@
 import { forwardRef, PropsWithoutRef } from "react"
 import { useField, useFormikContext, ErrorMessage } from "formik"
 import { TextField } from "@mui/material"
+
 export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElements["input"]> {
   /** Field name. */
   name: string
@@ -12,43 +13,24 @@ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElem
 }
 
 export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldProps>(
-  ({ name, label, outerProps, ...props }, ref) => {
-    const [input] = useField(name)
+  ({ name, label, outerProps, type = "text", ...props }, ref) => {
+    const [field, meta] = useField(name) // `useField` returns field and meta info
     const { isSubmitting } = useFormikContext()
 
     return (
       <div {...outerProps}>
-        <label>
-          {label}
-          <input {...input} disabled={isSubmitting} {...props} ref={ref} />
-        </label>
-
-        <ErrorMessage name={name}>
-          {(msg) => (
-            <div role="alert" style={{ color: "red" }}>
-              {msg}
-            </div>
-          )}
-        </ErrorMessage>
-
-        <style jsx>{`
-          label {
-            display: flex;
-            flex-direction: column;
-            align-items: start;
-            font-size: 1rem;
-            width: 100%;
-          }
-          input {
-            font-size: 1rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 3px;
-            border: 1px solid purple;
-            appearance: none;
-            margin-top: 0.5rem;
-            width: 100%;
-          }
-        `}</style>
+        <TextField
+          {...field} // Handles `name`, `value`, `onChange`, and `onBlur`
+          label={label}
+          type={type}
+          disabled={isSubmitting}
+          error={Boolean(meta.touched && meta.error)} // Highlight field in red if there's an error
+          helperText={meta.touched && meta.error ? meta.error : " "} // Display error message below
+          fullWidth
+          variant="outlined"
+          inputRef={ref}
+          {...props} // Spread additional props (like `placeholder`)
+        />
       </div>
     )
   }

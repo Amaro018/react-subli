@@ -45,107 +45,73 @@ export const SignupForm = (props: SignupFormProps) => {
         <>
           <div className="flex flex-col gap-2">
             <div className="flex gap-2 w-full">
-              <TextField
+              <LabeledTextField
                 name="firstName"
                 label="First Name"
-                placeholder="First Name"
-                required
-                variant="outlined"
-                fullWidth
+                placeholder="Enter your first name"
+                type="text"
               />
-              <TextField
-                name="middleName"
-                label="Middle Name"
-                placeholder="Middle Name"
-                variant="outlined"
-                fullWidth
-              />
-              <TextField
+              <LabeledTextField name="middleName" label="Middle Name" placeholder="Middle Name" />
+              <LabeledTextField
                 name="lastName"
                 label="Last Name"
                 placeholder="Last Name"
-                type="text"
                 required
-                variant="outlined"
-                fullWidth
               />
             </div>
 
-            <TextField
+            <LabeledTextField
               name="phoneNumber"
               label="Contact Number"
               placeholder="Contact Number"
               type="text"
               required
-              variant="outlined"
-              fullWidth
             />
-            <TextField
+            <LabeledTextField
               name="birthDate"
+              label="Date of Birth"
               placeholder="Date of Birth"
               type="date"
               required
-              variant="outlined"
-              fullWidth
-              InputLabelProps={{
-                shrink: true, // ensures the label shrinks when the input is focused or filled
-              }}
             />
             <div className="flex gap-2">
-              <TextField
+              <LabeledTextField
                 name="street"
                 label="Street"
                 placeholder="Street"
                 type="text"
                 required
-                variant="outlined"
-                fullWidth
               />
-              <TextField
-                name="city"
-                label="City"
-                placeholder="City"
-                type="text"
-                required
-                variant="outlined"
-                fullWidth
-              />
+              <LabeledTextField name="city" label="City" placeholder="City" type="text" required />
             </div>
             <div className="flex gap-2">
-              <TextField
+              <LabeledTextField
                 name="region"
                 label="Region"
                 placeholder="Region"
                 type="text"
                 required
-                variant="outlined"
-                fullWidth
               />
-
-              <TextField
+              <LabeledTextField
                 name="country"
                 label="Country"
                 placeholder="Country"
                 type="text"
                 required
-                variant="outlined"
-                fullWidth
               />
             </div>
-
-            <TextField
+            <LabeledTextField
               name="zipCode"
               label="Zipcode"
               placeholder="Zipcode"
               type="text"
               required
-              variant="outlined"
-              fullWidth
             />
           </div>
         </>
       ),
     },
+
     {
       label: "Create an Ad",
       content: (
@@ -175,6 +141,7 @@ export const SignupForm = (props: SignupFormProps) => {
   }
 
   const handleSubmit = async (values: any) => {
+    console.log(values)
     try {
       // Handle birthDate as a string and convert to Date object
       const birthDate = values.birthDate ? new Date(values.birthDate) : new Date()
