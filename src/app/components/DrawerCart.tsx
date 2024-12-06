@@ -1,13 +1,20 @@
 "use client"
 import Image from "next/image"
 import React, { useState } from "react"
-import { Box, Drawer, Modal } from "@mui/material"
+import { Box, Drawer, Modal, TextField } from "@mui/material"
 import getAllCartItem from "../queries/getAllCartItem"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import updateCartByVariantId from "../mutations/updateCartByVariantId"
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
 import deleteCartItemById from "../mutations/deleteCartItemById"
 import CheckoutForm from "./CheckOutForm"
+
+//for radio buttons
+import Radio from "@mui/material/Radio"
+import RadioGroup from "@mui/material/RadioGroup"
+import FormControlLabel from "@mui/material/FormControlLabel"
+import FormControl from "@mui/material/FormControl"
+import FormLabel from "@mui/material/FormLabel"
 
 const style = {
   position: "absolute" as "absolute",
@@ -29,6 +36,31 @@ export default function DrawerCart() {
   const [open, setOpen] = useState(false)
   const [checkOutItems, setCheckOutItems] = useState([])
 
+  const [addressOption, setAddressOption] = useState("Home")
+  const [selectedAddress, setSelectedAddress] = useState(() => {
+    if (cartItems && cartItems.length > 0) {
+      const { street, city, region, country, zipCode } = cartItems[0].user.personalInfo
+      return `${street}, ${city}, ${region}, ${country}, ${zipCode}`
+    }
+    return ""
+  })
+
+  const [newAddress, setNewAddress] = useState({
+    street: "",
+    city: "",
+    region: "",
+    country: "",
+    zipCode: "",
+  })
+
+  const handleNewAddressChange = (e) => {
+    const { name, value } = e.target
+    setNewAddress((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
   const checkboxChange = (e) => {
     const checked = e.target.checked
     if (checked) {
@@ -37,15 +69,57 @@ export default function DrawerCart() {
       setCheckOutItems((prev) => prev.filter((item) => item !== e.target.value))
     }
   }
-
   const handleCheckOut = () => {
-    if (checkOutItems.length === 0) {
-      alert("Please select at least one item to checkout.")
-      return
+    const [address, setAddress] = useState("")
+
+    if (addressOption === "Home") {
+      setAddress(selectedAddress)
+    } else if (addressOption === "New") {
+      if (
+        !newAddress.street ||
+        !newAddress.city ||
+        !newAddress.region ||
+        !newAddress.country ||
+        !newAddress.zipCode
+      ) {
+        alert("Please fill out all address fields.")
+        return
+      }
+      setAddress(
+        newAddress.street +
+          ", " +
+          newAddress.city +
+          ", " +
+          newAddress.region +
+          ", " +
+          newAddress.country +
+          ", " +
+          newAddress.zipCode
+      )
     }
 
-    setOpen(true)
-    console.log(checkOutItems)
+    // if (!selectedAddress) {
+    //   alert("Please select or provide an address.");
+    //   return;
+    // }
+
+    // if (addressOption === "New") {
+    //   // Validate new address fields
+    //   const { street, city, region, country, zipCode } = newAddress;
+    //   if (!street || !city || !region || !country || !zipCode) {
+    //     alert("Please fill out all address fields.");
+    //     return;
+    //   }
+
+    //   // Construct the new address string
+    //   setSelectedAddress(
+    //     `${street}, ${city}, ${region}, ${country}, ${zipCode}`
+    //   );
+    // }
+
+    // console.log("Selected address for delivery:", selectedAddress);
+    // // Proceed with checkout logic
+    // setOpen(true);
   }
 
   const handleClose = () => {
@@ -101,8 +175,8 @@ export default function DrawerCart() {
     <>
       <Box
         sx={{
-          width: 400,
-          height: "100vh",
+          width: 500,
+
           flexShrink: 0,
           "& .MuiDrawer-paper": {
             width: 250,
@@ -111,7 +185,7 @@ export default function DrawerCart() {
         role="presentation"
         className="bg-slate-600"
       >
-        <div className="p-12 text-white flex flex-col gap-2 w-full">
+        <div className="p-8 text-white flex flex-col gap-2 w-full">
           {cartItems && cartItems.length > 0 ? (
             cartItems.map((item) => (
               <div className="flex flex-col justify-stretch" key={item.id}>
@@ -193,7 +267,6 @@ export default function DrawerCart() {
                   </div>
                   {/* grand total computation  */}
                 </div>
-                <div>{item.user.personalInfo?.firstName}</div>
               </div>
             ))
           ) : (
@@ -201,7 +274,94 @@ export default function DrawerCart() {
           )}
         </div>
 
-        <div className="p-4 flex justify-center w-full">
+        {cartItems?.[0]?.user?.personalInfo && (
+          <div className="flex justify-center w-full">
+            <div className="text-white w-full p-4 ">
+              <div className="mx-auto bg-red-600 font-bold flex justify-center">
+                <label>Address for items that is for Delivery</label>
+              </div>
+
+              <RadioGroup
+                value={addressOption} // Pass the selected value
+                name="radio-buttons-group"
+                className="p-4"
+              >
+                <FormControlLabel
+                  value="Home"
+                  control={<Radio />}
+                  label="Deliver to Home Address"
+                  onClick={() => setAddressOption("Home")}
+                />
+                {addressOption === "Home" && (
+                  <p className="ml-6">
+                    {cartItems?.[0]?.user?.personalInfo?.street},{" "}
+                    {cartItems?.[0]?.user?.personalInfo?.city},{" "}
+                    {cartItems?.[0]?.user?.personalInfo?.region},{" "}
+                    {cartItems?.[0]?.user?.personalInfo?.country},{" "}
+                    {cartItems?.[0]?.user?.personalInfo?.zipCode}
+                  </p>
+                )}
+
+                <FormControlLabel
+                  value="New"
+                  control={<Radio />}
+                  label="Use a Different Address"
+                  onClick={() => setAddressOption("New")}
+                />
+              </RadioGroup>
+              {addressOption === "New" && (
+                <div>
+                  <TextField
+                    name="street"
+                    label="Street"
+                    value={newAddress.street}
+                    onChange={handleNewAddressChange}
+                    fullWidth
+                    margin="normal"
+                    required
+                  />
+                  <TextField
+                    name="city"
+                    label="City"
+                    value={newAddress.city}
+                    onChange={handleNewAddressChange}
+                    fullWidth
+                    margin="normal"
+                    required
+                  />
+                  <TextField
+                    name="region"
+                    label="Region"
+                    value={newAddress.region}
+                    onChange={handleNewAddressChange}
+                    fullWidth
+                    margin="normal"
+                    required
+                  />
+                  <TextField
+                    name="country"
+                    label="Country"
+                    value={newAddress.country}
+                    onChange={handleNewAddressChange}
+                    fullWidth
+                    margin="normal"
+                    required
+                  />
+                  <TextField
+                    name="zipCode"
+                    label="Zip Code"
+                    value={newAddress.zipCode}
+                    onChange={handleNewAddressChange}
+                    fullWidth
+                    margin="normal"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="p-4 flex justify-center w-full bg-slate-600">
           <button
             className="bg-white hover:bg-gray-300 font-bold py-2 px-4 rounded w-full text-slate-600"
             onClick={handleCheckOut}
