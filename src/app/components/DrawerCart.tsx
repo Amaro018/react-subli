@@ -69,11 +69,15 @@ export default function DrawerCart() {
       setCheckOutItems((prev) => prev.filter((item) => item !== e.target.value))
     }
   }
-  const handleCheckOut = () => {
-    const [address, setAddress] = useState("")
 
+  const formData = {
+    address: "",
+    items: checkOutItems,
+  }
+  const handleCheckOut = () => {
     if (addressOption === "Home") {
-      setAddress(selectedAddress)
+      formData.address = selectedAddress
+      console.log(formData)
     } else if (addressOption === "New") {
       if (
         !newAddress.street ||
@@ -85,17 +89,29 @@ export default function DrawerCart() {
         alert("Please fill out all address fields.")
         return
       }
-      setAddress(
-        newAddress.street +
-          ", " +
-          newAddress.city +
-          ", " +
-          newAddress.region +
-          ", " +
-          newAddress.country +
-          ", " +
-          newAddress.zipCode
-      )
+      formData.address = `${newAddress.street}, ${newAddress.city}, ${newAddress.region}, ${newAddress.country}, ${newAddress.zipCode}`
+      console.log(formData)
+      // if (
+      //   !newAddress.street ||
+      //   !newAddress.city ||
+      //   !newAddress.region ||
+      //   !newAddress.country ||
+      //   !newAddress.zipCode
+      // ) {
+      //   alert("Please fill out all address fields.")
+      //   return
+      // }
+      // setAddress(
+      //   newAddress.street +
+      //     ", " +
+      //     newAddress.city +
+      //     ", " +
+      //     newAddress.region +
+      //     ", " +
+      //     newAddress.country +
+      //     ", " +
+      //     newAddress.zipCode
+      // )
     }
 
     // if (!selectedAddress) {
@@ -183,7 +199,7 @@ export default function DrawerCart() {
           },
         }}
         role="presentation"
-        className="bg-slate-600 h-full"
+        className="bg-slate-600"
       >
         <div className="p-8 text-white flex flex-col gap-2 w-full">
           {cartItems && cartItems.length > 0 ? (
