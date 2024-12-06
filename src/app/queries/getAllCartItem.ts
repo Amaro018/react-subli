@@ -16,16 +16,23 @@ export default resolver.pipe(async (_, ctx: Ctx) => {
       userId, // Only query for cart items of the authenticated user
     },
     include: {
+      user: {
+        include: {
+          personalInfo: true,
+        },
+      },
       product: {
         include: {
           variants: true,
           images: true,
           category: true,
+          shop: true,
         },
       },
       variant: {
         include: {
           color: true,
+          product: true,
         },
       },
     },
@@ -34,4 +41,3 @@ export default resolver.pipe(async (_, ctx: Ctx) => {
   // Return cart items, or null if no items are found
   return cartItems.length > 0 ? cartItems : null
 })
-

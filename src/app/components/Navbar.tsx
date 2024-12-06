@@ -4,16 +4,16 @@ import { LogoutButton } from "../(auth)/components/LogoutButton"
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag"
 import getAllCartItem from "../queries/getAllCartItem"
 import { useQuery } from "@blitzjs/rpc"
-const Navbar = ({currentUser, toggleDrawer}) => {
-//  const currentUser = props.currentUser
- //  const {toggleDrawer} = props
+const Navbar = ({ currentUser, toggleDrawer }) => {
+  //  const currentUser = props.currentUser
+  //  const {toggleDrawer} = props
   const [isOpen, setIsOpen] = useState(false)
   const [cartItems] = useQuery(getAllCartItem, null)
 
   const toggleTest = () => {
-     toggleDrawer(true)
-     console.log("test")
-   }
+    toggleDrawer(true)
+    console.log("test")
+  }
 
   const toggleMenu = () => {
     setIsOpen(!isOpen)
@@ -24,8 +24,8 @@ const Navbar = ({currentUser, toggleDrawer}) => {
   }
 
   return (
-    <nav className="bg-gray-800 text-white fixed top-0 z-10 w-full">
-      <div className="container mx-auto flex justify-between items-center px-4 py-3">
+    <nav className="bg-gray-800 text-white fixed top-0 z-10 w-full shadow px-24">
+      <div className="container flex justify-evenly items-center px-16 py-4">
         <h1 className="text-2xl font-bold">MyApp</h1>
         {/* Hamburger Menu Button */}
         <button
