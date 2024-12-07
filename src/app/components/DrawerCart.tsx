@@ -1,9 +1,9 @@
 "use client"
 import Image from "next/image"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Box, Drawer, Modal, TextField } from "@mui/material"
 import getAllCartItem from "../queries/getAllCartItem"
-import { useMutation, useQuery } from "@blitzjs/rpc"
+import { invoke, useMutation, useQuery } from "@blitzjs/rpc"
 import updateCartByVariantId from "../mutations/updateCartByVariantId"
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
 import deleteCartItemById from "../mutations/deleteCartItemById"
@@ -15,6 +15,10 @@ import RadioGroup from "@mui/material/RadioGroup"
 import FormControlLabel from "@mui/material/FormControlLabel"
 import FormControl from "@mui/material/FormControl"
 import FormLabel from "@mui/material/FormLabel"
+import getCurrentUser from "../users/queries/getCurrentUser"
+
+//the mutation for creating rent
+import createRent from "../mutations/createRent"
 
 const style = {
   position: "absolute" as "absolute",
@@ -29,7 +33,11 @@ const style = {
   borderRadius: "10px",
 }
 
-export default function DrawerCart() {
+export default function DrawerCart(props: any) {
+  const [loading, setLoading] = useState(false)
+
+  const [createRentMutation] = useMutation(createRent)
+  const { currentUser } = props
   const [deleteItem] = useMutation(deleteCartItemById)
   const [cartItems, { refetch }] = useQuery(getAllCartItem, {})
   const [updateCartItem] = useMutation(updateCartByVariantId)
@@ -40,10 +48,12 @@ export default function DrawerCart() {
   const [selectedAddress, setSelectedAddress] = useState(() => {
     if (cartItems && cartItems.length > 0) {
       const { street, city, region, country, zipCode } = cartItems[0].user.personalInfo
-      return `${street}, ${city}, ${region}, ${country}, ${zipCode}`
+      return street + ", " + city + ", " + region + ", " + country + ", " + zipCode
     }
     return ""
   })
+
+  const [totalPrice, setTotalPrice] = useState(0)
 
   const [newAddress, setNewAddress] = useState({
     street: "",
@@ -61,23 +71,45 @@ export default function DrawerCart() {
     }))
   }
 
-  const checkboxChange = (e) => {
+  const checkboxChange = (e, item) => {
     const checked = e.target.checked
+
+    // Calculate item price based on quantity, price, and duration
+    const itemPrice =
+      item.quantity *
+      item.variant.price *
+      Math.ceil(
+        (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+
     if (checked) {
-      setCheckOutItems((prev) => [...prev, e.target.value])
+      // Add to checkout items and update the total price
+      setCheckOutItems((prev) => [...prev, item.id])
+      setTotalPrice((prevTotal) => prevTotal + itemPrice)
     } else {
-      setCheckOutItems((prev) => prev.filter((item) => item !== e.target.value))
+      // Remove from checkout items and update the total price
+      setCheckOutItems((prev) => prev.filter((id) => id !== item.id))
+      setTotalPrice((prevTotal) => prevTotal - itemPrice)
     }
   }
 
-  const formData = {
-    address: "",
-    items: checkOutItems,
-  }
-  const handleCheckOut = () => {
+  const handleCheckOut = async () => {
+    setLoading(true) // Start loading
+    if (checkOutItems.length === 0) {
+      alert("Please select at least one item to checkout.")
+      return
+    }
+
+    let deliveryAddress = ""
+
+    // Validate and set the delivery address
     if (addressOption === "Home") {
-      formData.address = selectedAddress
-      console.log(formData)
+      if (!selectedAddress) {
+        alert("Please select a delivery address.")
+        return
+      }
+      deliveryAddress = selectedAddress
     } else if (addressOption === "New") {
       if (
         !newAddress.street ||
@@ -89,53 +121,61 @@ export default function DrawerCart() {
         alert("Please fill out all address fields.")
         return
       }
-      formData.address = `${newAddress.street}, ${newAddress.city}, ${newAddress.region}, ${newAddress.country}, ${newAddress.zipCode}`
-      console.log(formData)
-      // if (
-      //   !newAddress.street ||
-      //   !newAddress.city ||
-      //   !newAddress.region ||
-      //   !newAddress.country ||
-      //   !newAddress.zipCode
-      // ) {
-      //   alert("Please fill out all address fields.")
-      //   return
-      // }
-      // setAddress(
-      //   newAddress.street +
-      //     ", " +
-      //     newAddress.city +
-      //     ", " +
-      //     newAddress.region +
-      //     ", " +
-      //     newAddress.country +
-      //     ", " +
-      //     newAddress.zipCode
-      // )
+      deliveryAddress = [
+        newAddress.street,
+        newAddress.city,
+        newAddress.region,
+        newAddress.country,
+        newAddress.zipCode,
+      ].join(", ")
+    } else {
+      alert("Please choose a valid delivery address option.")
+      return
     }
 
-    // if (!selectedAddress) {
-    //   alert("Please select or provide an address.");
-    //   return;
-    // }
+    // Map items for the mutation payload
+    const items = checkOutItems.map((id) => {
+      const item = cartItems.find((item) => item.id === id)
+      if (!item) {
+        throw new Error("Cart item not found.")
+      }
+      return {
+        productVariantId: item.variantId,
+        price: item.variant.price,
+        quantity: item.quantity,
+        startDate: item.startDate,
+        endDate: item.endDate,
+      }
+    })
 
-    // if (addressOption === "New") {
-    //   // Validate new address fields
-    //   const { street, city, region, country, zipCode } = newAddress;
-    //   if (!street || !city || !region || !country || !zipCode) {
-    //     alert("Please fill out all address fields.");
-    //     return;
-    //   }
+    // Construct formData
+    const formData = {
+      userId: currentUser.id, // Ensure userId is valid
+      totalPrice: totalPrice, // Ensure totalPrice is valid
+      status: "Pending",
+      deliveryAddress,
+      items,
+    }
 
-    //   // Construct the new address string
-    //   setSelectedAddress(
-    //     `${street}, ${city}, ${region}, ${country}, ${zipCode}`
-    //   );
-    // }
+    console.log("FormData:", formData) // Debug: Check if formData is correct
 
-    // console.log("Selected address for delivery:", selectedAddress);
-    // // Proceed with checkout logic
-    // setOpen(true);
+    // Confirm checkout
+    const confirmCheckout = window.confirm("Are you sure you want to proceed with the checkout?")
+    if (!confirmCheckout) return
+
+    // Perform mutation
+    try {
+      const rent = await createRentMutation(formData)
+      console.log("Checkout successful:", rent)
+      refetch() // Refresh cart items
+      alert("Checkout successful!")
+      setLoading(false)
+      setOpen(false)
+    } catch (error) {
+      setLoading(false)
+      console.error("Failed to checkout:", error)
+      alert("Failed to checkout. Please try again.")
+    }
   }
 
   const handleClose = () => {
@@ -204,10 +244,14 @@ export default function DrawerCart() {
         <div className="p-8 text-white flex flex-col gap-2 w-full">
           {cartItems && cartItems.length > 0 ? (
             cartItems.map((item) => (
-              <div className="flex flex-col justify-stretch" key={item.id}>
+              <div className="flex flex-col justify-stretch " key={item.id}>
                 <div>
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" value={item.id} onChange={checkboxChange} />
+                    <input
+                      type="checkbox"
+                      value={item.id}
+                      onChange={(e) => checkboxChange(e, item)}
+                    />
                     <Image
                       src={`/uploads/products/${item.product.images[0]?.url}`}
                       alt={item.product.name}
@@ -215,7 +259,7 @@ export default function DrawerCart() {
                       height={100}
                       className="w-32 h-32 object-cover"
                     />
-                    <div className="text-sm">
+                    <div className="text-sm w-full">
                       <div className="flex justify-between items-center">
                         <p className="underline">{item.product.shop.shopName}</p>
 
@@ -235,7 +279,7 @@ export default function DrawerCart() {
                         }).formatRange(new Date(item.startDate), new Date(item.endDate))}
                       </p>
 
-                      <div className="flex my-2 border-b border-slate-500 py-2 justify-end">
+                      <div className="flex my-2 py-2 justify-end">
                         <button
                           className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
                           onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
@@ -273,12 +317,14 @@ export default function DrawerCart() {
                     <p>=</p>
                     <p>
                       &#x20B1;
-                      {item.quantity *
+                      {(
+                        item.quantity *
                         item.variant.price *
                         Math.ceil(
                           (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
                             (1000 * 60 * 60 * 24)
-                        )}
+                        )
+                      ).toLocaleString("en-US")}
                     </p>
                   </div>
                   {/* grand total computation  */}
@@ -288,6 +334,15 @@ export default function DrawerCart() {
           ) : (
             <p className="text-center">No items in cart</p>
           )}
+        </div>
+        <div className="px-8 text-white flex flex-row justify-end items-center gap-4">
+          <p>
+            {checkOutItems.length} {checkOutItems.length > 1 ? "items" : "item"}
+          </p>
+          <p>
+            grand total: &#x20B1;
+            {totalPrice.toLocaleString("en-US")}
+          </p>
         </div>
 
         {cartItems?.[0]?.user?.personalInfo && (
@@ -335,6 +390,8 @@ export default function DrawerCart() {
                     fullWidth
                     margin="normal"
                     required
+                    InputLabelProps={{ style: { color: "white" } }}
+                    InputProps={{ style: { color: "white" } }}
                   />
                   <TextField
                     name="city"
@@ -344,6 +401,8 @@ export default function DrawerCart() {
                     fullWidth
                     margin="normal"
                     required
+                    InputLabelProps={{ style: { color: "white" } }}
+                    InputProps={{ style: { color: "white" } }}
                   />
                   <TextField
                     name="region"
@@ -353,6 +412,8 @@ export default function DrawerCart() {
                     fullWidth
                     margin="normal"
                     required
+                    InputLabelProps={{ style: { color: "white" } }}
+                    InputProps={{ style: { color: "white" } }}
                   />
                   <TextField
                     name="country"
@@ -362,6 +423,8 @@ export default function DrawerCart() {
                     fullWidth
                     margin="normal"
                     required
+                    InputLabelProps={{ style: { color: "white" } }}
+                    InputProps={{ style: { color: "white" } }}
                   />
                   <TextField
                     name="zipCode"
@@ -371,6 +434,8 @@ export default function DrawerCart() {
                     fullWidth
                     margin="normal"
                     required
+                    InputLabelProps={{ style: { color: "white" } }}
+                    InputProps={{ style: { color: "white" } }}
                   />
                 </div>
               )}
@@ -381,8 +446,9 @@ export default function DrawerCart() {
           <button
             className="bg-white hover:bg-gray-300 font-bold py-2 px-4 rounded w-full text-slate-600"
             onClick={handleCheckOut}
+            disabled={loading}
           >
-            checkout
+            {loading ? "Processing..." : "Checkout"}
           </button>
         </div>
       </Box>

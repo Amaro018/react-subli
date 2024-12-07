@@ -191,14 +191,15 @@ model CartItem {
 }
 
 model Rent {
-  id         Int        @id @default(autoincrement())
-  userId     Int
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalPrice Float
-  status     String
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  items      RentItem[] // Order contains multiple OrderItems
+  id              Int        @id @default(autoincrement())
+  userId          Int
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalPrice      Float
+  status          String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  items           RentItem[] // Order contains multiple OrderItems
+  deliveryAddress String
 }
 
 model RentItem {
@@ -209,6 +210,8 @@ model RentItem {
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
   quantity         Int
   price            Float
+  startDate        DateTime
+  endDate          DateTime
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 }
