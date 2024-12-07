@@ -1,0 +1,27 @@
+/*
+  Warnings:
+
+  - Added the required column `endDate` to the `RentItem` table without a default value. This is not possible if the table is not empty.
+  - Added the required column `startDate` to the `RentItem` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- RedefineTables
+PRAGMA foreign_keys=OFF;
+CREATE TABLE "new_RentItem" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "rentId" INTEGER NOT NULL,
+    "productVariantId" INTEGER NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "price" REAL NOT NULL,
+    "startDate" DATETIME NOT NULL,
+    "endDate" DATETIME NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "RentItem_rentId_fkey" FOREIGN KEY ("rentId") REFERENCES "Rent" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "RentItem_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "ProductVariant" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+INSERT INTO "new_RentItem" ("createdAt", "id", "price", "productVariantId", "quantity", "rentId", "updatedAt") SELECT "createdAt", "id", "price", "productVariantId", "quantity", "rentId", "updatedAt" FROM "RentItem";
+DROP TABLE "RentItem";
+ALTER TABLE "new_RentItem" RENAME TO "RentItem";
+PRAGMA foreign_key_check;
+PRAGMA foreign_keys=ON;

@@ -32,7 +32,7 @@ export default function Home() {
       <Navbar currentUser={currentUser} toggleDrawer={toggleDrawer} />
       <ProductList />
       <Drawer anchor="right" open={isOpen} onClose={toggleDrawer}>
-        <DrawerCart />
+        <DrawerCart currentUser={currentUser} />
       </Drawer>
     </>
   )
