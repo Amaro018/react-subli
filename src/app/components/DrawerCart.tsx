@@ -232,7 +232,7 @@ export default function DrawerCart(props: any) {
       <Box
         sx={{
           width: 500,
-
+          height: "100vh",
           flexShrink: 0,
           "& .MuiDrawer-paper": {
             width: 250,
@@ -346,7 +346,7 @@ export default function DrawerCart(props: any) {
         </div>
 
         {cartItems?.[0]?.user?.personalInfo && (
-          <div className="flex justify-center w-full">
+          <div className="flex justify-center w-full bg-slate-600">
             <div className="text-white w-full p-4 ">
               <div className="mx-auto bg-red-600 font-bold flex justify-center">
                 <label>Address for items that is for Delivery</label>
@@ -452,12 +452,12 @@ export default function DrawerCart(props: any) {
           </button>
         </div>
       </Box>
-
+      {/* 
       <Modal open={open} onClose={handleClose}>
         <Box sx={style}>
           <CheckoutForm />
         </Box>
-      </Modal>
+      </Modal> */}
     </>
   )
 }
