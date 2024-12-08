@@ -26,7 +26,7 @@ const Navbar = ({ currentUser, toggleDrawer }) => {
   return (
     <nav className="bg-gray-800 text-white fixed top-0 z-10 w-full shadow px-24">
       <div className="container flex justify-evenly items-center px-16 py-4">
-        <h1 className="text-2xl font-bold">MyApp</h1>
+        <h1 className="text-2xl font-bold">Subli .</h1>
         {/* Hamburger Menu Button */}
         <button
           className="sm:hidden md:hidden block text-2xl focus:outline-none"
