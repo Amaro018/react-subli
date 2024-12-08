@@ -54,21 +54,26 @@ const ProductPage = ({ params }: any) => {
     setOpen(state) // Properly handle the state update
     console.log("testing")
   }
-
   const handleChangeColor = (colorId: number) => {
     setSelectedColor(colorId)
-    setSelectedSize(null)
-    setQuantity(1)
+    setSelectedSize(null) // Reset size when changing color
+    setQuantity(1) // Reset quantity
+    updateSelectedVariant(colorId, selectedSize) // Update selectedVariant
   }
 
-  // for size sana
   const handleChangeSize = (size: string) => {
     setSelectedSize(size)
-    if (selectedColor !== null && selectedSize !== null) {
-      const selectedVariant = product.variants.find(
-        (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+    updateSelectedVariant(selectedColor, size) // Update selectedVariant
+  }
+
+  const updateSelectedVariant = (colorId: number | null, size: string | null) => {
+    if (colorId !== null && size !== null) {
+      const variant = product.variants.find(
+        (variant) => variant.color.id === colorId && variant.size === size
       )
-      setSelectedVariant(selectedVariant.id)
+      setSelectedVariant(variant || null) // Update the selected variant
+    } else {
+      setSelectedVariant(null) // Reset if either is null
     }
   }
 
@@ -484,7 +489,7 @@ const ProductPage = ({ params }: any) => {
             <div className="w-2/3 mt-4 flex flex-col ">
               <p className="font-bold">Available Schedule:</p>
               <div className="w-full">
-                <CalendarEvent />
+                <CalendarEvent product={product} selectedVariant={selectedVariant} />
               </div>
             </div>
           </div>

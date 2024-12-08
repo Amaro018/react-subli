@@ -37,7 +37,7 @@ export default function DrawerCart(props: any) {
   const [loading, setLoading] = useState(false)
 
   const [createRentMutation] = useMutation(createRent)
-  const { currentUser } = props
+  const [currentUser] = useQuery(getCurrentUser, {})
   const [deleteItem] = useMutation(deleteCartItemById)
   const [cartItems, { refetch }] = useQuery(getAllCartItem, {})
   const [updateCartItem] = useMutation(updateCartByVariantId)
@@ -64,6 +64,7 @@ export default function DrawerCart(props: any) {
   })
 
   const handleNewAddressChange = (e) => {
+    console.log(currentUser, "current user", currentUser.id)
     const { name, value } = e.target
     setNewAddress((prev) => ({
       ...prev,
@@ -95,7 +96,6 @@ export default function DrawerCart(props: any) {
   }
 
   const handleCheckOut = async () => {
-    setLoading(true) // Start loading
     if (checkOutItems.length === 0) {
       alert("Please select at least one item to checkout.")
       return
@@ -162,7 +162,7 @@ export default function DrawerCart(props: any) {
     // Confirm checkout
     const confirmCheckout = window.confirm("Are you sure you want to proceed with the checkout?")
     if (!confirmCheckout) return
-
+    setLoading(true) // Start loading
     // Perform mutation
     try {
       const rent = await createRentMutation(formData)
@@ -251,6 +251,7 @@ export default function DrawerCart(props: any) {
                       type="checkbox"
                       value={item.id}
                       onChange={(e) => checkboxChange(e, item)}
+                      className="rounded-full border-2 border-white w-8 h-8 flex items-center justify-center"
                     />
                     <Image
                       src={`/uploads/products/${item.product.images[0]?.url}`}
@@ -332,23 +333,30 @@ export default function DrawerCart(props: any) {
               </div>
             ))
           ) : (
-            <p className="text-center">No items in cart</p>
+            <p className="text-center font-bold flex justify-center items-center">
+              No items in cart
+            </p>
           )}
         </div>
-        <div className="px-8 text-white flex flex-row justify-end items-center gap-4">
-          <p>
-            {checkOutItems.length} {checkOutItems.length > 1 ? "items" : "item"}
-          </p>
-          <p>
-            grand total: &#x20B1;
-            {totalPrice.toLocaleString("en-US")}
-          </p>
-        </div>
+        {cartItems && cartItems.length > 0 && (
+          <div className="px-8 text-white flex flex-row justify-end items-center gap-4">
+            <p>
+              {checkOutItems.length} {checkOutItems.length > 1 ? "items" : "item"}
+            </p>
+            <p>
+              grand total: &#x20B1;
+              {totalPrice.toLocaleString("en-US")}
+            </p>
+          </div>
+        )}
 
         {cartItems?.[0]?.user?.personalInfo && (
           <div className="flex justify-center w-full bg-slate-600">
             <div className="text-white w-full p-4 ">
-              <div className="mx-auto bg-red-600 font-bold flex justify-center">
+              <div className="mx-auto w-full text-center text-md flex justify-center">
+                <label>Strictly Cash on Delivery or Pick-up</label>
+              </div>
+              <div className="mx-auto border-b border-slate-500 w-full text-center text-lg font-bold flex justify-center">
                 <label>Address for items that is for Delivery</label>
               </div>
 
@@ -442,22 +450,18 @@ export default function DrawerCart(props: any) {
             </div>
           </div>
         )}
-        <div className="p-4 flex justify-center w-full bg-slate-600">
-          <button
-            className="bg-white hover:bg-gray-300 font-bold py-2 px-4 rounded w-full text-slate-600"
-            onClick={handleCheckOut}
-            disabled={loading}
-          >
-            {loading ? "Processing..." : "Checkout"}
-          </button>
-        </div>
+        {cartItems && cartItems.length > 0 && (
+          <div className="p-4 flex justify-center w-full bg-slate-600">
+            <button
+              className="bg-white hover:bg-gray-300 font-bold py-2 px-4 rounded w-full text-slate-600"
+              onClick={handleCheckOut}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Checkout"}
+            </button>
+          </div>
+        )}
       </Box>
-      {/* 
-      <Modal open={open} onClose={handleClose}>
-        <Box sx={style}>
-          <CheckoutForm />
-        </Box>
-      </Modal> */}
     </>
   )
 }
