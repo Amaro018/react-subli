@@ -1,4 +1,5 @@
 import { resolver } from "@blitzjs/rpc"
+import { dE } from "@fullcalendar/core/internal-common"
 import db from "db"
 import { z } from "zod"
 
@@ -7,12 +8,13 @@ export default resolver.pipe(
     z.object({
       variantId: z.number(),
       quantity: z.number().min(1),
+      deliveryMethod: z.string(),
       startDate: z.date().optional(),
       endDate: z.date().optional(),
     })
   ),
   resolver.authorize(),
-  async ({ variantId, quantity, startDate, endDate }, ctx) => {
+  async ({ variantId, quantity, startDate, deliveryMethod, endDate }, ctx) => {
     const userId = ctx.session.userId
 
     const existingCartItem = await db.cartItem.findFirst({
@@ -30,6 +32,7 @@ export default resolver.pipe(
       where: { id: existingCartItem.id },
       data: {
         quantity,
+        deliveryMethod: deliveryMethod,
         startDate,
         endDate,
       },

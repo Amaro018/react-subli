@@ -212,6 +212,7 @@ model RentItem {
   quantity         Int
   price            Float
   status           String
+  deliveryMethod   String
   startDate        DateTime
   endDate          DateTime
   createdAt        DateTime       @default(now())

@@ -55,14 +55,14 @@ const ProductPage = ({ params }: any) => {
   const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
   const [selectedSize, setSelectedSize] = React.useState<string | null>(null)
   const [selectedDelivery, setSelectedDelivery] = React.useState(
-    product?.deliveryOption === "DELIVER"
-      ? "deliver"
+    product?.deliveryOption === "DELIVERY"
+      ? "delivery"
       : product?.deliveryOption === "PICKUP"
       ? "pickup"
       : ""
   )
 
-  console.log(selectedDelivery)
+  console.log("the delivery system is :", selectedDelivery)
   const [open, setOpen] = React.useState(false)
 
   const toggleDrawer = (state: boolean) => () => {
@@ -443,10 +443,10 @@ const ProductPage = ({ params }: any) => {
                 {product.deliveryOption === "BOTH" ? (
                   <div className="flex gap-2">
                     <Button
-                      variant={selectedDelivery === "deliver" ? "contained" : "outlined"}
-                      color={selectedDelivery === "deliver" ? "primary" : "secondary"}
-                      className={selectedDelivery === "deliver" ? "border-2 border-slate-600" : ""}
-                      onClick={() => setSelectedDelivery("deliver")}
+                      variant={selectedDelivery === "delivery" ? "contained" : "outlined"}
+                      color={selectedDelivery === "delivery" ? "primary" : "secondary"}
+                      className={selectedDelivery === "delivery" ? "border-2 border-slate-600" : ""}
+                      onClick={() => setSelectedDelivery("delivery")}
                     >
                       Deliver
                     </Button>
@@ -460,12 +460,12 @@ const ProductPage = ({ params }: any) => {
                       Pickup
                     </Button>
                   </div>
-                ) : product.deliveryOption === "DELIVER" ? (
+                ) : product.deliveryOption === "DELIVERY" ? (
                   <Button
                     variant="contained"
                     color="primary"
                     className="border-2 border-slate-600"
-                    onClick={() => setSelectedDelivery("deliver")}
+                    onClick={() => setSelectedDelivery("delivery")}
                   >
                     Deliver Only
                   </Button>
