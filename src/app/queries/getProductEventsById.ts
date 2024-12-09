@@ -21,12 +21,14 @@ const getProductEventsById = resolver.pipe(
           select: {
             id: true,
             size: true,
+            quantity: true,
             color: {
               select: { name: true },
             },
             rentItems: {
               select: {
                 id: true,
+
                 rent: {
                   select: {
                     id: true,
@@ -34,6 +36,7 @@ const getProductEventsById = resolver.pipe(
                     status: true,
                   },
                 },
+                status: true,
                 quantity: true,
                 startDate: true,
                 endDate: true,

@@ -143,6 +143,7 @@ export default function DrawerCart(props: any) {
         productVariantId: item.variantId,
         price: item.variant.price,
         quantity: item.quantity,
+        status: "pending",
         startDate: item.startDate,
         endDate: item.endDate,
       }
