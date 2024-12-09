@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import React, { useEffect, useState } from "react"
-import { Box, Drawer, Modal, TextField } from "@mui/material"
+import { Box, Button, Drawer, Modal, TextField } from "@mui/material"
 import getAllCartItem from "../queries/getAllCartItem"
 import { invoke, useMutation, useQuery } from "@blitzjs/rpc"
 import updateCartByVariantId from "../mutations/updateCartByVariantId"
@@ -19,6 +19,7 @@ import getCurrentUser from "../users/queries/getCurrentUser"
 
 //the mutation for creating rent
 import createRent from "../mutations/createRent"
+import { select } from "@nextui-org/theme"
 
 const style = {
   position: "absolute" as "absolute",
@@ -44,6 +45,19 @@ export default function DrawerCart(props: any) {
   const [open, setOpen] = useState(false)
   const [checkOutItems, setCheckOutItems] = useState([])
 
+  const [selectedDelivery, setSelectedDelivery] = React.useState("")
+  const [deliveryMethods, setDeliveryMethods] = useState({})
+
+  useEffect(() => {
+    if (cartItems?.length > 0) {
+      const initialMethods = cartItems.reduce((acc, item) => {
+        acc[item.variantId] = item.deliveryMethod || "pickup" // Default to "pickup"
+        return acc
+      }, {})
+      setDeliveryMethods(initialMethods)
+    }
+  }, [cartItems])
+
   const [addressOption, setAddressOption] = useState("Home")
   const [selectedAddress, setSelectedAddress] = useState(() => {
     if (cartItems && cartItems.length > 0) {
@@ -64,7 +78,6 @@ export default function DrawerCart(props: any) {
   })
 
   const handleNewAddressChange = (e) => {
-    console.log(currentUser, "current user", currentUser.id)
     const { name, value } = e.target
     setNewAddress((prev) => ({
       ...prev,
@@ -73,6 +86,7 @@ export default function DrawerCart(props: any) {
   }
 
   const checkboxChange = (e, item) => {
+    console.log("delivery method is :", deliveryMethods)
     const checked = e.target.checked
 
     // Calculate item price based on quantity, price, and duration
@@ -144,6 +158,7 @@ export default function DrawerCart(props: any) {
         price: item.variant.price,
         quantity: item.quantity,
         status: "pending",
+        deliveryMethod: deliveryMethods[item.variantId],
         startDate: item.startDate,
         endDate: item.endDate,
       }
@@ -187,7 +202,6 @@ export default function DrawerCart(props: any) {
     const confirmDelete = confirm("Are you sure you want to delete this item?")
     if (!confirmDelete) return
 
-    console.log(id)
     try {
       const item = await deleteItem({ id })
       console.log(item)
@@ -197,34 +211,49 @@ export default function DrawerCart(props: any) {
       console.error("Failed to delete item:", error)
     }
   }
-
-  const updateQuantity = async (variantId, newQuantity) => {
+  const updateCartItemDetails = async (variantId, updates) => {
     const cartItem = cartItems.find((item) => item.variantId === variantId)
-    console.log(cartItem.variant.quantity)
     if (!cartItem) {
       console.error("Cart item not found!")
       return
     }
 
-    if (newQuantity > cartItem.variant.quantity) {
-      alert("You cannot add more than the available quantity")
-      return
-    } else if (newQuantity < 1) {
-      alert("Quantity cannot be less than 1.")
-      return
-    } else {
-      try {
-        // Update the local cart data for instant UI feedback
-        cartItem.quantity = newQuantity
+    // Destructure updates for clarity
+    const { newQuantity, deliveryMethod } = updates
 
-        // Call the mutation to update the quantity on the server
-        const updatedItem = await updateCartItem({ variantId, quantity: newQuantity })
-
-        // Update the local cache with the new quantity (optional for UI sync)
-        refetch()
-      } catch (error) {
-        console.error("Failed to update cart item:", error)
+    // Handle quantity validation
+    if (newQuantity !== undefined) {
+      if (newQuantity > cartItem.variant.quantity) {
+        alert("You cannot add more than the available quantity.")
+        return
+      } else if (newQuantity < 1) {
+        alert("Quantity cannot be less than 1.")
+        return
       }
+    }
+
+    // Update local state for delivery method
+    if (deliveryMethod !== null) {
+      setDeliveryMethods((prev) => ({
+        ...prev,
+        [variantId]: deliveryMethod,
+      }))
+      console.log(deliveryMethod)
+    }
+    try {
+      // Perform the mutation to update the cart item
+      await updateCartItem({
+        variantId,
+        quantity: newQuantity !== undefined ? newQuantity : cartItem.quantity,
+        deliveryMethod: deliveryMethod,
+        startDate: cartItem.startDate, // Pass other necessary fields if required
+        endDate: cartItem.endDate,
+      })
+
+      // Refresh the cart items
+      refetch()
+    } catch (error) {
+      console.error("Failed to update cart item:", error)
     }
   }
 
@@ -281,10 +310,39 @@ export default function DrawerCart(props: any) {
                         }).formatRange(new Date(item.startDate), new Date(item.endDate))}
                       </p>
 
+                      <div className="flex flex-col gap-2 mt-4">
+                        {item.product.deliveryOption === "BOTH" ? (
+                          <select
+                            className="bg-transparent border-2 border-white rounded-lg p-2 text-white"
+                            value={item.deliveryMethod}
+                            onChange={(e) =>
+                              updateCartItemDetails(item.variantId, {
+                                deliveryMethod: e.target.value,
+                              })
+                            } // Pass item ID and selected value
+                          >
+                            <option value="pickup" className="text-slate-600 bg-transparent">
+                              PICKUP
+                            </option>
+                            <option value="deliver" className="text-slate-600 bg-transparent">
+                              DELIVER
+                            </option>
+                          </select>
+                        ) : item.product.deliveryOption === "pickup" ? (
+                          <p>PICKUP ONLY</p>
+                        ) : (
+                          <p>DELIVER ONLY</p>
+                        )}
+                      </div>
+
                       <div className="flex my-2 py-2 justify-end">
                         <button
                           className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
-                          onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
+                          onClick={() =>
+                            updateCartItemDetails(item.variantId, {
+                              newQuantity: item.quantity - 1,
+                            })
+                          }
                         >
                           -
                         </button>
@@ -292,10 +350,19 @@ export default function DrawerCart(props: any) {
                           type="number"
                           value={item.quantity}
                           className="w-12 text-center text-slate-600"
+                          onChange={(e) =>
+                            updateCartItemDetails(item.variantId, {
+                              newQuantity: parseInt(e.target.value),
+                            })
+                          }
                         />
                         <button
                           className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
-                          onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                          onClick={() =>
+                            updateCartItemDetails(item.variantId, {
+                              newQuantity: item.quantity + 1,
+                            })
+                          }
                         >
                           +
                         </button>
