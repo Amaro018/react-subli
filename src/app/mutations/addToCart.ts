@@ -8,6 +8,7 @@ const AddToCart = z.object({
   productId: z.number(),
   variantId: z.number(),
   quantity: z.number().min(1),
+  deliveryMethod: z.string(),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
 })
@@ -15,7 +16,7 @@ const AddToCart = z.object({
 export default resolver.pipe(
   resolver.zod(AddToCart),
   resolver.authorize(), // Ensure the user is logged in
-  async ({ productId, variantId, quantity, startDate, endDate }, ctx) => {
+  async ({ productId, variantId, quantity, deliveryMethod, startDate, endDate }, ctx) => {
     const userId = ctx.session.userId
 
     // Check if the same item is already in the cart
@@ -47,6 +48,7 @@ export default resolver.pipe(
         productId,
         variantId,
         quantity,
+        deliveryMethod,
         startDate,
         endDate,
       },
