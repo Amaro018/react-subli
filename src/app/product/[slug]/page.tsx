@@ -54,16 +54,15 @@ const ProductPage = ({ params }: any) => {
 
   const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
   const [selectedSize, setSelectedSize] = React.useState<string | null>(null)
-  const [selectedDelivery, setSelectedDelivery] = React.useState<string | null>(null)
+  const [selectedDelivery, setSelectedDelivery] = React.useState(
+    product?.deliveryOption === "DELIVER"
+      ? "deliver"
+      : product?.deliveryOption === "PICKUP"
+      ? "pickup"
+      : ""
+  )
 
-  useEffect(() => {
-    if (product.deliveryOption === "DELIVER") {
-      setSelectedDelivery("deliver")
-    } else if (product.deliveryOption === "PICKUP") {
-      setSelectedDelivery("pickup")
-    }
-  }, [product.deliveryOption])
-
+  console.log(selectedDelivery)
   const [open, setOpen] = React.useState(false)
 
   const toggleDrawer = (state: boolean) => () => {
@@ -130,7 +129,7 @@ const ProductPage = ({ params }: any) => {
       userId: currentUser.id,
       productId: Number(id),
       quantity: quantity,
-      selectedDelivery: selectedDelivery,
+      deliveryMethod: String(selectedDelivery),
       variantId: selectedVariant.id, // Directly use the selected variant ID
       startDate: startDate,
       endDate: endDate,
@@ -189,7 +188,7 @@ const ProductPage = ({ params }: any) => {
       userId: currentUser.id,
       productId: Number(id),
       quantity: quantity,
-      selectedDelivery: selectedDelivery,
+      deliverMethod: selectedDelivery,
       variantId: selectedVariant.id, // Directly use the selected variant ID
       startDate: startDate,
       endDate: endDate,
