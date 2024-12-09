@@ -24,9 +24,9 @@ export default function Calendar({
     if (!selectedVariant) {
       return rents.variants.flatMap((variant: any) =>
         variant.rentItems.map((rentItem: any) => ({
-          title: `${rents.name} (${variant.size}, ${variant.color.name})`,
-          start: rentItem.startDate,
-          end: rentItem.endDate,
+          title: `${rents.name} (${variant.size}, ${variant.color.name}, ${rentItem.status})`,
+          start: new Date(rentItem.startDate).toISOString(),
+          end: new Date(rentItem.endDate).toISOString(),
         }))
       )
     }
@@ -36,11 +36,14 @@ export default function Calendar({
       (v: any) => v.id === selectedVariant.id // Match the selected variant
     )
 
-    if (!variant || !variant.rentItems) return [] // No events for the selected variant
+    if (!variant || !variant.rentItems) return []
     return variant.rentItems.map((rentItem: any) => ({
-      title: `${rents.name} (${variant.size}, ${variant.color.name})`,
-      start: rentItem.startDate,
-      end: rentItem.endDate,
+      title:
+        rentItem.status === "rendering" && rentItem.quantity === variant.quantity
+          ? "NOT AVAILABLE"
+          : rentItem.status,
+      start: new Date(rentItem.startDate).toISOString(),
+      end: new Date(rentItem.endDate).toISOString(),
     }))
   }, [rents, selectedVariant])
 
@@ -57,6 +60,14 @@ export default function Calendar({
         plugins={[dayGridPlugin]}
         initialView="dayGridMonth"
         events={events} // Pass the mapped events
+        displayEventTime={false}
+        eventContent={(arg) => {
+          return (
+            <div className="flex justify-center font-bold">
+              <p>{arg.event.title}</p>
+            </div>
+          ) // Only display the title
+        }}
       />
     </div>
   )

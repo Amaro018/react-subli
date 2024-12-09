@@ -39,6 +39,12 @@ export const Sidebar = (props: { currentUser: any }) => {
             <Link href="/shop/products">Products</Link>
           </div>
         </li>
+        <li className="text-white border-b border-slate-500 hover:border-slate-400">
+          <div className="flex gap-2 ">
+            <ShoppingBagIcon />
+            <Link href="/shop/orders">Orders</Link>
+          </div>
+        </li>
 
         <li className="text-white border-b border-slate-500 hover:border-slate-400">
           <div className="flex gap-2 ">

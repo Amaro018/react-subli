@@ -21,7 +21,14 @@ import CheckOutDrawer from "../../components/CheckOutDrawer"
 
 import getAllCartItem from "../../queries/getAllCartItem"
 import CalendarEvent from "../../components/CalendarEvent"
-import { TextField } from "@mui/material"
+import {
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Radio,
+  RadioGroup,
+  TextField,
+} from "@mui/material"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
 import DrawerCart from "../../components/DrawerCart"
 
@@ -47,6 +54,15 @@ const ProductPage = ({ params }: any) => {
 
   const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
   const [selectedSize, setSelectedSize] = React.useState<string | null>(null)
+  const [selectedDelivery, setSelectedDelivery] = React.useState<string | null>(null)
+
+  useEffect(() => {
+    if (product.deliveryOption === "DELIVER") {
+      setSelectedDelivery("deliver")
+    } else if (product.deliveryOption === "PICKUP") {
+      setSelectedDelivery("pickup")
+    }
+  }, [product.deliveryOption])
 
   const [open, setOpen] = React.useState(false)
 
@@ -114,6 +130,7 @@ const ProductPage = ({ params }: any) => {
       userId: currentUser.id,
       productId: Number(id),
       quantity: quantity,
+      selectedDelivery: selectedDelivery,
       variantId: selectedVariant.id, // Directly use the selected variant ID
       startDate: startDate,
       endDate: endDate,
@@ -172,6 +189,7 @@ const ProductPage = ({ params }: any) => {
       userId: currentUser.id,
       productId: Number(id),
       quantity: quantity,
+      selectedDelivery: selectedDelivery,
       variantId: selectedVariant.id, // Directly use the selected variant ID
       startDate: startDate,
       endDate: endDate,
@@ -419,6 +437,49 @@ const ProductPage = ({ params }: any) => {
                     )
                   })}
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-2 mt-4">
+                <p>Delivery Option:</p>
+                {product.deliveryOption === "BOTH" ? (
+                  <div className="flex gap-2">
+                    <Button
+                      variant={selectedDelivery === "deliver" ? "contained" : "outlined"}
+                      color={selectedDelivery === "deliver" ? "primary" : "secondary"}
+                      className={selectedDelivery === "deliver" ? "border-2 border-slate-600" : ""}
+                      onClick={() => setSelectedDelivery("deliver")}
+                    >
+                      Deliver
+                    </Button>
+
+                    <Button
+                      variant={selectedDelivery === "pickup" ? "contained" : "outlined"}
+                      color={selectedDelivery === "pickup" ? "secondary" : "primary"}
+                      className={selectedDelivery === "pickup" ? "border-2 border-slate-600" : ""}
+                      onClick={() => setSelectedDelivery("pickup")}
+                    >
+                      Pickup
+                    </Button>
+                  </div>
+                ) : product.deliveryOption === "DELIVER" ? (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    className="border-2 border-slate-600"
+                    onClick={() => setSelectedDelivery("deliver")}
+                  >
+                    Deliver Only
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    className="border-2 border-slate-600"
+                    onClick={() => setSelectedDelivery("pickup")}
+                  >
+                    Pickup Only
+                  </Button>
+                )}
               </div>
 
               {/* schedule */}

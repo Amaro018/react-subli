@@ -12,6 +12,7 @@ const CreateRent = z.object({
       productVariantId: z.number(),
       quantity: z.number(),
       price: z.number(),
+      status: z.string(),
       startDate: z.date(),
       endDate: z.date(),
     })
@@ -35,6 +36,7 @@ export default async function createRent(input: z.infer<typeof CreateRent>) {
           productVariantId: item.productVariantId,
           quantity: item.quantity,
           price: item.price,
+          status: "pending",
           startDate: item.startDate,
           endDate: item.endDate,
         })),
