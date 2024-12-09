@@ -9,6 +9,9 @@ import {
   CardContent,
   Grid,
   MenuItem,
+  Step,
+  StepLabel,
+  Stepper,
   TextField,
   Typography,
 } from "@mui/material"
@@ -68,19 +71,21 @@ export const OrderList = () => {
       </div>
 
       {filteredRentItems.map((rentItem) => (
-        <div key={rentItem.id} className="border rounded-lg shadow-md p-4 bg-white flex gap-4 my-2">
-          <div>
+        <div
+          key={rentItem.id}
+          className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-2"
+        >
+          <div className="">
             <Image
               src={`/uploads/products/${rentItem.productVariant.product.images[0]?.url}`}
               alt={rentItem.productVariant.product.name}
-              width={150}
+              width={250}
               height={150}
+              className="w-48 h-48 object-cover"
             />
           </div>
           <div className="flex flex-col justify-between">
             <h2 className="text-lg font-semibold">{rentItem.productVariant.product.name}</h2>
-            <p>Status: {rentItem.status}</p>
-
             <div className="flex gap-2">
               <p>
                 Rent Range:{" "}
@@ -132,12 +137,36 @@ export const OrderList = () => {
             </p>
           </div>
 
-          <div>
-            <p className="capitalize">
+          <div className="capitalize">
+            <p>
               Renter: {rentItem.rent.user.personalInfo?.firstName}{" "}
               {rentItem.rent.user.personalInfo?.middleName}{" "}
               {rentItem.rent.user.personalInfo?.lastName}
             </p>
+            <p>Email: {rentItem.rent.user.email}</p>
+            <p>Phone: {rentItem.rent.user.personalInfo?.phoneNumber}</p>
+            <p>Address: {rentItem.rent.deliveryAddress}</p>
+            <p>Delivery method : {rentItem.deliveryMethod}</p>
+          </div>
+
+          <div className="flex justify-end w-1/4">
+            <div>
+              <Stepper
+                activeStep={
+                  rentItem.status === "pending" ? 0 : rentItem.status === "rendering" ? 1 : 2
+                }
+              >
+                <Step>
+                  <StepLabel>Pending</StepLabel>
+                </Step>
+                <Step>
+                  <StepLabel>Rendering</StepLabel>
+                </Step>
+                <Step>
+                  <StepLabel>Completed</StepLabel>
+                </Step>
+              </Stepper>
+            </div>
           </div>
         </div>
       ))}

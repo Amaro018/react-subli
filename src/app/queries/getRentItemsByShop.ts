@@ -22,6 +22,7 @@ export default async function getRentItemsByShop(input: GetRentItemsByShopInput)
           id: true,
           status: true,
           totalPrice: true,
+          deliveryAddress: true,
           user: {
             include: {
               personalInfo: true,
