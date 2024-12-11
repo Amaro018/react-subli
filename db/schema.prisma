@@ -215,6 +215,17 @@ model RentItem {
   deliveryMethod   String
   startDate        DateTime
   endDate          DateTime
+  payments         Payment[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+}
+
+model Payment {
+  id         Int      @id @default(autoincrement())
+  rentItemId Int // Foreign key to RentItem
+  rentItem   RentItem @relation(fields: [rentItemId], references: [id])
+  amount     Float // Payment amount
+  status     String // Payment status (e.g., 'partial', 'paid', 'unpaid')
+  note       String? // Payment description
+  createdAt  DateTime @default(now())
 }
