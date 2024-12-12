@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getRentItemsByShop from "../../queries/getRentItemsByShop"
 import {
@@ -65,27 +65,61 @@ export const OrderList = () => {
   const [rentItems, { refetch }] = useQuery(getRentItemsByShop, { shopId })
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [selectedItem, setSelectedItem] = useState(null)
-  // const [payments] = useQuery(getPaymentByRentId, {rentItemId})
+  const [addPaymentMutation] = useMutation(addPayment)
+
+  const [amount, setAmount] = useState(0)
+  const [status, setStatus] = useState("Partial")
+  const [note, setNote] = useState("")
+
+  const [payments, setPayments] = useState([])
   // Filter the rentItems based on the selected statuss
+
   const filteredRentItems =
     statusFilter === "ALL" ? rentItems : rentItems.filter((item) => item.status === statusFilter)
 
   const [open, setOpen] = useState(false)
 
-  const handleOpen = (rentItemId: any) => {
+  const handleOpen = async (rentItem: any) => {
     setOpen(true)
-    setSelectedItem(rentItemId)
-    console.log(rentItemId)
+    setSelectedItem(rentItem)
+    console.log("Selected rent item:", rentItem)
+
+    try {
+      const payments = await getPaymentByRentId({ rentItemId: rentItem.id })
+      setPayments(payments)
+    } catch (error) {
+      console.error("Error fetching payments:", error)
+    }
   }
 
   const onClose = () => {
     setOpen(false)
+    setPayments([]) // Clear payments when the modal closes (optional)
   }
 
-  const [amount, setAmount] = useState(0)
-  const [status, setStatus] = useState("Partial")
-  const [note, setNote] = useState("")
-  const [addPaymentMutation] = useMutation(addPayment)
+  // const fetchRentItemsWithPayments = async () => {
+  //   try {
+  //     const rentItemsWithPayments = await Promise.all(
+  //       filteredRentItems.map(async (rentItem) => {
+  //         const payments = await getPaymentByRentId({ rentItemId: rentItem.id })
+  //         return {
+  //           ...rentItem,
+  //           payments,
+  //         }
+  //       })
+  //     )
+  //     console.log("ito rent items",rentItemsWithPayments)
+  //     setRentItemsWithPayments(rentItemsWithPayments)
+  //   } catch (error) {
+  //     console.error("Error fetching rent items with payments:", error)
+  //   }
+  // }
+
+  // useEffect(() => {
+  //   fetchRentItemsWithPayments()
+  // }, [shopId])
+
+  // console.log("rentItemsWithPayments",rentItemsWithPayments)
 
   const handleSubmit = async () => {
     console.log("succeed")
@@ -221,6 +255,9 @@ export const OrderList = () => {
                   </Step>
                 </Stepper>
               </div>
+              <div>
+                <p>Amount Paid :</p>
+              </div>
               <div className="mt-8">
                 <button
                   className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
@@ -285,9 +322,20 @@ export const OrderList = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td></td>
-                </tr>
+                {payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td className="border border-slate-300 p-2">
+                      {new Date(payment.createdAt).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                      })}
+                    </td>
+                    <td className="border border-slate-300 p-2">{payment.amount}</td>
+                    <td className="border border-slate-300 p-2">{payment.status}</td>
+                    <td className="border border-slate-300 p-2">{payment.note}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
