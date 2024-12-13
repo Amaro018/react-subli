@@ -23,6 +23,7 @@ import { useParams } from "next/navigation"
 import Image from "next/image"
 import addPayment from "../../mutations/addPayment"
 import getPaymentByRentId from "../../queries/getPaymentByRentId"
+import { set } from "zod"
 
 const statuses = [
   {
@@ -65,13 +66,14 @@ export const OrderList = () => {
   const [rentItems, { refetch }] = useQuery(getRentItemsByShop, { shopId })
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [selectedItem, setSelectedItem] = useState(null)
-  const [addPaymentMutation] = useMutation(addPayment)
-
   const [amount, setAmount] = useState(0)
   const [status, setStatus] = useState("Partial")
   const [note, setNote] = useState("")
 
   const [payments, setPayments] = useState([])
+  const [sumOfPayment, setSumOfPayment] = useState(0)
+  const [rentItemsWithPayments, setRentItemsWithPayments] = useState([])
+  const [addPaymentMutation] = useMutation(addPayment)
   // Filter the rentItems based on the selected statuss
 
   const filteredRentItems =
@@ -82,10 +84,13 @@ export const OrderList = () => {
   const handleOpen = async (rentItem: any) => {
     setOpen(true)
     setSelectedItem(rentItem)
-    console.log("Selected rent item:", rentItem)
+
+    console.log("selected item", selectedItem)
 
     try {
       const payments = await getPaymentByRentId({ rentItemId: rentItem.id })
+      const sum = payments.reduce((acc, p) => acc + p.amount, 0)
+      setSumOfPayment(sum)
       setPayments(payments)
     } catch (error) {
       console.error("Error fetching payments:", error)
@@ -97,38 +102,16 @@ export const OrderList = () => {
     setPayments([]) // Clear payments when the modal closes (optional)
   }
 
-  // const fetchRentItemsWithPayments = async () => {
-  //   try {
-  //     const rentItemsWithPayments = await Promise.all(
-  //       filteredRentItems.map(async (rentItem) => {
-  //         const payments = await getPaymentByRentId({ rentItemId: rentItem.id })
-  //         return {
-  //           ...rentItem,
-  //           payments,
-  //         }
-  //       })
-  //     )
-  //     console.log("ito rent items",rentItemsWithPayments)
-  //     setRentItemsWithPayments(rentItemsWithPayments)
-  //   } catch (error) {
-  //     console.error("Error fetching rent items with payments:", error)
-  //   }
-  // }
-
-  // useEffect(() => {
-  //   fetchRentItemsWithPayments()
-  // }, [shopId])
-
-  // console.log("rentItemsWithPayments",rentItemsWithPayments)
-
   const handleSubmit = async () => {
     console.log("succeed")
 
-    console.log(selectedItem.id, amount, status, note)
     try {
       await addPaymentMutation({ rentItemId: selectedItem.id, amount, status, note })
       alert("Payment added successfully!")
       onClose()
+      setAmount(0)
+      setStatus("Partial")
+      setNote("")
       refetch()
     } catch (error) {
       console.error("Error adding payment:", error)
@@ -275,7 +258,12 @@ export const OrderList = () => {
           <div className="flex flex-row justify-between items-center">
             <h2 className="font-bold ">Add Payment for Item</h2>
             <div>
-              <Button variant="contained" color="primary" onClick={handleSubmit}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSubmit}
+                disabled={selectedItem?.status === "completed"}
+              >
                 Submit
               </Button>
               <Button sx={{ ml: 2 }} variant="contained" color="warning" onClick={onClose}>
@@ -317,25 +305,49 @@ export const OrderList = () => {
                   <th className="border border-slate-300 p-2">Date</th>
 
                   <th className="border border-slate-300 p-2">Amount</th>
+                  <th className="border border-slate-300 p-2">Balance</th>
                   <th className="border border-slate-300 p-2">Status</th>
                   <th className="border border-slate-300 p-2">Note</th>
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td className="border border-slate-300 p-2">
-                      {new Date(payment.createdAt).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                      })}
+                {!payments.length ? (
+                  <tr>
+                    <td colSpan={4} className="border border-slate-300 p-2 text-center">
+                      No payments found
                     </td>
-                    <td className="border border-slate-300 p-2">{payment.amount}</td>
-                    <td className="border border-slate-300 p-2">{payment.status}</td>
-                    <td className="border border-slate-300 p-2">{payment.note}</td>
                   </tr>
-                ))}
+                ) : (
+                  payments.map((payment) => (
+                    <tr key={payment.id}>
+                      <td className="border border-slate-300 p-2">
+                        {new Date(payment.createdAt).toLocaleString("en-US", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })}
+                      </td>
+                      <td className="border border-slate-300 p-2">{payment.amount}</td>
+                      <td className="border border-slate-300 p-2">
+                        {Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
+                          Math.max(
+                            0,
+                            payment.rentItem.price *
+                              payment.rentItem.quantity *
+                              Math.ceil(
+                                (new Date(payment.rentItem.endDate).getTime() -
+                                  new Date(payment.rentItem.startDate).getTime()) /
+                                  (1000 * 60 * 60 * 24)
+                              ) -
+                              sumOfPayment
+                          )
+                        )}
+                      </td>
+                      <td className="border border-slate-300 p-2">{payment.status}</td>
+                      <td className="border border-slate-300 p-2">{payment.note}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
