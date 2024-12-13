@@ -26,6 +26,8 @@ export default resolver.pipe(
     let updateStatus = ""
     if (paymentStatus === "Partial") {
       updateStatus = "rendering"
+    } else if (paymentStatus === "canceled") {
+      updateStatus = "canceled"
     } else {
       updateStatus = "completed"
     }
