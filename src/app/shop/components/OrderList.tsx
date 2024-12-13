@@ -102,6 +102,24 @@ export const OrderList = () => {
     setPayments([]) // Clear payments when the modal closes (optional)
   }
 
+  const handleCancel = async (rentItem: any) => {
+    setSelectedItem(rentItem)
+    try {
+      await addPaymentMutation({
+        rentItemId: selectedItem.id,
+        amount: 0,
+        status: "canceled",
+        note: "Payment canceled",
+      })
+      alert("Payment canceled successfully!")
+      onClose()
+      refetch()
+    } catch (error) {
+      console.error("Error canceling payment:", error)
+      alert("Failed to cancel payment")
+    }
+  }
+
   const handleSubmit = async () => {
     console.log("succeed")
 
@@ -238,15 +256,32 @@ export const OrderList = () => {
                   </Step>
                 </Stepper>
               </div>
-              <div>
-                <p>Amount Paid :</p>
-              </div>
               <div className="mt-8">
                 <button
                   className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
                   onClick={() => handleOpen(rentItem)}
                 >
                   VIEW PAYMENT
+                </button>
+              </div>
+
+              <div>
+                <button
+                  className={`${
+                    rentItem.status === "completed"
+                      ? "bg-green-600"
+                      : rentItem.status === "canceled"
+                      ? "bg-red-600"
+                      : "bg-red-500 hover:bg-red-700"
+                  } text-white font-bold py-2 px-4 rounded w-full`}
+                  onClick={() => handleCancel(rentItem)}
+                  disabled={rentItem.status === "completed" || rentItem.status === "canceled"}
+                >
+                  {rentItem.status === "completed"
+                    ? "Order Completed"
+                    : rentItem.status === "canceled"
+                    ? "Order Canceled"
+                    : "Cancel Order"}
                 </button>
               </div>
             </div>
@@ -257,6 +292,43 @@ export const OrderList = () => {
         <Box sx={style}>
           <div className="flex flex-row justify-between items-center">
             <h2 className="font-bold ">Add Payment for Item</h2>
+            <div>
+              <p>
+                Total Price :
+                {Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
+                  Math.max(
+                    0,
+                    selectedItem?.price *
+                      selectedItem?.quantity *
+                      Math.ceil(
+                        (new Date(selectedItem?.endDate).getTime() -
+                          new Date(selectedItem?.startDate).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )
+                  )
+                )}
+              </p>
+            </div>
+
+            <div>
+              <p>
+                Remaining Balance :
+                {Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
+                  Math.max(
+                    0,
+                    selectedItem?.price *
+                      selectedItem?.quantity *
+                      Math.ceil(
+                        (new Date(selectedItem?.endDate).getTime() -
+                          new Date(selectedItem?.startDate).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      ) -
+                      sumOfPayment
+                  )
+                )}
+              </p>
+            </div>
+
             <div>
               <Button
                 variant="contained"
@@ -305,7 +377,6 @@ export const OrderList = () => {
                   <th className="border border-slate-300 p-2">Date</th>
 
                   <th className="border border-slate-300 p-2">Amount</th>
-                  <th className="border border-slate-300 p-2">Balance</th>
                   <th className="border border-slate-300 p-2">Status</th>
                   <th className="border border-slate-300 p-2">Note</th>
                 </tr>
@@ -328,21 +399,6 @@ export const OrderList = () => {
                         })}
                       </td>
                       <td className="border border-slate-300 p-2">{payment.amount}</td>
-                      <td className="border border-slate-300 p-2">
-                        {Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
-                          Math.max(
-                            0,
-                            payment.rentItem.price *
-                              payment.rentItem.quantity *
-                              Math.ceil(
-                                (new Date(payment.rentItem.endDate).getTime() -
-                                  new Date(payment.rentItem.startDate).getTime()) /
-                                  (1000 * 60 * 60 * 24)
-                              ) -
-                              sumOfPayment
-                          )
-                        )}
-                      </td>
                       <td className="border border-slate-300 p-2">{payment.status}</td>
                       <td className="border border-slate-300 p-2">{payment.note}</td>
                     </tr>
