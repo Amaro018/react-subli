@@ -87,6 +87,30 @@ export const OrderList = () => {
 
     console.log("selected item", selectedItem)
 
+    const today = new Date()
+    const endDate = new Date(rentItem?.endDate)
+    const daysPassed = Math.max(
+      0,
+      Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+    )
+    const basePrice =
+      rentItem?.price *
+      rentItem?.quantity *
+      Math.ceil(endDate.getDate() - new Date(rentItem?.startDate).getDate())
+    const additionalPrice = daysPassed * basePrice
+
+    console.log("Days passed:", additionalPrice)
+    // Associate the additionalPrice with the selectedItem
+    const updatedItem = {
+      ...rentItem,
+      additionalPrice: additionalPrice,
+      basePrice: basePrice,
+      daysPassed: daysPassed,
+    }
+
+    setSelectedItem(updatedItem) // Update the state with the modified object
+    console.log("Updated selected item", updatedItem)
+
     try {
       const payments = await getPaymentByRentId({ rentItemId: rentItem.id })
       const sum = payments.reduce((acc, p) => acc + p.amount, 0)
@@ -226,7 +250,8 @@ export const OrderList = () => {
               </p>
             </div>
 
-            <div className="capitalize">
+            <div className="capitalize flex flex-col justify-between">
+              <p className="font-semibold">Renter Details</p>
               <p>
                 Renter: {rentItem.rent.user.personalInfo?.firstName}{" "}
                 {rentItem.rent.user.personalInfo?.middleName}{" "}
@@ -238,11 +263,17 @@ export const OrderList = () => {
               <p>Delivery method : {rentItem.deliveryMethod}</p>
             </div>
 
-            <div className="flex flex-col w-1/4 gap-2">
+            <div className="flex flex-col w-1/4 gap-2 justify-between">
               <div>
                 <Stepper
                   activeStep={
-                    rentItem.status === "pending" ? 0 : rentItem.status === "rendering" ? 1 : 2
+                    rentItem.status === "pending"
+                      ? 0
+                      : rentItem.status === "rendering"
+                      ? 1
+                      : rentItem.status === "completed"
+                      ? 2
+                      : 0
                   }
                 >
                   <Step>
@@ -256,7 +287,10 @@ export const OrderList = () => {
                   </Step>
                 </Stepper>
               </div>
-              <div className="mt-8">
+              <div className="">
+                <p>Order Status: {rentItem.status}</p>
+              </div>
+              <div className="">
                 <button
                   className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
                   onClick={() => handleOpen(rentItem)}
@@ -270,15 +304,23 @@ export const OrderList = () => {
                   className={`${
                     rentItem.status === "completed"
                       ? "bg-green-600"
+                      : rentItem.status === "rendering"
+                      ? "bg-yellow-400"
                       : rentItem.status === "canceled"
                       ? "bg-red-600"
                       : "bg-red-500 hover:bg-red-700"
                   } text-white font-bold py-2 px-4 rounded w-full`}
                   onClick={() => handleCancel(rentItem)}
-                  disabled={rentItem.status === "completed" || rentItem.status === "canceled"}
+                  disabled={
+                    rentItem.status === "completed" ||
+                    rentItem.status === "canceled" ||
+                    rentItem.status === "rendering"
+                  }
                 >
                   {rentItem.status === "completed"
                     ? "Order Completed"
+                    : rentItem.status === "rendering"
+                    ? "Item on Render"
                     : rentItem.status === "canceled"
                     ? "Order Canceled"
                     : "Cancel Order"}
@@ -291,41 +333,41 @@ export const OrderList = () => {
       <Modal open={open} onClose={onClose}>
         <Box sx={style}>
           <div className="flex flex-row justify-between items-center">
-            <h2 className="font-bold ">Add Payment for Item</h2>
             <div>
               <p>
                 Total Price :
                 {Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
-                  Math.max(
-                    0,
-                    selectedItem?.price *
-                      selectedItem?.quantity *
-                      Math.ceil(
-                        (new Date(selectedItem?.endDate).getTime() -
-                          new Date(selectedItem?.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )
-                  )
+                  selectedItem?.basePrice
                 )}
               </p>
             </div>
 
-            <div>
+            <div className="flex gap-4 text-lg">
               <p>
-                Remaining Balance :
-                {Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
-                  Math.max(
-                    0,
-                    selectedItem?.price *
-                      selectedItem?.quantity *
-                      Math.ceil(
-                        (new Date(selectedItem?.endDate).getTime() -
-                          new Date(selectedItem?.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      ) -
-                      sumOfPayment
-                  )
-                )}
+                Remaining Balance :{" "}
+                {selectedItem?.status === "completed"
+                  ? "No Balance"
+                  : Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
+                      Math.max(
+                        0,
+                        selectedItem?.price *
+                          selectedItem?.quantity *
+                          Math.ceil(
+                            (new Date(selectedItem?.endDate).getTime() -
+                              new Date(selectedItem?.startDate).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          ) -
+                          sumOfPayment +
+                          selectedItem?.additionalPrice
+                      )
+                    )}
+              </p>
+
+              <p>
+                Penalty:{" "}
+                {selectedItem?.status === "completed"
+                  ? "No Penalty"
+                  : selectedItem?.additionalPrice}
               </p>
             </div>
 
