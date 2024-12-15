@@ -1,0 +1,24 @@
+// const fetchRentItemsWithPayments = async () => {
+  //   try {
+  //     const rentItemsWithPayments = await Promise.all(
+  //       filteredRentItems.map(async (rentItem) => {
+  //         const payments = await getPaymentByRentId({ rentItemId: rentItem.id })
+  //         return {
+  //           ...rentItem,
+  //           payments,
+  //         }
+  //       })
+  //     )
+  //     console.log("ito rent items",rentItemsWithPayments)
+  //     setRentItemsWithPayments(rentItemsWithPayments)
+  //   } catch (error) {
+  //     console.error("Error fetching rent items with payments:", error)
+  //   }
+  // }
+
+
+  // useEffect(() => {
+  //   fetchRentItemsWithPayments()
+  // }, [shopId])
+
+  // console.log("rentItemsWithPayments",rentItemsWithPayments)

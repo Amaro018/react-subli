@@ -32,10 +32,29 @@ export default resolver.pipe(
       updateStatus = "completed"
     }
 
+    // Update a single rentItem's status
     await db.rentItem.update({
       where: { id: rentItemId },
       data: { status: updateStatus },
     })
+
+    // Check if all rentItems for the same rentId are completed
+    const rentItem = await db.rentItem.findUnique({
+      where: { id: rentItemId },
+      select: { rentId: true },
+    })
+
+    const allCompleted = await db.rentItem.findMany({
+      where: { rentId: rentItem?.rentId, NOT: { status: "completed" } },
+    })
+
+    // If no incomplete rentItems remain, update the rent's status to "completed"
+    if (allCompleted.length === 0) {
+      await db.rent.update({
+        where: { id: rentItem?.rentId },
+        data: { status: "completed" },
+      })
+    }
 
     return payment
   }
