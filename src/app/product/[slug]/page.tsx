@@ -188,7 +188,7 @@ const ProductPage = ({ params }: any) => {
       userId: currentUser.id,
       productId: Number(id),
       quantity: quantity,
-      deliverMethod: selectedDelivery,
+      deliveryMethod: String(selectedDelivery),
       variantId: selectedVariant.id, // Directly use the selected variant ID
       startDate: startDate,
       endDate: endDate,
@@ -198,7 +198,7 @@ const ProductPage = ({ params }: any) => {
 
     try {
       await invoke(addToCart, formData)
-      alert("Successfully added to cart")
+      alert("Thanks for renting")
       refetch()
     } catch (error) {
       console.error("Error adding to cart:", error)
