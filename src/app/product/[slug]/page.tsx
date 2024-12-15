@@ -32,6 +32,9 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
 import DrawerCart from "../../components/DrawerCart"
 
+import getAllRentItems from "../../queries/getAllRentItems"
+import { start } from "repl"
+
 const ProductPage = ({ params }: any) => {
   const [currentUser, setCurrentUser] = useState<any>(null)
 
@@ -62,12 +65,12 @@ const ProductPage = ({ params }: any) => {
       : ""
   )
 
-  console.log("the delivery system is :", selectedDelivery)
+  // console.log("the delivery system is :", selectedDelivery)
   const [open, setOpen] = React.useState(false)
 
   const toggleDrawer = (state: boolean) => () => {
     setOpen(state) // Properly handle the state update
-    console.log("testing")
+    // console.log("testing")
   }
   const handleChangeColor = (colorId: number) => {
     setSelectedColor(colorId)
@@ -135,7 +138,7 @@ const ProductPage = ({ params }: any) => {
       endDate: endDate,
     }
 
-    console.log("Form Data:", formData)
+    // console.log("Form Data:", formData)
 
     try {
       await invoke(addToCart, formData)
@@ -194,7 +197,7 @@ const ProductPage = ({ params }: any) => {
       endDate: endDate,
     }
 
-    console.log("Form Data:", formData)
+    // console.log("Form Data:", formData)
 
     try {
       await invoke(addToCart, formData)
@@ -231,7 +234,7 @@ const ProductPage = ({ params }: any) => {
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
       )
       setQuantity((prev) => prev - 1)
-      console.log(selectedVariant.id)
+      // console.log(selectedVariant.id)
     }
   }
 
@@ -250,17 +253,46 @@ const ProductPage = ({ params }: any) => {
 
   const [startDate, setStartDate] = useState(null)
   const [endDate, setEndDate] = useState(null)
+  const [allRents] = useQuery(getAllRentItems, {})
 
   const handleStartDateChange = (date: any) => {
     // Convert the string to a Date object
-    const dateObject = new Date(date)
+    const selectedDateObject = new Date(date)
+
+    console.log("teh rents", allRents)
+
+    const filteredData = allRents.filter((rent) => rent.productVariantId === selectedVariant.id)
+
+    const isInRange = filteredData.some((rent) => {
+      const startDate = new Date(rent.startDate)
+      const endDate = new Date(rent.endDate)
+
+      return selectedDateObject >= startDate && selectedDateObject <= endDate
+    })
+
+    if (isInRange) {
+      console.log("Selected date is within a range!")
+      console.log(
+        "Filtered quantities:",
+        filteredData.map((item) => item.quantity)
+      )
+    } else {
+      console.log("Selected date is not within any range.")
+      // Additional logic if needed
+    }
+
+    console.log("the selected date ", selectedDateObject)
+
+    console.log("the filtered data start date", startDate)
+
+    console.log("the selected variant:", selectedVariant.quantity)
 
     // Check if the selected date is in the future
-    if (dateObject < new Date()) {
+    if (selectedDateObject < new Date()) {
       alert("Please select a future date")
       setStartDate(null) // Reset the date value to null if invalid
     } else {
-      setStartDate(dateObject) // Set the valid date
+      setStartDate(selectedDateObject) // Set the valid date
     }
   }
 
@@ -276,76 +308,6 @@ const ProductPage = ({ params }: any) => {
       setEndDate(dateObject) // Set the valid date
     }
   }
-
-  // // Drawer
-  // const DrawerList = (
-  //   <Box
-  //     sx={{
-  //       width: 400,
-  //       height: "100vh",
-  //       flexShrink: 0,
-  //       "& .MuiDrawer-paper": {
-  //         width: 250,
-  //         boxSizing: "border-box",
-  //       },
-  //     }}
-  //     role="presentation"
-  //     onClick={toggleDrawer(false)}
-  //     className="bg-slate-600"
-  //   >
-  //     <div className="p-12 text-white">
-  //       {cartItems && cartItems.length > 0 ? (
-  //         cartItems.map((item) => (
-  //           <div className="flex flex-col justify-stretch" key={item.id}>
-  //             <div>
-  //               <div className="flex items-center space-x-4">
-  //                 <Image
-  //                   src={`/uploads/products/${item.product.images[0]?.url}`}
-  //                   alt={item.product.name}
-  //                   width={50}
-  //                   height={50}
-  //                   className="w-24 h-24 object-cover"
-  //                 />
-  //                 <div className="text-sm truncate">
-  //                   <p className="text-white">{item.product.name}</p>
-  //                   <p className="text-gray-400">
-  //                     {item.variant.size} - {item.variant.color.name}
-  //                   </p>
-  //                 </div>
-  //               </div>
-  //               <p>{item.product.name}</p>
-  //               <p>{item.quantity}</p>
-  //               <p>
-  //                 {new Intl.DateTimeFormat("en-US", {
-  //                   month: "long",
-  //                   day: "2-digit",
-  //                   year: "numeric",
-  //                 }).format(new Date(item.startDate))}
-  //               </p>
-  //               <p>
-  //                 {new Intl.DateTimeFormat("en-US", {
-  //                   month: "long",
-  //                   day: "2-digit",
-  //                   year: "numeric",
-  //                 }).format(new Date(item.endDate))}
-  //               </p>
-  //               <p>{item.variant.size}</p>
-  //               <p>{item.variant.color.name}</p>
-  //               <p>{item.variant.price}</p>
-  //             </div>
-  //             <div>
-  //               <button>checkout</button>
-  //             </div>
-  //           </div>
-  //         ))
-  //       ) : (
-  //         <p className="text-center">No items in cart</p>
-  //       )}
-  //     </div>
-  //   </Box>
-  // )
-
-  // END OF DRAWER
 
   return (
     <>
