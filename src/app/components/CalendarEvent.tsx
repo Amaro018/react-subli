@@ -20,46 +20,51 @@ export default function Calendar({
   const events = useMemo(() => {
     if (!rents || !rents.variants) return []
 
-    // If no variant is selected, show events for all variants
+    // If no variant is selected, show "rendering" events for all variants
     if (!selectedVariant) {
       return rents.variants.flatMap((variant: any) =>
-        variant.rentItems.map((rentItem: any) => ({
-          title: `${rents.name} (${variant.size}, ${variant.color.name}, ${rentItem.status})`,
-          start: new Date(rentItem.startDate).toISOString(),
-          end: new Date(rentItem.endDate).toISOString(),
-        }))
+        variant.rentItems
+          .filter((rentItem: any) => rentItem.status === "rendering") // Only include items with "rendering" status
+          .map((rentItem: any) => ({
+            title: `${rents.name} (${variant.size}, ${variant.color.name}, ${rentItem.status})`,
+            start: new Date(rentItem.startDate).toISOString(),
+            end: new Date(rentItem.endDate).toISOString(),
+          }))
       )
     }
 
-    // If a variant is selected, filter events for the selected variant
+    // If a variant is selected, filter "rendering" events for the selected variant
     const variant = rents.variants.find(
       (v: any) => v.id === selectedVariant.id // Match the selected variant
     )
 
     if (!variant || !variant.rentItems) return []
-    return variant.rentItems.map((rentItem: any) => ({
-      title:
-        rentItem.status === "rendering" && rentItem.quantity === variant.quantity
-          ? "NOT AVAILABLE"
-          : rentItem.status,
-      start: new Date(rentItem.startDate).toISOString(),
-      end: new Date(rentItem.endDate).toISOString(),
-    }))
+    return variant.rentItems
+      .filter((rentItem: any) => rentItem.status === "rendering") // Only include items with "rendering" status
+      .map((rentItem: any) => ({
+        title:
+          rentItem.status === "rendering" && rentItem.quantity === variant.quantity
+            ? "NOT AVAILABLE"
+            : rentItem.status,
+        start: new Date(rentItem.startDate).toISOString(),
+        end: new Date(rentItem.endDate).toISOString(),
+      }))
   }, [rents, selectedVariant])
 
   return (
     <div>
       {selectedVariant ? (
         <h3>
-          Showing events for variant: {selectedVariant.size} - {selectedVariant.color?.name}
+          Showing "rendering" events for variant: {selectedVariant.size} -{" "}
+          {selectedVariant.color?.name}
         </h3>
       ) : (
-        <h3>Showing events for all variants</h3>
+        <h3>Showing "rendering" events for all variants</h3>
       )}
       <FullCalendar
         plugins={[dayGridPlugin]}
         initialView="dayGridMonth"
-        events={events} // Pass the mapped events
+        events={events} // Pass the filtered events
         displayEventTime={false}
         eventContent={(arg) => {
           return (
