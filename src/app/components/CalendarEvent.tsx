@@ -26,7 +26,7 @@ export default function Calendar({
         variant.rentItems
           .filter((rentItem: any) => rentItem.status === "rendering") // Only include items with "rendering" status
           .map((rentItem: any) => ({
-            title: `${rents.name} (${variant.size}, ${variant.color.name}, ${rentItem.status})`,
+            title: `${rentItem.status}`,
             start: new Date(rentItem.startDate).toISOString(),
             end: new Date(rentItem.endDate).toISOString(),
           }))

@@ -59,13 +59,9 @@ export default function DrawerCart(props: any) {
   }, [cartItems])
 
   const [addressOption, setAddressOption] = useState("Home")
-  const [selectedAddress, setSelectedAddress] = useState(() => {
-    if (cartItems && cartItems.length > 0) {
-      const { street, city, region, country, zipCode } = cartItems[0].user.personalInfo
-      return street + ", " + city + ", " + region + ", " + country + ", " + zipCode
-    }
-    return ""
-  })
+  const [selectedAddress, setSelectedAddress] = useState(
+    `${currentUser?.personalInfo?.street}, ${currentUser?.personalInfo?.city}, ${currentUser?.personalInfo?.region}, ${currentUser?.personalInfo?.country}, ${currentUser?.personalInfo?.zipCode}`
+  )
 
   const [totalPrice, setTotalPrice] = useState(0)
 

@@ -57,14 +57,19 @@ const ProductPage = ({ params }: any) => {
 
   const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
   const [selectedSize, setSelectedSize] = React.useState<string | null>(null)
+  const [quantity, setQuantity] = React.useState(0)
   const [availableQuantity, setAvailableQuantity] = React.useState(0)
   const [selectedDelivery, setSelectedDelivery] = React.useState(
     product?.deliveryOption === "DELIVERY"
       ? "delivery"
       : product?.deliveryOption === "PICKUP"
       ? "pickup"
-      : ""
+      : product?.deliveryOption === "BOTH"
+      ? "pickup"
+      : null
   )
+
+  console.log("the delivery system is :", selectedDelivery)
 
   // console.log("the delivery system is :", selectedDelivery)
   const [open, setOpen] = React.useState(false)
@@ -78,7 +83,7 @@ const ProductPage = ({ params }: any) => {
     setStartDate(null)
     setEndDate(null)
     setSelectedSize(null) // Reset size when changing color
-    setQuantity(1) // Reset quantity
+    setQuantity(0) // Reset quantity
     updateSelectedVariant(colorId, selectedSize) // Update selectedVariant
   }
 
@@ -161,7 +166,6 @@ const ProductPage = ({ params }: any) => {
       return
     }
 
-    setOpen(true)
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
       alert("Please select a color and size")
@@ -189,26 +193,37 @@ const ProductPage = ({ params }: any) => {
       return
     }
 
-    // Create formData with all the necessary details
-    const formData = {
-      userId: currentUser.id,
-      productId: Number(id),
-      quantity: quantity,
-      deliveryMethod: String(selectedDelivery),
-      variantId: selectedVariant.id, // Directly use the selected variant ID
-      startDate: startDate,
-      endDate: endDate,
+    if (quantity <= 0) {
+      alert("Quantity must be greater than 0")
+      return
     }
 
-    // console.log("Form Data:", formData)
+    if (!selectedDelivery === null) {
+      alert("Please select a delivery method")
+      return
+    } else {
+      setOpen(true)
+      // Create formData with all the necessary details
+      const formData = {
+        userId: currentUser.id,
+        productId: Number(id),
+        quantity: quantity,
+        deliveryMethod: String(selectedDelivery),
+        variantId: selectedVariant.id, // Directly use the selected variant ID
+        startDate: startDate,
+        endDate: endDate,
+      }
 
-    try {
-      await invoke(addToCart, formData)
-      alert("Thanks for renting")
-      refetch()
-    } catch (error) {
-      console.error("Error adding to cart:", error)
-      alert("Error adding to cart")
+      // console.log("Form Data:", formData)
+
+      try {
+        await invoke(addToCart, formData)
+        alert("Thanks for renting")
+        refetch()
+      } catch (error) {
+        console.error("Error adding to cart:", error)
+        alert("Error adding to cart")
+      }
     }
     // Perform your action here, like calling an API or adding to the cart
     // For example: invoke(addToCart, formData);
@@ -224,8 +239,6 @@ const ProductPage = ({ params }: any) => {
   const uniqueSizes = React.useMemo(() => {
     return Array.from(new Set(product.variants.map((variant) => variant.size)))
   }, [product])
-
-  const [quantity, setQuantity] = React.useState(0)
 
   const handleCountMinus = () => {
     if (!selectedColor || !selectedSize) {
@@ -254,8 +267,8 @@ const ProductPage = ({ params }: any) => {
     }
   }
 
-  const [startDate, setStartDate] = useState(null)
-  const [endDate, setEndDate] = useState(null)
+  const [startDate, setStartDate] = useState<Date | null>()
+  const [endDate, setEndDate] = useState<Date | null>()
   const [allRents] = useQuery(getAllRentItems, {})
 
   const handleStartDateChange = (date: any) => {
@@ -270,7 +283,8 @@ const ProductPage = ({ params }: any) => {
 
     console.log("the rents", allRents)
 
-    const filteredData = allRents.filter((rent) => rent.productVariantId === selectedVariant.id)
+    const filteredData = allRents.filter((rent) => rent.productVariantId === selectedVariant?.id)
+
     const totalQuantity = filteredData.reduce((sum, rent) => {
       const startDate = new Date(rent.startDate)
       const endDate = new Date(rent.endDate)
@@ -288,17 +302,18 @@ const ProductPage = ({ params }: any) => {
     }, 0) // Initial sum is 0
 
     console.log("the total quantity", totalQuantity)
-    setAvailableQuantity(selectedVariant.quantity - totalQuantity)
-    if (totalQuantity >= selectedVariant.quantity) {
+    setAvailableQuantity(selectedVariant?.quantity - totalQuantity)
+    if (totalQuantity >= selectedVariant?.quantity) {
       alert("item is not available at this date")
       setStartDate(null)
+      setEndDate(null)
       return
     }
-    console.log("the selected date ", selectedDateObject)
+    // console.log("the selected date ", selectedDateObject)
 
-    console.log("the filtered data start date", startDate)
+    // console.log("the filtered data start date", startDate)
 
-    console.log("the selected variant:", selectedVariant.quantity)
+    // console.log("the selected variant:", selectedVariant?.quantity)
 
     // Check if the selected date is in the future
     if (selectedDateObject < new Date()) {
@@ -311,14 +326,45 @@ const ProductPage = ({ params }: any) => {
 
   const handleEndDateChange = (date: any) => {
     // Convert the string to a Date object
-    const dateObject = new Date(date)
+    const selectedDateObject = new Date(date)
+
+    const filteredData = allRents.filter((rent) => rent.productVariantId === selectedVariant?.id)
+    const totalQuantity = filteredData.reduce((sum, rent) => {
+      const rentStartDate = new Date(rent.startDate)
+      const rentEndDate = new Date(rent.endDate)
+
+      // Check for overlap between the selected range and the rent range
+      const isOverlapping =
+        (startDate >= rentStartDate && startDate <= rentEndDate) || // User's start is within the rent range
+        (selectedDateObject >= rentStartDate && selectedDateObject <= rentEndDate) || // User's end is within the rent range
+        (startDate <= rentStartDate && selectedDateObject >= rentEndDate) // User's range completely contains the rent range
+
+      if (isOverlapping && rent.status === "rendering") {
+        // Add the quantity if there is an overlap
+        return sum + rent.quantity // Assuming each rent object has a `quantity` property
+      }
+
+      return sum
+    }, 0) // Initial sum is 0
+
+    setAvailableQuantity(selectedVariant?.quantity - totalQuantity)
+    if (totalQuantity >= selectedVariant?.quantity) {
+      alert("item is not available at this date")
+      setStartDate(null)
+      return
+    }
+    console.log("the selected date ", selectedDateObject)
+
+    console.log("the filtered data start date", startDate)
+
+    console.log("the selected variant:", selectedVariant?.quantity)
 
     // Check if the selected date is in the future
-    if (dateObject < new Date() || dateObject <= startDate) {
-      alert("please make sure that the end date is after the start date")
+    if (selectedDateObject < new Date()) {
+      alert("Please select a future date")
       setEndDate(null) // Reset the date value to null if invalid
     } else {
-      setEndDate(dateObject) // Set the valid date
+      setEndDate(selectedDateObject) // Set the valid date
     }
   }
 
