@@ -7,7 +7,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import LockIcon from "@mui/icons-material/Lock"
 import StoreIcon from "@mui/icons-material/Store"
 
-export const Sidebar = (props) => {
+export const Sidebar = (props: any) => {
   const currentUser = props.currentUser
   const router = useRouter()
 
@@ -35,7 +35,7 @@ export const Sidebar = (props) => {
         <li className="text-white border-b border-slate-500 hover:border-slate-400">
           <div className="flex gap-2 ">
             <AccountCircleIcon />
-            <Link href="/renter">Profile</Link>
+            <Link href="/renter/renter-profile">Profile</Link>
           </div>
         </li>
         <li className="text-white border-b border-slate-500 hover:border-slate-400">
