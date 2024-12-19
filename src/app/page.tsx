@@ -1,4 +1,3 @@
-"use client"
 import { invoke } from "./blitz-server"
 
 import getCurrentUser from "./users/queries/getCurrentUser"
@@ -10,30 +9,14 @@ import { Drawer } from "@mui/material"
 import React, { useEffect, useState } from "react"
 import DrawerCart from "./components/DrawerCart"
 
-export default function Home() {
-  const [currentUser, setCurrentUser] = useState<any>(null)
-
-  const getCurrentUser = async () => {
-    const user = await getUser()
-    setCurrentUser(user)
-  }
-  useEffect(() => {
-    getCurrentUser()
-  }, [])
-
-  const [isOpen, setIsOpen] = useState(false)
-
-  const toggleDrawer = () => {
-    setIsOpen(!isOpen)
-  }
+export default async function Home() {
+  // const [currentUser, setCurrentUser] = useState<any>(null)
+  const currentUser = await invoke(getCurrentUser, null)
 
   return (
     <>
-      <Navbar currentUser={currentUser} toggleDrawer={toggleDrawer} />
+      <Navbar currentUser={currentUser} />
       <ProductList />
-      <Drawer anchor="right" open={isOpen} onClose={toggleDrawer}>
-        <DrawerCart currentUser={currentUser} />
-      </Drawer>
     </>
   )
 }

@@ -6,7 +6,14 @@ import path from "path"
 interface UploadProductImageInput {
   fileName: string
   data: string // Base64 data string
-  targetDirectory: "shop-bg" | "dti" | "shop-profile" | "permit" | "tax" | "products"
+  targetDirectory:
+    | "shop-bg"
+    | "dti"
+    | "shop-profile"
+    | "permit"
+    | "tax"
+    | "products"
+    | "renter-profile"
 }
 
 export default resolver.pipe(
