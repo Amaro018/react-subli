@@ -30,6 +30,8 @@ model User {
   shop         Shop?
   cartItems    CartItem[] // Relation to CartItem
   rents        Rent[]
+  reviews      Review[] // Relation to reviews
+  reports      Report[] // Relation to reports
 }
 
 model Shop {
@@ -133,6 +135,8 @@ model Product {
   category       Category         @relation("ProductCategories", fields: [categoryid], references: [id]) // Many-to-Many relationship with Category
   categoryid     Int
   cartItems      CartItem[]
+  reviews        Review[] // Relation to reviews
+  reports        Report[] // Relation to reports
 }
 
 model ProductVariant {
@@ -215,6 +219,8 @@ model RentItem {
   deliveryMethod   String
   startDate        DateTime
   endDate          DateTime
+  isReviewed       Boolean        @default(false)
+  reviews          Review[]
   payments         Payment[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -228,4 +234,33 @@ model Payment {
   status     String // Payment status (e.g., 'partial', 'paid', 'unpaid')
   note       String? // Payment description
   createdAt  DateTime @default(now())
+}
+
+// Review Model
+model Review {
+  id         Int      @id @default(autoincrement())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  Int // Foreign key to Product
+  user       User     @relation(fields: [userId], references: [id]) // Optional relation to User
+  userId     Int // Foreign key to User (optional)
+  rentItem   RentItem @relation(fields: [rentItemId], references: [id], onDelete: Cascade)
+  rentItemId Int // Foreign key to RentItem
+  rating     Int // Rating (e.g., 1 to 5 stars)
+  comment    String? // Optional comment
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Report Model
+model Report {
+  id          Int      @id @default(autoincrement())
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   Int // Foreign key to Product
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  reason      String // Reason for the report
+  description String? // Detailed description of the issue
+  status      String   @default("pending") // Status of the report (e.g., 'pending', 'resolved', 'rejected')
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

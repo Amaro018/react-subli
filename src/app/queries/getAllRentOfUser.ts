@@ -13,6 +13,7 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
 
       items: {
         include: {
+          reviews: true,
           productVariant: {
             include: {
               color: true,
@@ -26,7 +27,9 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
               }, // Include related product details
             },
           },
-          payments: true, // Include payments for each RentItem
+          payments: true,
+
+          // Include payments for each RentItem
         },
       },
     },
