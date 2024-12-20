@@ -238,17 +238,18 @@ model Payment {
 
 // Review Model
 model Review {
-  id         Int      @id @default(autoincrement())
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId  Int // Foreign key to Product
-  user       User     @relation(fields: [userId], references: [id]) // Optional relation to User
-  userId     Int // Foreign key to User (optional)
-  rentItem   RentItem @relation(fields: [rentItemId], references: [id], onDelete: Cascade)
-  rentItemId Int // Foreign key to RentItem
-  rating     Int // Rating (e.g., 1 to 5 stars)
-  comment    String? // Optional comment
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   Int // Foreign key to Product
+  user        User     @relation(fields: [userId], references: [id]) // Optional relation to User
+  userId      Int // Foreign key to User (optional)
+  rentItem    RentItem @relation(fields: [rentItemId], references: [id], onDelete: Cascade)
+  rentItemId  Int // Foreign key to RentItem
+  rating      Int // Rating (e.g., 1 to 5 stars)
+  comment     String? // Optional comment
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Report Model

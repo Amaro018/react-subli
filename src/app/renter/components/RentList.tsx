@@ -12,6 +12,7 @@ import {
   Modal,
   Box,
   TextField,
+  Checkbox,
 } from "@mui/material"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
@@ -52,6 +53,7 @@ export const RentList: React.FC = (props: any) => {
 
   const [selectedItem, setSelectedItem] = React.useState<number | null>(null)
   const [comment, setComment] = useState("")
+  const [anonymous, setAnonymous] = useState(false)
 
   const handleCloseReview = () => {
     setOpenReview(false)
@@ -84,6 +86,7 @@ export const RentList: React.FC = (props: any) => {
           rentItemId: selectedItem?.id,
           rating: review,
           userId: currentUser.id,
+          anonymous: anonymous,
           comment: comment,
         })
         console.log("Review submitted successfully:", review)
@@ -292,8 +295,13 @@ export const RentList: React.FC = (props: any) => {
             />
           </Typography>
 
-          <div className="flex flex-row gap-2">
-            <input type="checkbox" id="anonymous" name="anonymous" />
+          <div className="flex flex-row gap-2 items-center">
+            <Checkbox
+              id="anonymous"
+              name="anonymous"
+              checked={anonymous}
+              onChange={(e) => setAnonymous(e.target.checked)}
+            />
             <label htmlFor="anonymous">Rate as an Anonymous</label>
           </div>
 
