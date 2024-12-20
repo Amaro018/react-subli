@@ -229,11 +229,11 @@ export const RentList: React.FC = (props: any) => {
                         <p>Review</p>
                         <Rating
                           name="review"
-                          value={item.productVariant.product.review?.rating}
+                          value={item.reviews[0]?.rating}
                           precision={0.25}
                           readOnly
                         />
-                        <p>{item.productVariant.product.review?.rating}</p>
+                        <p>{item.reviews[0]?.rating}</p>
                       </div>
                     </div>
                   ) : (

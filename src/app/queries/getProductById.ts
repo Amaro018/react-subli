@@ -5,6 +5,15 @@ export default async function getProductById({ id }: { id: number }) {
     where: { id },
     include: {
       category: true,
+      reviews: {
+        include: {
+          user: {
+            include: {
+              personalInfo: true, // Include the associated user's personal info
+            },
+          },
+        },
+      },
       variants: {
         include: {
           color: true, // Include the associated Color for each variant
@@ -19,4 +28,3 @@ export default async function getProductById({ id }: { id: number }) {
 
   return product
 }
-
