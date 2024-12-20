@@ -373,7 +373,7 @@ const ProductPage = ({ params }: any) => {
     <>
       <Navbar currentUser={currentUser} toggleDrawer={toggleDrawer(true)} />
       <div className="w-full flex flex-col md:flex-row lg:flex-row p-24">
-        <div className="w-1/2">
+        <div className="w-1/2 h-full my-auto">
           <ProductCarousel product={product} />
         </div>
         <div className="w-full bg-gray-50 p-12">
