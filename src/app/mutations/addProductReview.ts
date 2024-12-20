@@ -8,6 +8,7 @@ const CreateReview = z.object({
   rentItemId: z.number(), // Add rentItemId
   userId: z.number().optional(), // User can be optional
   rating: z.number().min(1).max(5), // Rating must be between 1 and 5
+  anonymous: z.boolean().optional(),
   comment: z.string().optional(),
 })
 
@@ -32,6 +33,7 @@ const createReview = resolver.pipe(
         rentItemId: input.rentItemId,
         userId: input.userId || null, // Handle optional user
         rating: input.rating,
+        isAnonymous: input.anonymous,
         comment: input.comment || null,
       },
     })

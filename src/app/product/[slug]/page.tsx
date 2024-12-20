@@ -622,7 +622,11 @@ const ProductPage = ({ params }: any) => {
               <div key={review.id} className="mb-4 border-b border-gray-300">
                 <div className="flex flex-row items-center gap-2">
                   <Image
-                    src={`/uploads/renter-profile/${review.user.profileImage}`}
+                    src={
+                      review.isAnonymous
+                        ? "/uploads/renter-profile/default.png"
+                        : `/uploads/renter-profile/${review.user.profileImage}`
+                    }
                     alt="Profile Picture"
                     width={50}
                     height={50}
@@ -630,7 +634,9 @@ const ProductPage = ({ params }: any) => {
                   />
                   <div className="flex flex-col">
                     <p className="font-bold">
-                      {review.user.personalInfo.firstName} {review.user.personalInfo.lastName}
+                      {review.isAnonymous
+                        ? "Anonymous"
+                        : `${review.user.personalInfo?.firstName} ${review.user.personalInfo?.middleName} ${review.user.personalInfo?.lastName}`}
                     </p>
 
                     <p>
