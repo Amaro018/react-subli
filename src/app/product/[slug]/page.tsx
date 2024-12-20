@@ -27,6 +27,7 @@ import {
   FormLabel,
   Radio,
   RadioGroup,
+  Rating,
   TextField,
 } from "@mui/material"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
@@ -609,6 +610,42 @@ const ProductPage = ({ params }: any) => {
                     Rent
                     </button> */}
           </div>
+        </div>
+      </div>
+      <div className="w-full flex flex-col px-24">
+        <div className="mb-8">
+          <p className="font-bold text-2xl">Product Reviews</p>
+        </div>
+        <div className="flex flex-col">
+          {product.reviews.length > 0 ? (
+            product.reviews.map((review) => (
+              <div key={review.id} className="mb-4 border-b border-gray-300">
+                <div className="flex flex-row items-center gap-2">
+                  <Image
+                    src={`/uploads/renter-profile/${review.user.profileImage}`}
+                    alt="Profile Picture"
+                    width={50}
+                    height={50}
+                    className={`rounded-full`}
+                  />
+                  <div className="flex flex-col">
+                    <p className="font-bold">
+                      {review.user.personalInfo.firstName} {review.user.personalInfo.lastName}
+                    </p>
+
+                    <p>
+                      <Rating name="review" value={review.rating} precision={0.25} readOnly />
+                    </p>
+                  </div>
+                </div>
+                <div className="my-2">
+                  <p>{review.comment}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>No reviews yet</p>
+          )}
         </div>
       </div>
     </>
