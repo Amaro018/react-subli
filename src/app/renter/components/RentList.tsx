@@ -13,6 +13,10 @@ import {
   Box,
   TextField,
   Checkbox,
+  FormControl,
+  MenuItem,
+  InputLabel,
+  Select,
 } from "@mui/material"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
@@ -54,6 +58,22 @@ export const RentList: React.FC = (props: any) => {
   const [selectedItem, setSelectedItem] = React.useState<number | null>(null)
   const [comment, setComment] = useState("")
   const [anonymous, setAnonymous] = useState(false)
+
+  //this is for filtering and sorting data
+  const [filterStatus, setFilterStatus] = useState("all") // Filter status
+  const [currentPage, setCurrentPage] = useState(1) // Current page
+  const itemsPerPage = 3
+
+  // Filter rents by status
+  const filteredRents =
+    filterStatus === "all" ? userRents : userRents.filter((rent) => rent.status === filterStatus)
+
+  // Paginate rents
+  const totalPages = Math.ceil(filteredRents.length / itemsPerPage)
+  const paginatedRents = filteredRents.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   const handleCloseReview = () => {
     setOpenReview(false)
@@ -100,8 +120,23 @@ export const RentList: React.FC = (props: any) => {
 
   return (
     <div className="w-full">
-      {userRents.length == 0 && <p className="text-center">No rents</p>}
-      {userRents.map((rent) => (
+      {/* Filter Dropdown */}
+      <FormControl fullWidth margin="normal">
+        <InputLabel>Status</InputLabel>
+        <Select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          label="Status"
+        >
+          <MenuItem value="all">All</MenuItem>
+          <MenuItem value="Pending">Pending</MenuItem>
+          <MenuItem value="completed">Completed</MenuItem>
+        </Select>
+      </FormControl>
+
+      {/* Rent List */}
+      {paginatedRents.length === 0 && <p className="text-center">No rents</p>}
+      {paginatedRents.map((rent) => (
         <div
           className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-2 w-full"
           key={rent.id}
@@ -311,6 +346,24 @@ export const RentList: React.FC = (props: any) => {
           </div>
         </Box>
       </Modal>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center my-4 items-center">
+          <Button disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => prev - 1)}>
+            Previous
+          </Button>
+          <Typography className="mx-2">
+            Page {currentPage} of {totalPages}
+          </Typography>
+          <Button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
