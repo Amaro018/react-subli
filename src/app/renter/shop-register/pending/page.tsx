@@ -3,8 +3,11 @@ import { invoke } from "./../../../blitz-server"
 import getCurrentUser from "../../../users/queries/getCurrentUser"
 
 import { Sidebar } from "../../components/sidebar"
+import { ShopPendingRegistration } from "../../components/ShopPendingRegistration"
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
+
+  console.log(currentUser)
 
   return (
     <div>
@@ -16,7 +19,7 @@ export default async function Page() {
           <Sidebar currentUser={currentUser} />
         </div>
         <div className="p-16 mt-8 w-full">
-          <p>pending pa umalat ka</p>
+          <ShopPendingRegistration currentUser={currentUser} />
         </div>
       </main>
     </div>
