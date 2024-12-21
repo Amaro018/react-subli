@@ -22,7 +22,9 @@ export const Sidebar = (props: any) => {
         <li className="text-white border-b border-slate-500 hover:border-slate-400">
           <div className="flex gap-2 ">
             <DashboardIcon />
-            <Link href="/renter">Dashboard</Link>
+            <Link href="/renter" className="capitalize">
+              {currentUser.personalInfo.firstName}
+            </Link>
           </div>
         </li>
         <li className="text-white border-b border-slate-500 hover:border-slate-400">
@@ -42,12 +44,12 @@ export const Sidebar = (props: any) => {
           {currentUser.isShopRegistered ? (
             <div className="flex gap-2">
               {currentUser.shop.status === "pending" ? (
-                <div className="flex gap-2">
-                  <LockIcon />
-                  <button disabled className="cursor-not-allowed">
-                    Shop
-                  </button>
-                </div>
+                <Link href={"/renter/shop-register/pending"}>
+                  <div className="flex gap-2">
+                    <LockIcon />
+                    <button className="text-xs">Shop Registration</button>
+                  </div>
+                </Link>
               ) : (
                 <Link href={"/shop"}>
                   <div className="flex gap-2">

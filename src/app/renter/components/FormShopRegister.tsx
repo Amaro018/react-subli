@@ -198,37 +198,33 @@ const FormShopRegister = (props: { currentUser: any }) => {
   })
 
   const handleNext = () => {
-    // if (
-    //   formData.shopName == "" ||
-    //   formData.email == "" ||
-    //   formData.street == "" ||
-    //   formData.city == "" ||
-    //   formData.region == "" ||
-    //   formData.country == "" ||
-    //   formData.zipCode == "" ||
-    //   formData.contactNumber == ""
-    // ) {
-    //   alert("Please fill all the fields")
-    // } else if (!formData.email.includes("@") || !formData.email.includes(".")) {
-    //   alert("Please enter a valid email address")
-    // } else {
-    if (activeStep < steps.length - 1) {
+    if (
+      formData.shopName == "" ||
+      formData.email == "" ||
+      formData.street == "" ||
+      formData.city == "" ||
+      formData.region == "" ||
+      formData.country == "" ||
+      formData.zipCode == "" ||
+      formData.contact == ""
+    ) {
+      alert("Please fill all the fields")
+    } else if (!formData.email.includes("@") || !formData.email.includes(".")) {
+      alert("Please enter a valid email address")
+    } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
-    // }
   }
 
   const handleNextNext = () => {
-    // if (
-    //   formData.documentDTI == null ||
-    //   formData.documentPermit == null ||
-    //   formData.documentTax == null
-    // ) {
-    //   alert("Please fill all the fields")
-    // } else {
-    if (activeStep < steps.length - 1) {
+    if (
+      formData.documentDTI == null ||
+      formData.documentPermit == null ||
+      formData.documentTax == null
+    ) {
+      alert("Please fill all the fields")
+    } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
-      // }
     }
   }
 
