@@ -33,6 +33,9 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
         },
       },
     },
+    orderBy: {
+      createdAt: "desc",
+    },
   })
 
   return userRents
