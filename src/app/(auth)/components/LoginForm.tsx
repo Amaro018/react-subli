@@ -33,7 +33,7 @@ export const LoginForm = (props: LoginFormProps) => {
             if (next) {
               router.push(next as Route)
             } else {
-              router.push("/")
+              router.push("/verify-email")
             }
           } catch (error: any) {
             if (error instanceof AuthenticationError) {

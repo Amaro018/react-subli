@@ -23,6 +23,7 @@ model User {
   isShopMode       Boolean   @default(false)
   isShopRegistered Boolean   @default(false)
   profileImage     String?
+  emailVerified    Boolean   @default(false) // Add this field
   tokens           Token[]
   sessions         Session[]
 

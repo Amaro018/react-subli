@@ -6,6 +6,28 @@ import { Sidebar } from "./components/sidebar"
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
 
+  if (!currentUser) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p>You need to log in to access this page.</p>
+      </div>
+    )
+  }
+
+  if (!currentUser?.emailVerified) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold">Verify Your Account</h1>
+          <p className="text-gray-600 mt-2">
+            Please verify your email address to access this page. Check your email inbox for the
+            verification link.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-4">
