@@ -2,11 +2,14 @@
 import { useMutation } from "@blitzjs/rpc"
 import { useState, useEffect } from "react"
 import verifyEmail from "./../mutations/verifyEmail"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
+import { Box, CircularProgress } from "@mui/material"
 
 const VerifyEmailPage = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
-  const searchParams = useSearchParams() // Use useSearchParams to get query parameters
+  const [countdown, setCountdown] = useState(5) // Timer starts at 5 seconds
+  const searchParams = useSearchParams() // Get query parameters
+  const router = useRouter() // Initialize the router
   const [verifyEmailMutation] = useMutation(verifyEmail)
 
   useEffect(() => {
@@ -21,7 +24,7 @@ const VerifyEmailPage = () => {
 
       try {
         // Call the mutation to verify the email with the token
-        await verifyEmailMutation(token)
+        await verifyEmailMutation({ token })
         setStatus("success")
       } catch (error) {
         setStatus("error")
@@ -31,16 +34,62 @@ const VerifyEmailPage = () => {
     verify()
   }, [searchParams]) // Trigger the effect when search parameters change
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+
+    // Start countdown if the status is "success"
+    if (status === "success") {
+      interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval) // Clear interval when countdown ends
+            router.push("/") // Redirect to homepage
+            return 0
+          }
+          return prev - 1 // Decrease countdown by 1
+        })
+      }, 1000) // Update every second
+    }
+
+    return () => clearInterval(interval) // Cleanup on component unmount
+  }, [status, router])
+
   // Render different messages based on the verification status
   if (status === "loading") {
-    return <p>Verifying your email...</p>
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress size={100} />
+      </Box>
+    )
   }
 
   if (status === "success") {
-    return <h1>Email successfully verified!</h1>
+    return (
+      <div style={{ textAlign: "center", marginTop: "50px" }}>
+        <h1>🎉 Email Verified Successfully!</h1>
+        <p>
+          Thank you for verifying your email. Redirecting to the homepage in {countdown} seconds...
+        </p>
+      </div>
+    )
   }
 
-  return <h1>Failed to verify email. Please check the link.</h1>
+  return (
+    <div style={{ textAlign: "center", marginTop: "50px" }}>
+      <h1>⚠️ Email Verification Failed</h1>
+      <p>
+        The verification link is invalid or has expired. Please try signing up again or contact
+        support.
+      </p>
+    </div>
+  )
 }
 
 export default VerifyEmailPage
