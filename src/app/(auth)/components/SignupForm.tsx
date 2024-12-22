@@ -68,11 +68,14 @@ export const SignupForm = (props: SignupFormProps) => {
               required
             />
             <LabeledTextField
-              name="birthDate"
               label="Date of Birth"
+              name="birthDate"
               placeholder="Date of Birth"
               type="date"
               required
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
             <div className="flex gap-2">
               <LabeledTextField
@@ -112,16 +115,16 @@ export const SignupForm = (props: SignupFormProps) => {
       ),
     },
 
-    {
-      label: "Create an Ad",
-      content: (
-        <Typography>
-          Try out different ad text to see what brings in the most customers, and learn how to
-          enhance your ads using features like ad extensions. If you run into any problems with your
-          ads, find out how to tell if e running and how to resolve approval issues.
-        </Typography>
-      ),
-    },
+    // {
+    //   label: "Create an Ad",
+    //   content: (
+    //     <Typography>
+    //       Try out different ad text to see what brings in the most customers, and learn how to
+    //       enhance your ads using features like ad extensions. If you run into any problems with your
+    //       ads, find out how to tell if e running and how to resolve approval issues.
+    //     </Typography>
+    //   ),
+    // },
   ]
 
   const [signupMutation] = useMutation(signup)

@@ -18,12 +18,11 @@ export const LoginForm = (props: LoginFormProps) => {
   const [loginMutation] = useMutation(login)
   const router = useRouter()
   const next = useSearchParams()?.get("next")
+
   return (
     <>
-      <h1>Login</h1>
-
       <Form
-        submitText="Login"
+        id="login-form"
         schema={Login}
         initialValues={{ email: "", password: "" }}
         onSubmit={async (values) => {
@@ -33,7 +32,7 @@ export const LoginForm = (props: LoginFormProps) => {
             if (next) {
               router.push(next as Route)
             } else {
-              router.push("/verify-email")
+              router.push("/")
             }
           } catch (error: any) {
             if (error instanceof AuthenticationError) {
@@ -46,17 +45,29 @@ export const LoginForm = (props: LoginFormProps) => {
             }
           }
         }}
+        className="flex flex-col gap-4 w-1/4 border p-4 shadow-md rounded-lg"
       >
         <LabeledTextField name="email" label="Email" placeholder="Email" />
         <LabeledTextField name="password" label="Password" placeholder="Password" type="password" />
         <div>
           <Link href={"/forgot-password"}>Forgot your password?</Link>
         </div>
-      </Form>
 
-      <div style={{ marginTop: "1rem" }}>
-        Or <Link href="/signup">Sign Up</Link>
-      </div>
+        {/* Submit button inside the Form */}
+        <div className="flex flex-row gap-4 w-full">
+          <button
+            type="submit"
+            className="bg-green-400 text-white px-4 py-2 rounded-lg hover:bg-green-600 w-full"
+          >
+            Login
+          </button>
+          <Link href="/signup" className="w-full">
+            <button className="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-800 w-full">
+              Sign Up
+            </button>
+          </Link>
+        </div>
+      </Form>
     </>
   )
 }
