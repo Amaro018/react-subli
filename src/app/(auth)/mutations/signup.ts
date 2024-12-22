@@ -1,5 +1,9 @@
 import db from "db"
 import { SecurePassword } from "@blitzjs/auth/secure-password"
+import { generateToken, hash256 } from "@blitzjs/auth"
+import { sendEmail } from "src/app/utils/mailer"
+
+const EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS = 24
 
 export default async function signup(
   input: {
@@ -29,6 +33,7 @@ export default async function signup(
       data: {
         email: input.email,
         hashedPassword,
+        emailVerified: false, // User starts unverified
         personalInfo: {
           create: {
             firstName: input.firstName,
@@ -46,10 +51,41 @@ export default async function signup(
       },
     })
 
-    // Create a session for the user
+    // Generate the email verification token
+    const token = generateToken()
+    const hashedToken = hash256(token)
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS)
+
+    // Save the verification token in the database
+    await db.token.create({
+      data: {
+        user: { connect: { id: user.id } },
+        type: "EMAIL_VERIFICATION",
+        hashedToken,
+        expiresAt,
+        sentTo: user.email,
+      },
+    })
+
+    // Send the email verification email
+    const verificationUrl = `${process.env.APP_URL}/verify-email?token=${token}`
+    const emailSubject = "Verify Your Email Address"
+    const emailHtml = `
+      <h1>Welcome to Our App!</h1>
+      <p>Hello ${input.firstName},</p>
+      <p>Thank you for signing up! Please verify your email address by clicking the link below:</p>
+      <a href="${verificationUrl}">${verificationUrl}</a>
+      <p>This link will expire in ${EMAIL_VERIFICATION_TOKEN_EXPIRATION_HOURS} hours.</p>
+    `
+
+    await sendEmail(user.email, emailSubject, emailHtml)
+
+    // Create a session for the user but prevent access to restricted routes until email is verified
     await blitzContext.session.$create({
       userId: user.id,
       role: user.role,
+      emailVerified: false,
     })
 
     return { userId: blitzContext.session.userId, ...user }

@@ -123,9 +123,9 @@ export default function RenterProfile(props: any) {
           <Image
             src={`/${profileImage}`}
             alt={currentUser.profileImage}
-            width={400}
-            height={600}
-            className="rounded-lg"
+            width={200}
+            height={200}
+            className="rounded-full object-cover aspect-square"
           />
           <div>
             <Button variant="contained" color="primary" onClick={handleClick} className="w-full">

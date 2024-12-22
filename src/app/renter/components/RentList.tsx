@@ -364,6 +364,8 @@ export const RentList: React.FC = (props: any) => {
           </Button>
         </div>
       )}
+
+      <button onClick={() => console.log(currentUser)}>click me</button>
     </div>
   )
 }
