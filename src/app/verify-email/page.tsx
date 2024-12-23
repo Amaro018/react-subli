@@ -7,9 +7,9 @@ import { Box, CircularProgress } from "@mui/material"
 
 const VerifyEmailPage = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
-  const [countdown, setCountdown] = useState(5) // Timer starts at 5 seconds
-  const searchParams = useSearchParams() // Get query parameters
-  const router = useRouter() // Initialize the router
+  const [countdown, setCountdown] = useState(5)
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [verifyEmailMutation] = useMutation(verifyEmail)
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const VerifyEmailPage = () => {
 
       try {
         // Call the mutation to verify the email with the token
-        await verifyEmailMutation({ token })
+        await verifyEmailMutation(token as string)
         setStatus("success")
       } catch (error) {
         setStatus("error")
