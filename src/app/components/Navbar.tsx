@@ -85,7 +85,7 @@ const Navbar = ({ currentUser }) => {
               </>
             )}
 
-            <li>
+            <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
               <div>
                 {!currentUser ? null : (
                   <div className="relative">

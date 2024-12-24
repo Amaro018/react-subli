@@ -4,7 +4,11 @@ import db from "db"
 export default resolver.pipe(async () => {
   const products = await db.product.findMany({
     include: {
-      variants: true,
+      variants: {
+        include: {
+          color: true, // Include the associated Color for each variant
+        },
+      },
       shop: true,
       category: true,
 
