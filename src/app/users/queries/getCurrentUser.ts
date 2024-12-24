@@ -6,6 +6,8 @@ export default async function getCurrentUser(_: null, ctx: Ctx) {
   const user = await db.user.findFirst({
     where: { id: ctx.session.userId },
     include: {
+      sessions: true,
+      tokens: true,
       personalInfo: true,
       shop: true,
       cartItems: true,

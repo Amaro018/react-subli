@@ -10,6 +10,7 @@ const Navbar = ({ currentUser }) => {
   //  const currentUser = props.currentUser
   //  const {toggleDrawer} = props
   const [isOpen, setIsOpen] = useState(false)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [cartItems] = useQuery(getAllCartItem, null)
 
   const toggleMenu = () => {
@@ -17,13 +18,13 @@ const Navbar = ({ currentUser }) => {
   }
 
   const toggleDrawer = () => {
-    setIsOpen(!isOpen)
+    setIsDrawerOpen(!isDrawerOpen)
   }
 
   return (
     <>
       <nav className="bg-gray-800 text-white fixed top-0 z-10 w-full shadow px-24">
-        <div className="container flex justify-evenly items-center px-16 py-4">
+        <div className="flex justify-between items-center px-16 py-4">
           <h1 className="text-2xl font-bold">Subli .</h1>
           {/* Hamburger Menu Button */}
           <button
@@ -83,20 +84,25 @@ const Navbar = ({ currentUser }) => {
                 </li>
               </>
             )}
+
+            <li>
+              <div>
+                {!currentUser ? null : (
+                  <div className="relative">
+                    <button onClick={toggleDrawer}>
+                      <ShoppingBagIcon />
+                    </button>
+                    <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                      {cartItems?.length || 0}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </li>
           </ul>
-          <div>
-            <div className="relative">
-              <button onClick={toggleDrawer}>
-                <ShoppingBagIcon />
-              </button>
-              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                {cartItems?.length || 0}
-              </span>
-            </div>
-          </div>
         </div>
       </nav>
-      <Drawer anchor="right" open={isOpen} onClose={toggleDrawer}>
+      <Drawer anchor="right" open={isDrawerOpen} onClose={toggleDrawer}>
         <DrawerCart />
       </Drawer>
     </>
