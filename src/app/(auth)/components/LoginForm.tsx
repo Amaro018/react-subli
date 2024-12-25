@@ -27,9 +27,12 @@ export const LoginForm = (props: LoginFormProps) => {
         initialValues={{ email: "", password: "" }}
         onSubmit={async (values) => {
           try {
-            await loginMutation(values)
+            const user = await loginMutation(values)
+            console.log("values", values)
             router.refresh()
-            if (next) {
+            if (user.role === "ADMIN") {
+              router.push("/admin")
+            } else if (next) {
               router.push(next as Route)
             } else {
               router.push("/")
