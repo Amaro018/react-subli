@@ -7,7 +7,6 @@ export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
   return (
     <div>
-      <Navbar currentUser={currentUser} />
       <main className="flex flex-row gap-2">
         <div className="w-64 ">
           <Sidebar currentUser={currentUser} />

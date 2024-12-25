@@ -15,6 +15,7 @@ const seed = async () => {
     await db.user.create({
       data: {
         email: "admin@admin.com",
+        emailVerified: true,
         isAdmin: true,
         isShopMode: false,
         isShopRegistered: false,
