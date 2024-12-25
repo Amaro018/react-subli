@@ -13,7 +13,7 @@ export function ResetPasswordForm() {
   const [resetPasswordMutation, { isSuccess }] = useMutation(resetPassword)
 
   return (
-    <div>
+    <div className="flex flex-col gap-4 w-1/4 border p-4 shadow-md rounded-lg">
       <h1>Set a New Password</h1>
 
       {isSuccess ? (
