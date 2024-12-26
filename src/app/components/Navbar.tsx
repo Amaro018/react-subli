@@ -84,21 +84,24 @@ const Navbar = ({ currentUser }) => {
                 </li>
               </>
             )}
-
-            <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-              <div>
-                {!currentUser ? null : (
-                  <div className="relative">
-                    <button onClick={toggleDrawer}>
-                      <ShoppingBagIcon />
-                    </button>
-                    <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                      {cartItems?.length || 0}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </li>
+            {currentUser?.emailVerified ? (
+              <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
+                <div>
+                  {!currentUser ? null : (
+                    <div className="relative">
+                      <button onClick={toggleDrawer}>
+                        <ShoppingBagIcon />
+                      </button>
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                        {cartItems?.length || 0}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ) : (
+              ""
+            )}
           </ul>
         </div>
       </nav>

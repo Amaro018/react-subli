@@ -7,13 +7,14 @@ const UpdateShopStatus = z.object({
   shopId: z.number(), // ID of the shop
   documentType: z.enum(["DTI", "PERMIT", "TAX_CLEARANCE"]),
   status: z.enum(["pending", "approved", "rejected"]),
+  shopUserId: z.number(),
 })
 
 // Mutation to update shop status
 export default resolver.pipe(
   resolver.zod(UpdateShopStatus),
   resolver.authorize(), // Ensure user is authorized
-  async ({ shopId, documentType, status }) => {
+  async ({ shopId, documentType, status, shopUserId }) => {
     // Map document types to corresponding fields
     const fieldMapping = {
       DTI: "dtiStatus",
@@ -47,7 +48,7 @@ export default resolver.pipe(
       })
 
       const finalUpdatedUser = await db.user.update({
-        where: { id: shopId },
+        where: { id: shopUserId },
         data: {
           isShopMode: true,
         },
