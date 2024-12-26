@@ -8,12 +8,11 @@ export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
   return (
     <div className="w-full">
-      <Navbar currentUser={currentUser} />
       <main className="flex flex-row gap-2 ">
         <div className="w-64 ">
           <Sidebar currentUser={currentUser} />
         </div>
-        <div className="py-24 w-full px-8">
+        <div className="p-16 w-full">
           <ShopList />
         </div>
       </main>
