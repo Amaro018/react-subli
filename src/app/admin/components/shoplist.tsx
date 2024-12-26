@@ -39,11 +39,13 @@ export default function ShopList() {
   const handleUpdateStatus = async (documentType: string, status: string) => {
     try {
       const updatedShop = await updateStatusMutation({
-        shopId: selectedShop.id,
+        shopId: selectedShop?.id,
         documentType,
         status,
+        shopUserId: selectedShop?.userId,
       })
-      handleClose()
+      refetch()
+      setSelectedShop(updatedShop)
       alert(`Successfully updated to ${status}`)
 
       console.log(updatedShop)
@@ -71,77 +73,85 @@ export default function ShopList() {
             </tr>
           </thead>
           <tbody>
-            {shops.map((shop) => (
-              <tr key={shop.id} className="">
-                <td className="border border-slate-300 p-2 text-center">{shop.shopName}</td>
-                <td className="border border-slate-300 p-2 text-center">
-                  {shop.street}, {shop.city}, {shop.region}, {shop.country}
-                </td>
-                <td className="border border-slate-300 p-2 text-center">{shop.contact}</td>
+            {shops.length > 0 ? (
+              shops.map((shop) => (
+                <tr key={shop.id} className="">
+                  <td className="border border-slate-300 p-2 text-center">{shop.shopName}</td>
+                  <td className="border border-slate-300 p-2 text-center">
+                    {shop.street}, {shop.city}, {shop.region}, {shop.country}
+                  </td>
+                  <td className="border border-slate-300 p-2 text-center">{shop.contact}</td>
 
-                <td className="border border-slate-300 p-2 text-center">
-                  {(() => {
-                    switch (shop.dtiStatus) {
-                      case "pending":
-                        return <PendingIcon className="text-yellow-500" />
-                      case "approved":
-                        return <CheckCircleIcon className="text-green-500" />
-                      case "rejected":
-                        return <CancelIcon className="text-red-500" />
-                    }
-                  })()}
-                </td>
-                <td className="border border-slate-300 p-2 text-center">
-                  {(() => {
-                    switch (shop.permitStatus) {
-                      case "pending":
-                        return <PendingIcon className="text-yellow-500" />
-                      case "approved":
-                        return <CheckCircleIcon className="text-green-500" />
-                      case "rejected":
-                        return <CancelIcon className="text-red-500" />
-                    }
-                  })()}
-                </td>
-                <td className="border border-slate-300 p-2 text-center">
-                  {(() => {
-                    switch (shop.taxStatus) {
-                      case "pending":
-                        return <PendingIcon className="text-yellow-500" />
-                      case "approved":
-                        return <CheckCircleIcon className="text-green-500" />
-                      case "rejected":
-                        return <CancelIcon className="text-red-500" />
-                    }
-                  })()}
-                </td>
-                <td className="border border-slate-300 p-2 text-center">
-                  {(() => {
-                    switch (shop.status) {
-                      case "pending":
-                        return <PendingIcon className="text-yellow-500" />
-                      case "approved":
-                        return <CheckCircleIcon className="text-green-500" />
-                      case "rejected":
-                        return <CancelIcon className="text-red-500" />
-                    }
-                  })()}
-                </td>
-                <td className="border border-slate-300 p-2 text-center">
-                  <div className="flex flex-row gap-2 justify-center">
-                    <button
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                      onClick={() => handleOpen(shop)}
-                    >
-                      View Documents
-                    </button>
-                    <button className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                      Ban
-                    </button>
-                  </div>
+                  <td className="border border-slate-300 p-2 text-center">
+                    {(() => {
+                      switch (shop.dtiStatus) {
+                        case "pending":
+                          return <PendingIcon className="text-yellow-500" />
+                        case "approved":
+                          return <CheckCircleIcon className="text-green-500" />
+                        case "rejected":
+                          return <CancelIcon className="text-red-500" />
+                      }
+                    })()}
+                  </td>
+                  <td className="border border-slate-300 p-2 text-center">
+                    {(() => {
+                      switch (shop.permitStatus) {
+                        case "pending":
+                          return <PendingIcon className="text-yellow-500" />
+                        case "approved":
+                          return <CheckCircleIcon className="text-green-500" />
+                        case "rejected":
+                          return <CancelIcon className="text-red-500" />
+                      }
+                    })()}
+                  </td>
+                  <td className="border border-slate-300 p-2 text-center">
+                    {(() => {
+                      switch (shop.taxStatus) {
+                        case "pending":
+                          return <PendingIcon className="text-yellow-500" />
+                        case "approved":
+                          return <CheckCircleIcon className="text-green-500" />
+                        case "rejected":
+                          return <CancelIcon className="text-red-500" />
+                      }
+                    })()}
+                  </td>
+                  <td className="border border-slate-300 p-2 text-center">
+                    {(() => {
+                      switch (shop.status) {
+                        case "pending":
+                          return <PendingIcon className="text-yellow-500" />
+                        case "approved":
+                          return <CheckCircleIcon className="text-green-500" />
+                        case "rejected":
+                          return <CancelIcon className="text-red-500" />
+                      }
+                    })()}
+                  </td>
+                  <td className="border border-slate-300 p-2 text-center">
+                    <div className="flex flex-row gap-2 justify-center">
+                      <button
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                        onClick={() => handleOpen(shop)}
+                      >
+                        View Documents
+                      </button>
+                      <button className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                        Ban
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="text-center text-2xl font-bold p-4">
+                  NO DATA
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

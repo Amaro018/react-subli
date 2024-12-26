@@ -30,12 +30,14 @@ export default async function Page() {
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="fixed mb-4 z-50">
         <Navbar currentUser={currentUser} />
       </div>
       <main className="flex flex-row gap-2">
         <div className="w-64 ">
-          <Sidebar currentUser={currentUser} />
+          <div className="relative z-0">
+            <Sidebar currentUser={currentUser} />
+          </div>
         </div>
         <div className="p-16 mt-8 w-full">
           <RentList currentUser={currentUser} />
