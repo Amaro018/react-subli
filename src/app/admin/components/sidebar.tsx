@@ -6,6 +6,9 @@ import ShoppingBagIcon from "@mui/icons-material/ShoppingBag"
 import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import LockIcon from "@mui/icons-material/Lock"
 import StoreIcon from "@mui/icons-material/Store"
+import { Logout } from "@mui/icons-material"
+import { LogoutButton } from "../../(auth)/components/LogoutButton"
+import LogoutIcon from "@mui/icons-material/Logout"
 
 export const Sidebar = (props: { currentUser: any }) => {
   const currentUser = props.currentUser
@@ -32,6 +35,12 @@ export const Sidebar = (props: { currentUser: any }) => {
           <div className="flex gap-2 ">
             <AccountCircleIcon />
             <Link href="/renter">Profile</Link>
+          </div>
+        </li>
+        <li className="text-white border-b border-slate-500 hover:border-slate-400">
+          <div className="flex gap-2 ">
+            <LogoutIcon sx={{ transform: "scaleX(-1)" }} />
+            <LogoutButton />
           </div>
         </li>
       </ul>
