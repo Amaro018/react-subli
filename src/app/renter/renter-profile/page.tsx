@@ -19,11 +19,11 @@ export default async function Page() {
 
   return (
     <div>
-      <div className="flex mb-4">
+      <div className="fixed mb-4 z-50">
         <Navbar currentUser={currentUser} />
       </div>
       <main className="flex flex-row gap-2">
-        <div className="w-64">
+        <div className="w-64 z-0">
           <Sidebar currentUser={currentUser} />
         </div>
         <div className="w-full my-16 p-8">
