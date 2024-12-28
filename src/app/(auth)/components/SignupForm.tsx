@@ -17,24 +17,168 @@ import {
   TextField,
 } from "@mui/material"
 import { Signup } from "../validations"
+import checkEmail from "../../mutations/checkEmail"
+import { ZodError } from "zod"
 
 type SignupFormProps = {
   onSuccess?: () => void
 }
 
 export const SignupForm = (props: SignupFormProps) => {
+  const [checkEmailMutation] = useMutation(checkEmail)
+  const [errors, setErrors] = useState({ email: "", password: "", success: "" })
+  const [successMessage, setSuccessMessage] = useState("")
+
+  const [formValues, setFormValues] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+    middleName: "",
+    birthDate: "",
+    street: "",
+    city: "",
+    region: "",
+    country: "",
+    zipCode: "",
+  })
+
+  const handleEmailChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const email = event.target.value
+
+    // Update form values
+    setFormValues({
+      ...formValues,
+      [event.target.name]: email,
+    })
+
+    if (!email) {
+      setErrors({ ...errors, email: "Email is required." })
+      setSuccessMessage("")
+      return // Exit early if email is empty
+    }
+    // Basic client-side email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setErrors({ ...errors, email: "Not a valid email." })
+      setSuccessMessage("")
+      return // Exit early if the email is invalid
+    }
+
+    try {
+      // Call the email-checking mutation
+      const response = await checkEmailMutation({ email })
+
+      if (response.success) {
+        console.log(response, "ok no problem")
+        setErrors({ ...errors, email: "" })
+        setSuccessMessage(response.message)
+      } else {
+        console.log(response, "error")
+        setSuccessMessage("")
+        setErrors({ ...errors, email: response.message })
+      }
+    } catch (error) {
+      console.error("Error checking email:", error)
+      setSuccessMessage("")
+    }
+  }
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFormValues({
+      ...formValues,
+      [event.target.name]: event.target.value,
+    })
+
+    if (event.target.name === "password") {
+      const password = event.target.value
+
+      if (!password) {
+        setErrors((prev) => ({
+          ...prev,
+          password: "Password is required.",
+        }))
+        return
+      }
+
+      if (password.length < 10) {
+        setErrors((prev) => ({
+          ...prev,
+          password: "Password must be at least 10 characters.",
+        }))
+        return
+      }
+
+      try {
+        // Validate the password using your zod schema
+        Signup.parse({ password })
+
+        // Clear any previous password error if validation passes
+        setErrors((prev) => ({
+          ...prev,
+          password: "password is valid",
+        }))
+        console.log("password is valid")
+        return
+      } catch (error) {
+        if (error instanceof ZodError) {
+          // Extract and display the first password validation error
+          const passwordError = error.errors.find((err) => err.path.includes("password"))
+          if (passwordError) {
+            setErrors((prev) => ({
+              ...prev,
+              password: passwordError.message,
+            }))
+          } else {
+            setErrors((prev) => ({
+              ...prev,
+              password: "",
+            }))
+          }
+          console.log(passwordError)
+        } else {
+          // Handle unexpected errors
+          console.error("Unexpected error during password validation:", error)
+          setErrors((prev) => ({
+            ...prev,
+            password: "An unexpected error occurred.",
+          }))
+        }
+      }
+    }
+    console.log(formValues, "form values")
+  }
+
   const steps = [
     {
       label: "Account Credentials",
       content: (
         <>
-          <LabeledTextField name="email" label="Email" placeholder="Email" required />
+          <LabeledTextField
+            name="email"
+            label="Email"
+            placeholder="Email"
+            value={formValues.email}
+            onChange={handleEmailChange}
+            error={!!errors.email}
+            helperText={errors.email}
+            className=""
+          />
+          {successMessage && <p className="text-green-500 text-xs italic my-2">{successMessage}</p>}
+
           <LabeledTextField
             name="password"
             label="Password"
             placeholder="Password"
             type="password"
+            value={formValues.password}
+            onChange={handleChange}
+            error={!!errors.password}
+            helperText={errors.password}
             required
+            className="mt-4"
           />
         </>
       ),
@@ -50,13 +194,23 @@ export const SignupForm = (props: SignupFormProps) => {
                 label="First Name"
                 placeholder="Enter your first name"
                 type="text"
+                onChange={handleChange}
+                value={formValues.firstName}
               />
-              <LabeledTextField name="middleName" label="Middle Name" placeholder="Middle Name" />
+              <LabeledTextField
+                name="middleName"
+                label="Middle Name"
+                placeholder="Middle Name"
+                onChange={handleChange}
+                value={formValues.middleName}
+              />
               <LabeledTextField
                 name="lastName"
                 label="Last Name"
                 placeholder="Last Name"
                 required
+                onChange={handleChange}
+                value={formValues.lastName}
               />
             </div>
 
@@ -66,6 +220,8 @@ export const SignupForm = (props: SignupFormProps) => {
               placeholder="Contact Number"
               type="text"
               required
+              onChange={handleChange}
+              value={formValues.phoneNumber}
             />
             <LabeledTextField
               label="Date of Birth"
@@ -73,6 +229,8 @@ export const SignupForm = (props: SignupFormProps) => {
               placeholder="Date of Birth"
               type="date"
               required
+              onChange={handleChange}
+              value={formValues.birthDate}
               InputLabelProps={{
                 shrink: true,
               }}
@@ -83,9 +241,19 @@ export const SignupForm = (props: SignupFormProps) => {
                 label="Street"
                 placeholder="Street"
                 type="text"
+                onChange={handleChange}
+                value={formValues.street}
                 required
               />
-              <LabeledTextField name="city" label="City" placeholder="City" type="text" required />
+              <LabeledTextField
+                name="city"
+                label="City"
+                placeholder="City"
+                type="text"
+                required
+                onChange={handleChange}
+                value={formValues.city}
+              />
             </div>
             <div className="flex gap-2">
               <LabeledTextField
@@ -94,6 +262,8 @@ export const SignupForm = (props: SignupFormProps) => {
                 placeholder="Region"
                 type="text"
                 required
+                onChange={handleChange}
+                value={formValues.region}
               />
               <LabeledTextField
                 name="country"
@@ -101,6 +271,8 @@ export const SignupForm = (props: SignupFormProps) => {
                 placeholder="Country"
                 type="text"
                 required
+                onChange={handleChange}
+                value={formValues.country}
               />
             </div>
             <LabeledTextField
@@ -109,6 +281,8 @@ export const SignupForm = (props: SignupFormProps) => {
               placeholder="Zipcode"
               type="text"
               required
+              onChange={handleChange}
+              value={formValues.zipCode}
             />
           </div>
         </>
@@ -131,8 +305,38 @@ export const SignupForm = (props: SignupFormProps) => {
   const router = useRouter()
   const [activeStep, setActiveStep] = useState(0)
 
-  const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1)
+  const handleNext = async () => {
+    if (activeStep === 0) {
+      if (successMessage === "The email is available" && errors.password === "") {
+        console.log("PASOK KANA ALRIGTH")
+        console.log(successMessage)
+        setActiveStep((prevActiveStep) => prevActiveStep + 1)
+      } else if (errors.password !== "") {
+        console.log(errors.password)
+        alert("Please enter a valid password")
+      } else {
+        console.log(successMessage)
+        console.log(errors.email)
+        alert("Please enter a valid email")
+      }
+    } else {
+      if (
+        formValues.firstName === "" ||
+        formValues.middleName === "" ||
+        formValues.lastName === "" ||
+        formValues.birthDate === "" ||
+        formValues.phoneNumber === "" ||
+        formValues.street === "" ||
+        formValues.city === "" ||
+        formValues.region === "" ||
+        formValues.country === "" ||
+        formValues.zipCode === ""
+      ) {
+        alert("Please fill out all the required fields")
+      } else {
+        setActiveStep((prevActiveStep) => prevActiveStep + 1)
+      }
+    }
   }
 
   const handleBack = () => {
@@ -143,21 +347,21 @@ export const SignupForm = (props: SignupFormProps) => {
     setActiveStep(0)
   }
 
-  const handleSubmit = async (values: any) => {
-    console.log(values)
+  const handleSubmit = async () => {
     try {
-      // Handle birthDate as a string and convert to Date object
-      const birthDate = values.birthDate ? new Date(values.birthDate) : new Date()
+      const birthDate = formValues.birthDate ? new Date(formValues.birthDate) : new Date()
+      // Call the signup mutation with formValues directly
+      await signupMutation({ ...formValues, birthDate: birthDate })
 
-      await signupMutation({
-        ...values,
-        birthDate: birthDate,
-      })
+      // Trigger success callback and navigate
       props.onSuccess?.()
       router.push("/")
       alert("Signup successful!")
     } catch (error: any) {
-      return { [FORM_ERROR]: error.toString() }
+      console.error("Signup error:", error)
+
+      // Handle the error and display it appropriately
+      alert(error.message || "An unexpected error occurred.")
     }
   }
 
@@ -214,7 +418,7 @@ export const SignupForm = (props: SignupFormProps) => {
               <Button onClick={handleReset} sx={{ mt: 1, mr: 1 }}>
                 Reset
               </Button>
-              <Button type="submit" variant="contained" sx={{ mt: 1 }}>
+              <Button type="submit" onClick={handleSubmit} variant="contained" sx={{ mt: 1 }}>
                 Register
               </Button>
             </Paper>
