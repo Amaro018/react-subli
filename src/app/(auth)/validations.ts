@@ -7,8 +7,13 @@ export const email = z
 
 export const password = z
   .string()
-  .min(10)
-  .max(100)
+  .min(10, "Password must be at least 10 characters long.")
+  .max(100, "Password must be at most 100 characters long.")
+  .refine((str) => /[A-Z]/.test(str), "Password must contain at least one uppercase letter.")
+  .refine(
+    (str) => /[!@#$%^&*(),.?":{}|<>]/.test(str),
+    "Password must contain at least one special symbol."
+  )
   .transform((str) => str.trim())
 
 export const Signup = z.object({
