@@ -91,7 +91,7 @@ export const OrderList = () => {
     const endDate = new Date(rentItem?.endDate)
     const daysPassed = Math.max(
       0,
-      Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+      Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24)+1)
     )
     const basePrice =
       rentItem?.price *
@@ -212,7 +212,7 @@ export const OrderList = () => {
                   {Math.ceil(
                     (new Date(rentItem.endDate).getTime() -
                       new Date(rentItem.startDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
+                      (1000 * 60 * 60 * 24)+1
                   )}{" "}
                   days)
                 </p>
@@ -244,7 +244,7 @@ export const OrderList = () => {
                     Math.ceil(
                       (new Date(rentItem.endDate).getTime() -
                         new Date(rentItem.startDate).getTime()) /
-                        (1000 * 60 * 60 * 24)
+                        (1000 * 60 * 60 * 24)+1
                     )
                 )}
               </p>
@@ -355,7 +355,7 @@ export const OrderList = () => {
                           Math.ceil(
                             (new Date(selectedItem?.endDate).getTime() -
                               new Date(selectedItem?.startDate).getTime()) /
-                              (1000 * 60 * 60 * 24)
+                              (1000 * 60 * 60 * 24)+1
                           ) -
                           sumOfPayment +
                           selectedItem?.additionalPrice
