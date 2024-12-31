@@ -203,7 +203,7 @@ export const RentList: React.FC = (props: any) => {
                       - (
                       {Math.ceil(
                         (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
+                          (1000 * 60 * 60 * 24)+1
                       )}{" "}
                       days)
                     </p>
@@ -218,7 +218,7 @@ export const RentList: React.FC = (props: any) => {
                           Math.ceil(
                             (new Date(item.endDate).getTime() -
                               new Date(item.startDate).getTime()) /
-                              (1000 * 60 * 60 * 24)
+                              (1000 * 60 * 60 * 24)+1
                           ) *
                           item.quantity
                         ).toLocaleString("en-PH")}
@@ -252,7 +252,7 @@ export const RentList: React.FC = (props: any) => {
                           Math.ceil(
                             (new Date(item.endDate).getTime() -
                               new Date(item.startDate).getTime()) /
-                              (1000 * 60 * 60 * 24)
+                              (1000 * 60 * 60 * 24)+1
                           ) *
                           item.quantity -
                           totalPayment +
