@@ -12,7 +12,7 @@ export default function ProductList() {
   // State for filtering, searching, and pagination
   const [filterCategory, setFilterCategory] = useState("Categories") // Category filter
   const [searchTerm, setSearchTerm] = useState("") // Search input
-  const [priceRange, setPriceRange] = useState([1, 10000]) // Price range
+  const [priceRange, setPriceRange] = useState([0, 10000]) // Price range
   const [filterColor, setFilterColor] = useState("") // Color filter
   const [currentPage, setCurrentPage] = useState(1) // Current page
   const itemsPerPage = 50
@@ -45,7 +45,7 @@ export default function ProductList() {
 
       // Check price range filter
       const matchesPriceRange = product.variants.some(
-        (variant) => variant.price >= priceRange[1] && variant.price <= priceRange[1]
+        (variant) => variant.price >= priceRange[0] && variant.price <= priceRange[1]
       )
 
       // Check search term filter
@@ -117,7 +117,7 @@ export default function ProductList() {
                 value={priceRange}
                 onChange={(e, newValue) => setPriceRange(newValue)}
                 valueLabelDisplay="auto"
-                min={1}
+                min={0}
                 max={10000}
               />
               <TextField
