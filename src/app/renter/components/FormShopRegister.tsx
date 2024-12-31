@@ -15,8 +15,11 @@ import { useState } from "react"
 import createShop from "../../mutations/createShop"
 import uploadShopBg from "../../mutations/uploadShopBg"
 import { useMutation } from "@blitzjs/rpc"
+import { useRouter } from "next/navigation"
 
 const FormShopRegister = (props: { currentUser: any }) => {
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
   const [createShopMutation] = useMutation(createShop)
   const currentUser = props.currentUser
@@ -240,12 +243,15 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    setLoading(true)
     console.log(formData)
 
     try {
       const newShop = await createShopMutation(formData)
       console.log("Shop created successfully:", newShop)
+      router.push("/renter/shop-register/pending")
       alert("Shop registered successfully!")
+      setLoading(false)
     } catch (error) {
       console.error("Error creating shop:", error)
       alert("Failed to register shop. Please try again.")
@@ -493,8 +499,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
               <Button variant="contained" onClick={handleBack}>
                 Back
               </Button>
-              <Button variant="contained" color="primary" onClick={handleSubmit}>
-                Submit
+              <Button variant="contained" color="primary" onClick={handleSubmit} disabled={loading}>
+                {loading ? "Registering..." : "Submit"}
               </Button>
             </div>
           </div>

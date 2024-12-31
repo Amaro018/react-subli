@@ -23,9 +23,9 @@ export const Sidebar = (props: any) => {
           <li className="flex flex-col justify-center items-center">
             <Image
               src={
-                currentUser.profileImage
-                  ? `/uploads/renter-profile/${currentUser.profileImage}`
-                  : "/uploads/renter-profile/default.png"
+                currentUser.profileImage === null
+                  ? "/uploads/renter-profile/default.png"
+                  : `/uploads/renter-profile/${currentUser.profileImage}`
               }
               alt=""
               width={100}
