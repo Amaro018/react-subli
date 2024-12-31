@@ -35,6 +35,7 @@ import DrawerCart from "../../components/DrawerCart"
 
 import getAllRentItems from "../../queries/getAllRentItems"
 import { start } from "repl"
+import Footer from "../../components/Footer"
 
 const ProductPage = ({ params }: any) => {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -650,9 +651,14 @@ const ProductPage = ({ params }: any) => {
               </div>
             ))
           ) : (
-            <p>No reviews yet</p>
+            <div className="py-8">
+              <p>No reviews yet</p>
+            </div>
           )}
         </div>
+      </div>
+      <div>
+        <Footer />
       </div>
     </>
   )
