@@ -2,7 +2,7 @@ import { Sidebar } from "./components/sidebar"
 import { invoke } from "./../blitz-server"
 import getCurrentUser from "./../users/queries/getCurrentUser"
 import CreateProductForm from "./components/CreateProductForm"
-
+import ShopCards from "./components/ShopCards"
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
   return (
@@ -10,7 +10,9 @@ export default async function Page() {
       <div className="relative">
         <Sidebar currentUser={currentUser} />
       </div>
-      <div className="ml-36 p-16">hi</div>
+      <div className="ml-36 p-16">
+      <ShopCards />
+      </div>
     </div>
   )
 }
