@@ -7,6 +7,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import LockIcon from "@mui/icons-material/Lock"
 import StoreIcon from "@mui/icons-material/Store"
 import Image from "next/image"
+import InventoryIcon from "@mui/icons-material/Inventory"
 
 export const Sidebar = (props: { currentUser: any }) => {
   const currentUser = props.currentUser
@@ -35,7 +36,7 @@ export const Sidebar = (props: { currentUser: any }) => {
         </li>
         <li className="text-white border-b border-slate-500 hover:border-slate-400">
           <div className="flex gap-2 ">
-            <ShoppingBagIcon />
+            <InventoryIcon />
             <Link href="/shop/products">Products</Link>
           </div>
         </li>

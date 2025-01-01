@@ -8,6 +8,7 @@ import ProductList from "./components/ProductList"
 import { Drawer } from "@mui/material"
 import React, { useEffect, useState } from "react"
 import DrawerCart from "./components/DrawerCart"
+import Footer from "./components/Footer"
 
 export default async function Home() {
   // const [currentUser, setCurrentUser] = useState<any>(null)
@@ -16,7 +17,10 @@ export default async function Home() {
   return (
     <>
       <Navbar currentUser={currentUser} />
-      <ProductList />
+      <div className="h-full">
+        <ProductList />
+      </div>
+      <Footer />
     </>
   )
 }
