@@ -10,8 +10,8 @@ export default async function Page() {
       <div className="relative">
         <Sidebar currentUser={currentUser} />
       </div>
-      <div className="ml-36 p-16">
-      <ShopCards />
+      <div className="ml-36 p-16 w-full">
+        <ShopCards />
       </div>
     </div>
   )

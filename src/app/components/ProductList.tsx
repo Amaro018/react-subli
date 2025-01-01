@@ -169,7 +169,7 @@ export default function ProductList() {
                         alt={product.name}
                         width={200}
                         height={200}
-                        className="object-contain h-full"
+                        className="object-contain"
                       />
                     </div>
 
