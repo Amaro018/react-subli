@@ -162,7 +162,7 @@ const ProductList = (props) => {
             maxHeight: "calc(100vh - 200px)",
           }}
         >
-          <CreateProductForm currentUser={currentUser} />
+          <CreateProductForm currentUser={currentUser} handleClose={handleClose} />
         </Box>
       </Modal>
     </>

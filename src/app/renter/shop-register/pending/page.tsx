@@ -4,10 +4,16 @@ import getCurrentUser from "../../../users/queries/getCurrentUser"
 
 import { Sidebar } from "../../components/sidebar"
 import { ShopPendingRegistration } from "../../components/ShopPendingRegistration"
+import ErrorMessage from "../../components/ErrorMessage"
+
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
 
   console.log(currentUser)
+
+  if (currentUser?.isShopRegistered) {
+    return <ErrorMessage message="You already have a shop registered" title="Already registered" />
+  }
 
   return (
     <div>

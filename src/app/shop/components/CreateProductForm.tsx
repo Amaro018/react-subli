@@ -8,7 +8,11 @@ import { MenuItem, TextField } from "@mui/material"
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
 import uploadShopBg from "../../mutations/uploadShopBg"
 import createProduct from "../../mutations/createProduct"
-const CreateProductForm = (props: { currentUser: any }) => {
+import { useRouter } from "next/navigation"
+const CreateProductForm = (props: { currentUser: any; handleClose: () => void }) => {
+  const router = useRouter()
+  const { handleClose } = props
+  const [loading, setLoading] = useState(false)
   const currentUser = props.currentUser
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
   const [formData, setFormData] = useState({
@@ -87,10 +91,14 @@ const CreateProductForm = (props: { currentUser: any }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    setLoading(true)
+
     try {
       const product = await createProduct(formData)
       console.log("Product created:", product)
       alert("Product created successfully!")
+      handleClose()
+      setLoading(false)
     } catch (error) {
       console.error("Error creating product:", error)
       alert("Failed to create product!")
@@ -253,8 +261,8 @@ const CreateProductForm = (props: { currentUser: any }) => {
       </div>
 
       {/* Submit Button */}
-      <button type="submit" className="bg-green-500 text-white p-2 rounded">
-        Create Product
+      <button type="submit" className="bg-green-500 text-white p-2 rounded" disabled={loading}>
+        {loading ? "Creating..." : "Create Product"}
       </button>
     </form>
   )
