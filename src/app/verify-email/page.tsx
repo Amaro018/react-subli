@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import verifyEmail from "./../mutations/verifyEmail"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Box, CircularProgress } from "@mui/material"
-
+import Link from "next/link"
 const VerifyEmailPage = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
-  const [countdown, setCountdown] = useState(5)
+  const [countdown, setCountdown] = useState(30)
   const searchParams = useSearchParams()
   const router = useRouter()
   const [verifyEmailMutation] = useMutation(verifyEmail)
@@ -77,6 +77,7 @@ const VerifyEmailPage = () => {
         <p>
           Thank you for verifying your email. Redirecting to the homepage in {countdown} seconds...
         </p>
+        <Link href="/">or click here to go to the homepage</Link>
       </div>
     )
   }
