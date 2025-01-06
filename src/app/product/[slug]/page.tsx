@@ -373,7 +373,7 @@ const ProductPage = ({ params }: any) => {
   return (
     <>
       <Navbar currentUser={currentUser} />
-      <div className="w-full flex flex-col md:flex-row lg:flex-row p-24">
+      <div className="w-full flex flex-col md:flex-row lg:flex-row px-4 py-12">
         <div className="w-1/2 h-full my-auto">
           <ProductCarousel product={product} />
         </div>
@@ -582,7 +582,7 @@ const ProductPage = ({ params }: any) => {
           </div>
           {/* form and calendar */}
 
-          <div className="w-full flex flex-row justify-end gap-2">
+          <div className="w-full flex flex-row justify-end gap-2 my-2">
             <button
               type="button"
               onClick={handleClickCart}
