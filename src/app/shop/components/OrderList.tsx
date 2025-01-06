@@ -193,13 +193,13 @@ export const OrderList = () => {
                 alt={rentItem.productVariant.product.name}
                 width={250}
                 height={150}
-                className="w-48 h-48 object-cover"
+                className="w-full h-48 object-cover"
               />
             </div>
-            <div className="flex flex-col justify-between">
+            <div className="flex flex-col justify-between w-full" >
               <h2 className="text-lg font-semibold">{rentItem.productVariant.product.name}</h2>
-              <div className="flex gap-2">
-                <p>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm ">
                   Rent Range:{" "}
                   {new Intl.DateTimeFormat("en-US", {
                     month: "short",
@@ -207,7 +207,7 @@ export const OrderList = () => {
                     year: "numeric",
                   }).formatRange(new Date(rentItem.startDate), new Date(rentItem.endDate))}
                 </p>
-                <p>
+                <p className="text-sm">
                   (
                   {Math.ceil(
                     (new Date(rentItem.endDate).getTime() -
@@ -250,7 +250,7 @@ export const OrderList = () => {
               </p>
             </div>
 
-            <div className="capitalize flex flex-col justify-between">
+            <div className="capitalize flex flex-col justify-between w-full">
               <p className="font-semibold">Renter Details</p>
               <p>
                 Renter: {rentItem.rent.user.personalInfo?.firstName}{" "}
@@ -263,7 +263,7 @@ export const OrderList = () => {
               <p>Delivery method : {rentItem.deliveryMethod}</p>
             </div>
 
-            <div className="flex flex-col w-1/4 gap-2 justify-between">
+            <div className="flex flex-col gap-2 justify-between">
               <div>
                 <Stepper
                   activeStep={
