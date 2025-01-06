@@ -36,6 +36,7 @@ import DrawerCart from "../../components/DrawerCart"
 import getAllRentItems from "../../queries/getAllRentItems"
 import { start } from "repl"
 import Footer from "../../components/Footer"
+import { button } from "@nextui-org/theme"
 
 const ProductPage = ({ params }: any) => {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -582,34 +583,49 @@ const ProductPage = ({ params }: any) => {
           </div>
           {/* form and calendar */}
 
-          <div className="w-full flex flex-row justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleClickCart}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Add to Cart
-            </button>
+          <div
+            className="w-full flex flex-row justify-end gap-2 my-2"
+            style={{ display: currentUser ? "flex" : "none" }}
+          >
+            {currentUser?.emailVerified ? (
+              <button
+                type="button"
+                onClick={handleClickCart}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Add to Cart
+              </button>
+            ) : (
+              <button
+                onClick={() => alert("Please verify your email before adding to cart")}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Add to Cart
+              </button>
+            )}
 
             <div>
               <div>
-                <button
-                  onClick={handleClickRent}
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Rent
-                </button>
+                {currentUser?.emailVerified ? (
+                  <button
+                    onClick={handleClickRent}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Rent
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => alert("Please verify your email before Renting")}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Rent
+                  </button>
+                )}
                 <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
                   <DrawerCart />
                 </Drawer>
               </div>
             </div>
-            {/* <button
-                    type="button"
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                    Rent
-                    </button> */}
           </div>
         </div>
       </div>
