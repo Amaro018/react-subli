@@ -8,18 +8,24 @@ export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
 
   if (!currentUser) {
-    return <ErrorMessage message="You need to login to access this page." title="Access denied" />
+    return (
+      <ErrorMessage
+        message="You need to login to access this page."
+        title="Access denied"
+        currentUser={currentUser}
+      />
+    )
   }
 
   if (!currentUser?.emailVerified) {
     return (
       <ErrorMessage
-        message="You need to verify your email to access this page."
+        message="Please check your email to verify your account. If you don't see the email, check your spam folder or "
         title="Email not verified"
+        currentUser={currentUser}
       />
     )
   }
-
   return (
     <div>
       <div className="fixed mb-4 z-50">
