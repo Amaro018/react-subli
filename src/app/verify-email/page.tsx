@@ -5,12 +5,23 @@ import verifyEmail from "./../mutations/verifyEmail"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Box, CircularProgress } from "@mui/material"
 import Link from "next/link"
+import resendVerification from "../mutations/resendVerification"
 const VerifyEmailPage = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
   const [countdown, setCountdown] = useState(30)
   const searchParams = useSearchParams()
   const router = useRouter()
   const [verifyEmailMutation] = useMutation(verifyEmail)
+  const [resendVerificationMutation] = useMutation(resendVerification)
+
+  const handleResendVerification = async () => {
+    console.log("resend")
+    try {
+      await resendVerificationMutation()
+    } catch (error) {
+      console.error("Error resending verification email:", error)
+    }
+  }
 
   useEffect(() => {
     const verify = async () => {
@@ -89,6 +100,7 @@ const VerifyEmailPage = () => {
         The verification link is invalid or has expired. Please try signing up again or contact
         support.
       </p>
+      <button onClick={handleResendVerification}>Resend</button>
     </div>
   )
 }

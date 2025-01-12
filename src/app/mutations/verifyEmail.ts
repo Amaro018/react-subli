@@ -16,6 +16,9 @@ const verifyEmail = async (token: string) => {
   })
 
   if (!verificationToken || verificationToken.expiresAt < new Date()) {
+    if (verificationToken) {
+      await db.token.delete({ where: { id: verificationToken.id } })
+    }
     throw new VerifyError()
   }
 
