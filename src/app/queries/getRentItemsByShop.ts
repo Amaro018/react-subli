@@ -40,6 +40,7 @@ export default async function getRentItemsByShop(input: GetRentItemsByShopInput)
           color: true, // Include color details
         },
       },
+      payments: true,
     },
   })
 
