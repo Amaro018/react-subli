@@ -8,6 +8,8 @@ import LockIcon from "@mui/icons-material/Lock"
 import StoreIcon from "@mui/icons-material/Store"
 import Image from "next/image"
 import InventoryIcon from "@mui/icons-material/Inventory"
+import ExitToAppIcon from "@mui/icons-material/ExitToApp"
+import { LogoutButton } from "../../(auth)/components/LogoutButton"
 
 export const Sidebar = (props: { currentUser: any }) => {
   const currentUser = props.currentUser
@@ -23,9 +25,9 @@ export const Sidebar = (props: { currentUser: any }) => {
               alt=""
               width={200}
               height={200}
-              className="rounded-full"
+              className="rounded-full w-24 h-24"
             />
-            <p className="text-white underline">view profile</p>
+            <p className="text-white underline">{currentUser.shop.shopName}</p>
           </div>
         </li>
         <li className="text-white border-b border-slate-500 hover:border-slate-400">
@@ -51,6 +53,13 @@ export const Sidebar = (props: { currentUser: any }) => {
           <div className="flex gap-2 ">
             <AccountCircleIcon />
             <Link href="/renter">Go Renter</Link>
+          </div>
+        </li>
+
+        <li className="text-white border-b border-slate-500 hover:border-slate-400">
+          <div className="flex gap-2 ">
+            <ExitToAppIcon />
+            <LogoutButton />
           </div>
         </li>
       </ul>
