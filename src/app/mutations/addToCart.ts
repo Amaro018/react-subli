@@ -19,6 +19,11 @@ export default resolver.pipe(
   async ({ productId, variantId, quantity, deliveryMethod, startDate, endDate }, ctx) => {
     const userId = ctx.session.userId
 
+    const variant = await db.productVariant.findUnique({
+      where: { id: variantId },
+      select: { quantity: true }, // Assuming `maxQuantity` exists in your variant model
+    })
+
     // Check if the same item is already in the cart
     const existingCartItem = await db.cartItem.findFirst({
       where: {
@@ -29,15 +34,27 @@ export default resolver.pipe(
     })
 
     if (existingCartItem) {
-      // If it exists, update the quantity
+      // Define the maximum allowed quantity for the item
+      const MAX_QUANTITY = variant!.quantity // Adjust this value as needed
+
+      // Calculate the new quantity
+      const newQuantity = existingCartItem.quantity + quantity
+
+      // Check if the new quantity exceeds the max limit
+      if (newQuantity > MAX_QUANTITY) {
+        throw new Error(`Cannot update item. Maximum quantity of ${MAX_QUANTITY} reached.`)
+      }
+
+      // If within the limit, update the quantity
       const updatedCartItem = await db.cartItem.update({
         where: { id: existingCartItem.id },
         data: {
-          quantity: existingCartItem.quantity + quantity,
+          quantity: newQuantity,
           startDate: startDate || existingCartItem.startDate,
           endDate: endDate || existingCartItem.endDate,
         },
       })
+
       return updatedCartItem
     }
 

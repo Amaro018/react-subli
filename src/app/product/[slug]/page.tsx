@@ -157,7 +157,7 @@ const ProductPage = ({ params }: any) => {
       refetch()
     } catch (error) {
       console.error("Error adding to cart:", error)
-      alert("Error adding to cart")
+      alert(error)
     }
     // Perform your action here, like calling an API or adding to the cart
     // For example: invoke(addToCart, formData);
@@ -371,6 +371,10 @@ const ProductPage = ({ params }: any) => {
     }
   }
 
+  const sum = product.reviews?.reduce((acc, review) => acc + review.rating, 0)
+  const average = sum / product.reviews?.length
+  console.log(`The average rating is ${average}`)
+
   return (
     <>
       <Navbar currentUser={currentUser} />
@@ -378,9 +382,14 @@ const ProductPage = ({ params }: any) => {
         <div className="w-1/2 h-full my-auto">
           <ProductCarousel product={product} />
         </div>
-        <div className="w-full bg-gray-50 p-12">
-          <h1 className="text-2xl font-bold capitalize">{product.name}</h1>
-
+        <div className="w-full bg-gray-50 p-12 gap-2">
+          <div className="flex flex-row justify-between">
+            <h1 className="text-2xl font-bold capitalize">{product.name}</h1>
+            <p className="flex items-center gap-2 font-bold">
+              {isNaN(average) ? 0 : average}
+              <Rating name="review" value={average} precision={0.25} readOnly />
+            </p>
+          </div>
           <div className="mt-4 border-t">
             <p>{product.description}</p>
           </div>
@@ -647,7 +656,7 @@ const ProductPage = ({ params }: any) => {
                     alt="Profile Picture"
                     width={50}
                     height={50}
-                    className={`rounded-full`}
+                    className={`rounded-full w-12 h-12 object-cover`}
                   />
                   <div className="flex flex-col">
                     <p className="font-bold">
