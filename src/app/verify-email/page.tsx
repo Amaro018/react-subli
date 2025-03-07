@@ -25,7 +25,6 @@ const VerifyEmailPage = () => {
 
   useEffect(() => {
     const verify = async () => {
-      // Get the `token` from the query parameters
       const token = searchParams.get("token")
 
       if (!token) {
@@ -34,7 +33,6 @@ const VerifyEmailPage = () => {
       }
 
       try {
-        // Call the mutation to verify the email with the token
         await verifyEmailMutation(token as string)
         setStatus("success")
       } catch (error) {
@@ -43,7 +41,8 @@ const VerifyEmailPage = () => {
     }
 
     verify()
-  }, [searchParams]) // Trigger the effect when search parameters change
+  }, [searchParams, verifyEmailMutation]) // Now `verifyEmailMutation` is properly included
+  // Trigger the effect when search parameters change
 
   useEffect(() => {
     let interval: NodeJS.Timeout
