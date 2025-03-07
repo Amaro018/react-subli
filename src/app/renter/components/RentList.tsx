@@ -34,11 +34,6 @@ export const RentList: React.FC = (props: any) => {
   const [userRents, { refetch }] = useQuery(getAllRentOfUser, { id: userId })
   const [addReview] = useMutation(addProductReview)
 
-  if (!userRents) {
-    return <CircularProgress />
-  }
-  // console.log(userRents)
-
   const style = {
     position: "absolute" as "absolute",
     top: "50%",
@@ -117,6 +112,11 @@ export const RentList: React.FC = (props: any) => {
       }
     }
   }
+
+  if (!userRents) {
+    return <CircularProgress />
+  }
+  // console.log(userRents)
 
   return (
     <div className="w-full">

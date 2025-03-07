@@ -81,7 +81,7 @@ export default function DrawerCart(props: any) {
     }))
   }
 
-  const checkboxChange = (e, item) => {
+  const checkboxChange = (e: any, item: any) => {
     console.log("delivery method is :", deliveryMethods)
     const checked = e.target.checked
 

@@ -55,11 +55,11 @@ export default function Calendar({
     <div>
       {selectedVariant ? (
         <h3>
-          Showing "rendering" events for variant: {selectedVariant.size} -{" "}
+          Showing &quot;rendering&quot; events for variant: {selectedVariant.size} -{" "}
           {selectedVariant.color?.name}
         </h3>
       ) : (
-        <h3>Showing "rendering" events for all variants</h3>
+        <h3>Showing &quot;rendering&quot; events for all variants</h3>
       )}
       <FullCalendar
         plugins={[dayGridPlugin]}
