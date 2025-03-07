@@ -1,6 +1,6 @@
 import db from "db"
 
-export default async function getProductById({ id }: { id: number }) {
+const getProductById = async ({ id }: { id: number }) => {
   const product = await db.product.findFirst({
     where: { id },
     include: {
@@ -28,3 +28,5 @@ export default async function getProductById({ id }: { id: number }) {
 
   return product
 }
+
+export default getProductById
