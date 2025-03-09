@@ -52,6 +52,7 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "secure-password": "4.0.0",
+    "sonner": "2.0.1",
     "sweetalert2": "11.14.5",
     "swiper": "11.1.15",
     "yup": "1.4.0",

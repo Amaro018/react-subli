@@ -19,6 +19,29 @@ export const password = z
 export const Signup = z.object({
   email,
   password,
+  firstName: z.string(),
+  middleName: z.string().optional(),
+  lastName: z.string(),
+  birthDate: z.string(),
+  phoneNumber: z.string().optional(),
+  street: z.string(),
+  city: z.string(),
+  region: z.string(),
+  country: z.string(),
+  zipCode: z.string(),
+})
+
+export const UserInfo = z.object({
+  firstName: z.string(),
+  middleName: z.string().optional(),
+  lastName: z.string(),
+  birthDate: z.string(),
+  phoneNumber: z.string().optional(),
+  street: z.string(),
+  city: z.string(),
+  region: z.string(),
+  country: z.string(),
+  zipCode: z.string(),
 })
 
 export const Login = z.object({
