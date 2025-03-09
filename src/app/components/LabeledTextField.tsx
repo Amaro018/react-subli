@@ -8,7 +8,7 @@ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElem
   /** Field label. */
   label: string
   /** Field type. Doesn't include radio buttons and checkboxes */
-  type?: "text" | "password" | "email" | "number"
+  type?: "text" | "password" | "email" | "number" | "tel" | "url" | "search" | "color" | "date"
   outerProps?: PropsWithoutRef<JSX.IntrinsicElements["div"]>
 }
 

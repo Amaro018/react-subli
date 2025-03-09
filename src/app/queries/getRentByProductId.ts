@@ -1,6 +1,6 @@
 import db from "db"
 
-export default async ({ rentId }) => {
+const getRentById = async ({ rentId }: { rentId: number }) => {
   const rent = await db.rent.findUnique({
     where: { id: rentId },
     include: {
@@ -14,3 +14,5 @@ export default async ({ rentId }) => {
 
   return rent
 }
+
+export default getRentById

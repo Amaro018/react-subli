@@ -15,10 +15,16 @@ import {
   Typography,
   Paper,
   TextField,
+  InputAdornment,
 } from "@mui/material"
 import { Signup } from "../validations"
+
 import checkEmail from "../../mutations/checkEmail"
-import { ZodError } from "zod"
+
+import { set, ZodError } from "zod"
+import { IconButton } from "@mui/material"
+import { Visibility, VisibilityOff } from "@mui/icons-material"
+import { toast } from "sonner"
 
 type SignupFormProps = {
   onSuccess?: () => void
@@ -28,7 +34,8 @@ export const SignupForm = (props: SignupFormProps) => {
   const [checkEmailMutation] = useMutation(checkEmail)
   const [errors, setErrors] = useState({ email: "", password: "", success: "" })
   const [successMessage, setSuccessMessage] = useState("")
-
+  const [errorEmail, setErrorEmail] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [formValues, setFormValues] = useState({
     email: "",
     password: "",
@@ -55,16 +62,22 @@ export const SignupForm = (props: SignupFormProps) => {
     })
 
     if (!email) {
-      setErrors({ ...errors, email: "Email is required." })
       setSuccessMessage("")
-      return // Exit early if email is empty
+      setErrors((prev) => ({
+        ...prev,
+        email: "Email is required.",
+      }))
+      return
     }
-    // Basic client-side email format validation
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      setErrors({ ...errors, email: "Not a valid email." })
       setSuccessMessage("")
-      return // Exit early if the email is invalid
+      setErrors((prev) => ({
+        ...prev,
+        email: "Invalid email.",
+      }))
+      return
     }
 
     try {
@@ -75,15 +88,45 @@ export const SignupForm = (props: SignupFormProps) => {
         console.log(response, "ok no problem")
         setErrors({ ...errors, email: "" })
         setSuccessMessage(response.message)
+        setErrorEmail(false)
       } else {
         console.log(response, "error")
         setSuccessMessage("")
         setErrors({ ...errors, email: response.message })
       }
-    } catch (error) {
-      console.error("Error checking email:", error)
-      setSuccessMessage("")
+    } catch (error: unknown) {
+      if (error instanceof ZodError) {
+        const newErrors: Record<string, string> = {}
+
+        error.errors.forEach((err) => {
+          newErrors[err.path[0]] = err.message
+        })
+
+        setErrors((prev) => ({
+          ...prev,
+          ...newErrors,
+        }))
+      }
     }
+
+    // try {
+    //   // Call the email-checking mutation
+    //   const response = await checkEmailMutation({ email })
+
+    //   if (response.success) {
+    //     console.log(response, "ok no problem")
+    //     setErrors({ ...errors, email: "" })
+    //     setSuccessMessage(response.message)
+    //     setErrorEmail(false)
+    //   } else {
+    //     console.log(response, "error")
+    //     setSuccessMessage("")
+    //     setErrors({ ...errors, email: response.message })
+    //   }
+    // } catch (error) {
+    //   console.error("Error checking email:", error)
+    //   setSuccessMessage("")
+    // }
   }
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,7 +199,7 @@ export const SignupForm = (props: SignupFormProps) => {
       label: "Account Credentials",
       content: (
         <>
-          <LabeledTextField
+          <TextField
             name="email"
             label="Email"
             placeholder="Email"
@@ -164,21 +207,36 @@ export const SignupForm = (props: SignupFormProps) => {
             onChange={handleEmailChange}
             error={!!errors.email}
             helperText={errors.email}
-            className=""
+            fullWidth
+            required
           />
+          {errorEmail && <p className="text-red-500 text-xs italic my-2">{errors.email}</p>}
           {successMessage && <p className="text-green-500 text-xs italic my-2">{successMessage}</p>}
 
           <LabeledTextField
             name="password"
             label="Password"
             placeholder="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={formValues.password}
             onChange={handleChange}
             error={!!errors.password}
             helperText={errors.password}
             required
             className="mt-4"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         </>
       ),
@@ -305,19 +363,40 @@ export const SignupForm = (props: SignupFormProps) => {
   const router = useRouter()
   const [activeStep, setActiveStep] = useState(0)
 
+  // const handleNext = async () => {
+  //   if (activeStep === 0) {
+  //     console.log(formValues.email, "you are here")
+  //     await checkEmailMutation({ email: formValues.email })
+  //     if (successMessage === "The email is available" && errors.password === "") {
+  //       setActiveStep((prevActiveStep) => prevActiveStep + 1)
+  //     } else if (errors.password !== "") {
+  //       alert("Please enter a valid password")
+  //     } else {
+  //       alert("Please enter a valid email")
+  //     }
+  //   }
+  // }
+
   const handleNext = async () => {
     if (activeStep === 0) {
-      if (successMessage === "The email is available" && errors.password === "") {
+      if (formValues.password === "") {
+        toast.error("Please enter a valid password")
+      } else if (
+        successMessage === "The email is available" &&
+        errors.password === "" &&
+        formValues.email !== "" &&
+        formValues.password !== ""
+      ) {
         console.log("PASOK KANA ALRIGTH")
         console.log(successMessage)
         setActiveStep((prevActiveStep) => prevActiveStep + 1)
       } else if (errors.password !== "") {
         console.log(errors.password)
-        alert("Please enter a valid password")
+        toast.error("Please enter a valid password")
       } else {
         console.log(successMessage)
         console.log(errors.email)
-        alert("Please enter a valid email")
+        toast.error("Please enter a valid email")
       }
     } else {
       if (
@@ -332,7 +411,7 @@ export const SignupForm = (props: SignupFormProps) => {
         formValues.country === "" ||
         formValues.zipCode === ""
       ) {
-        alert("Please fill out all the required fields")
+        toast.error("Please fill out all required fields")
       } else {
         setActiveStep((prevActiveStep) => prevActiveStep + 1)
       }
@@ -356,7 +435,7 @@ export const SignupForm = (props: SignupFormProps) => {
       // Trigger success callback and navigate
       props.onSuccess?.()
       router.push("/")
-      alert("Signup successful!")
+      toast.success("Account created successfully!")
     } catch (error: any) {
       console.error("Signup error:", error)
 
