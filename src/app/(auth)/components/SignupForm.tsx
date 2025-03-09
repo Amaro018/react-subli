@@ -445,8 +445,8 @@ export const SignupForm = (props: SignupFormProps) => {
   }
 
   return (
-    <div className="w-1/4">
-      <div className="flex items-center justify-center bg-slate-600 p-2 rounded-t-lg">
+    <div className="w-full md:w-1/4">
+      <div className="flex items-center justify-center bg-slate-600 p-2 rounded-t-lg text-white font-bold">
         REGISTER A NEW ACCOUNT
       </div>
       <Form
