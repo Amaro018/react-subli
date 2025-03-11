@@ -20,6 +20,7 @@ import getCurrentUser from "../users/queries/getCurrentUser"
 //the mutation for creating rent
 import createRent from "../mutations/createRent"
 import { select } from "@nextui-org/theme"
+import { toast } from "sonner"
 
 const style = {
   position: "absolute" as "absolute",
@@ -107,7 +108,7 @@ export default function DrawerCart(props: any) {
 
   const handleCheckOut = async () => {
     if (checkOutItems.length === 0) {
-      alert("Please select at least one item to checkout.")
+      toast.error("Please select at least one item to checkout.")
       return
     }
 
@@ -116,7 +117,7 @@ export default function DrawerCart(props: any) {
     // Validate and set the delivery address
     if (addressOption === "Home") {
       if (!selectedAddress) {
-        alert("Please select a delivery address.")
+        toast.error("Please select a delivery address.")
         return
       }
       deliveryAddress = selectedAddress
@@ -128,7 +129,7 @@ export default function DrawerCart(props: any) {
         !newAddress.country ||
         !newAddress.zipCode
       ) {
-        alert("Please fill out all address fields.")
+        toast.error("Please fill out all address fields.")
         return
       }
       deliveryAddress = [
@@ -139,7 +140,7 @@ export default function DrawerCart(props: any) {
         newAddress.zipCode,
       ].join(", ")
     } else {
-      alert("Please choose a valid delivery address option.")
+      toast.error("Please select a valid delivery address option.")
       return
     }
 
@@ -180,13 +181,13 @@ export default function DrawerCart(props: any) {
       const rent = await createRentMutation(formData)
       console.log("Checkout successful:", rent)
       refetch() // Refresh cart items
-      alert("Checkout successful!")
+      toast.success("Checkout successful!")
       setLoading(false)
       setOpen(false)
     } catch (error) {
       setLoading(false)
       console.error("Failed to checkout:", error)
-      alert("Failed to checkout. Please try again.")
+      toast.error("Failed to checkout. Please try again.")
     }
   }
 
@@ -202,15 +203,15 @@ export default function DrawerCart(props: any) {
       const item = await deleteItem({ id })
       console.log(item)
       refetch()
-      alert("Item deleted successfully!")
+      toast.success("Item deleted successfully!")
     } catch (error) {
-      console.error("Failed to delete item:", error)
+      toast.error("Failed to delete item. Please try again.")
     }
   }
   const updateCartItemDetails = async (variantId, updates) => {
     const cartItem = cartItems.find((item) => item.variantId === variantId)
     if (!cartItem) {
-      console.error("Cart item not found!")
+      toast.error("Cart item not found.")
       return
     }
 
@@ -220,10 +221,10 @@ export default function DrawerCart(props: any) {
     // Handle quantity validation
     if (newQuantity !== undefined) {
       if (newQuantity > cartItem.variant.quantity) {
-        alert("You cannot add more than the available quantity.")
+        toast.error("You cannot add more than the available quantity.")
         return
       } else if (newQuantity < 1) {
-        alert("Quantity cannot be less than 1.")
+        toast.error("Quantity cannot be less than 1.")
         return
       }
     }
@@ -249,7 +250,7 @@ export default function DrawerCart(props: any) {
       // Refresh the cart items
       refetch()
     } catch (error) {
-      console.error("Failed to update cart item:", error)
+      toast.error("Failed to update cart item. Please try again.")
     }
   }
 

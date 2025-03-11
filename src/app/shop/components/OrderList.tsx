@@ -91,7 +91,7 @@ export const OrderList = () => {
     const endDate = new Date(rentItem?.endDate)
     const daysPassed = Math.max(
       0,
-      Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24)+1)
+      Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24) + 1)
     )
     const basePrice =
       rentItem?.price *
@@ -185,19 +185,20 @@ export const OrderList = () => {
         {filteredRentItems.map((rentItem) => (
           <div
             key={rentItem.id}
-            className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-2"
+            className="border rounded-lg shadow-md p-4 flex justify-start gap-16 my-2 flex-col md:flex-row"
           >
-            <div className="">
+            <div className="flex justify-start items-center w-1/4 border-b border-gray-200">
               <Image
                 src={`/uploads/products/${rentItem.productVariant.product.images[0]?.url}`}
                 alt={rentItem.productVariant.product.name}
-                width={250}
-                height={150}
-                className="w-full h-48 object-cover"
+                width={100}
+                height={100}
+                className="w-32 h-32 object-cover rounded"
               />
             </div>
-            <div className="flex flex-col justify-between w-full" >
-              <h2 className="text-lg font-semibold">{rentItem.productVariant.product.name}</h2>
+            <div className="flex flex-col justify-between w-full">
+              <p className="font-bold">Product Details</p>
+              <p className="text-lg font-semibold">{rentItem.productVariant.product.name}</p>
               <div className="flex flex-col gap-2">
                 <p className="text-sm ">
                   Rent Range:{" "}
@@ -212,7 +213,8 @@ export const OrderList = () => {
                   {Math.ceil(
                     (new Date(rentItem.endDate).getTime() -
                       new Date(rentItem.startDate).getTime()) /
-                      (1000 * 60 * 60 * 24)+1
+                      (1000 * 60 * 60 * 24) +
+                      1
                   )}{" "}
                   days)
                 </p>
@@ -244,7 +246,8 @@ export const OrderList = () => {
                     Math.ceil(
                       (new Date(rentItem.endDate).getTime() -
                         new Date(rentItem.startDate).getTime()) /
-                        (1000 * 60 * 60 * 24)+1
+                        (1000 * 60 * 60 * 24) +
+                        1
                     )
                 )}
               </p>
@@ -355,7 +358,8 @@ export const OrderList = () => {
                           Math.ceil(
                             (new Date(selectedItem?.endDate).getTime() -
                               new Date(selectedItem?.startDate).getTime()) /
-                              (1000 * 60 * 60 * 24)+1
+                              (1000 * 60 * 60 * 24) +
+                              1
                           ) -
                           sumOfPayment +
                           selectedItem?.additionalPrice

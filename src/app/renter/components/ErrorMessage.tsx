@@ -1,5 +1,4 @@
 "use client"
-
 import RefreshIcon from "@mui/icons-material/Refresh"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -71,7 +70,7 @@ export default function ErrorMessage({
         <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="text-gray-600 mt-2">{message}</p>
 
-        {user.tokens?.length ? (
+        {/* {user.tokens?.length ? (
           <button
             className="text-blue-500 hover:underline"
             onClick={handleResendVerification}
@@ -95,7 +94,7 @@ export default function ErrorMessage({
               ? `Wait ${formatCountdown(countdown)} to resend`
               : "Resend verification email"}
           </button>
-        )}
+        )} */}
       </div>
     </div>
   )
