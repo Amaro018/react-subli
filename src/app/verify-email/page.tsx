@@ -6,6 +6,8 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { Box, CircularProgress } from "@mui/material"
 import Link from "next/link"
 import resendVerification from "../mutations/resendVerification"
+import Confetti from "react-confetti"
+
 const VerifyEmailPage = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
   const [countdown, setCountdown] = useState(30)
@@ -42,29 +44,26 @@ const VerifyEmailPage = () => {
 
     verify()
   }, [searchParams, verifyEmailMutation]) // Now `verifyEmailMutation` is properly included
-  // Trigger the effect when search parameters change
 
   useEffect(() => {
     let interval: NodeJS.Timeout
 
-    // Start countdown if the status is "success"
     if (status === "success") {
       interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(interval) // Clear interval when countdown ends
-            router.push("/") // Redirect to homepage
+            clearInterval(interval)
+            router.push("/")
             return 0
           }
-          return prev - 1 // Decrease countdown by 1
+          return prev - 1
         })
-      }, 1000) // Update every second
+      }, 1000)
     }
 
-    return () => clearInterval(interval) // Cleanup on component unmount
+    return () => clearInterval(interval)
   }, [status, router])
 
-  // Render different messages based on the verification status
   if (status === "loading") {
     return (
       <Box
@@ -83,6 +82,7 @@ const VerifyEmailPage = () => {
   if (status === "success") {
     return (
       <div style={{ textAlign: "center", marginTop: "50px" }}>
+        <Confetti />
         <h1>🎉 Email Verified Successfully!</h1>
         <p>
           Thank you for verifying your email. Redirecting to the homepage in {countdown} seconds...

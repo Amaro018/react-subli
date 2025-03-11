@@ -9,6 +9,9 @@ import {
   StepLabel,
   Typography,
   CircularProgress,
+  CardContent,
+  Card,
+  Avatar,
 } from "@mui/material"
 import { useState } from "react"
 // import ImageUploadWithPreview from "./ImageUpload"
@@ -16,6 +19,8 @@ import createShop from "../../mutations/createShop"
 import uploadShopBg from "../../mutations/uploadShopBg"
 import { useMutation } from "@blitzjs/rpc"
 import { useRouter } from "next/navigation"
+import CloudUploadIcon from "@mui/icons-material/CloudUpload"
+import ErrorMessage from "./ErrorMessage"
 
 const FormShopRegister = (props: { currentUser: any }) => {
   const [loading, setLoading] = useState(false)
@@ -28,6 +33,9 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const [imageShopBg, setImageShopBg] = useState<string | null>(null)
   // const [documentDTI, setDocumentDTI] = useState<string | null>(null)
   // const [documentPermit, setDocumentPermit] = useState<string | null>(null)
+  const [dtiFile, setDtiFile] = useState<File | null>(null)
+  const [taxFile, setTaxFile] = useState<File | null>(null)
+  const [permitFile, setPermitFile] = useState<File | null>(null)
   const [previewShopBg, setPreviewShopBg] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -104,6 +112,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const handleFileDti = (event) => {
     const file = event.target.files?.[0]
     if (file) {
+      setDtiFile(file)
+
       const uniqueFileName = `${Date.now()}-${file.name}`
       setFormData((prevFormData) => ({ ...prevFormData, documentDTI: uniqueFileName }))
       setIsUploading(true)
@@ -130,6 +140,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const handleFilePermit = (event) => {
     const file = event.target.files?.[0]
     if (file) {
+      setPermitFile(file)
+
       const uniqueFileName = `${Date.now()}-${file.name}`
       setFormData((prevFormData) => ({ ...prevFormData, documentPermit: uniqueFileName }))
       setIsUploading(true)
@@ -156,6 +168,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const handleFileTax = (event) => {
     const file = event.target.files?.[0]
     if (file) {
+      setTaxFile(file)
+
       const uniqueFileName = `${Date.now()}-${file.name}`
       setFormData((prevFormData) => ({ ...prevFormData, documentTax: uniqueFileName }))
       setIsUploading(true)
@@ -258,9 +272,29 @@ const FormShopRegister = (props: { currentUser: any }) => {
     }
   }
 
+  const renderFilePreview = (file: File | null) => {
+    if (!file) return null
+
+    return (
+      <Typography variant="body2" color="text.secondary" mt={1}>
+        📄 {file.name}
+      </Typography>
+    )
+  }
+
+  if (currentUser!.isShopRegistered) {
+    return (
+      <ErrorMessage
+        message="You already have a shop registered"
+        title="Already registered"
+        currentUser={currentUser}
+      />
+    )
+  }
+
   return (
     <div className="p-16 w-full flex flex-col items-center gap-4">
-      <h1 className="text-3xl font-semibold uppercase">Shop Register</h1>
+      <h1 className="text-3xl font-semibold uppercase mt-16">Shop Register</h1>
       <div className="w-full mb-8">
         <Box sx={{ width: "100%" }}>
           <Stepper activeStep={activeStep} alternativeLabel>
@@ -273,7 +307,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         </Box>
       </div>
 
-      <form className="flex flex-col gap-4">
+      <form className="flex flex-col gap-4 w-full">
         {activeStep === 0 && (
           <div>
             <p className="text-center my-4 uppercase">SHOP DETAILS</p>
@@ -284,6 +318,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
                 name="shopName"
                 value={formData.shopName}
                 onChange={handleChange}
+                fullWidth
               />
               <TextField
                 required
@@ -291,6 +326,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                fullWidth
               />
             </div>
             <div className="my-4">
@@ -302,43 +338,45 @@ const FormShopRegister = (props: { currentUser: any }) => {
                 onChange={handleChange}
                 multiline
                 rows={4}
-                className="w-full"
+                fullWidth
               />
             </div>
             <p className="text-center my-4 uppercase">full Address</p>
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-row gap-2">
-                <TextField
-                  required
-                  label="Street"
-                  name="street"
-                  value={formData.street}
-                  onChange={handleChange}
-                />
-                <TextField
-                  required
-                  label="City"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="flex flex-row gap-2">
-                <TextField
-                  required
-                  label="Region"
-                  name="region"
-                  value={formData.region}
-                  onChange={handleChange}
-                />
-                <TextField
-                  required
-                  label="Country"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                />
-              </div>
+            <div className="flex flex-row gap-2">
+              <TextField
+                required
+                label="Street"
+                name="street"
+                value={formData.street}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                required
+                label="City"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                fullWidth
+              />
+
+              <TextField
+                required
+                label="Region"
+                name="region"
+                value={formData.region}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                required
+                label="Country"
+                name="country"
+                value={formData.country}
+                onChange={handleChange}
+                fullWidth
+              />
+
               <TextField
                 required
                 label="Zip"
@@ -346,6 +384,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
                 name="zipCode"
                 value={formData.zipCode}
                 onChange={handleChange}
+                fullWidth
               />
             </div>
 
@@ -374,54 +413,130 @@ const FormShopRegister = (props: { currentUser: any }) => {
         )}
 
         {activeStep === 1 && (
-          <div>
-            <p className="text-center my-4 uppercase">SHOP DOCUMENTS</p>
-            <div className="flex flex-col mb-4">
-              <p className="font-bold text-lg">DTI :</p>
-              <input
-                required
-                name="documentDTI"
-                type="file"
-                accept="application/pdf, image/*"
-                onChange={handleFileDti}
-              />
-            </div>
-            <div className="flex flex-col mb-4">
-              <p className="font-bold text-lg">TAX CLEARANCE :</p>
-              <input
-                required
-                name="documentTax"
-                type="file"
-                accept="application/pdf, image/*"
-                onChange={handleFileTax}
-              />
-            </div>
+          <Card sx={{ maxWidth: 600, mx: "auto", mt: 4, boxShadow: 3, borderRadius: 3 }}>
+            <CardContent>
+              <Typography variant="h5" textAlign="center" fontWeight="bold" gutterBottom>
+                📄 SHOP DOCUMENTS
+              </Typography>
 
-            <div className="flex flex-col mb-4">
-              <p className="font-bold text-lg">MAYORS PERMIT :</p>
-              <input
-                required
-                name="documentPermit"
-                type="file"
-                accept="application/pdf, image/*"
-                onChange={handleFilePermit}
-              />
-            </div>
+              {/* DTI Document */}
+              <Box mb={3}>
+                <Typography fontWeight="bold" color="text.secondary">
+                  DTI Certificate
+                </Typography>
+                <label htmlFor="documentDTI">
+                  <Box
+                    sx={{
+                      border: "2px dashed #ccc",
+                      borderRadius: 2,
+                      padding: 2,
+                      textAlign: "center",
+                      cursor: "pointer",
+                      "&:hover": { borderColor: "#1976D2" },
+                    }}
+                  >
+                    <CloudUploadIcon color="action" sx={{ fontSize: 40 }} />
+                    <Typography variant="body2">
+                      {dtiFile ? "File uploaded" : "Click to upload or drag file here"}
+                    </Typography>
+                    <input
+                      required
+                      name="documentDTI"
+                      type="file"
+                      accept="application/pdf, image/*"
+                      onChange={handleFileDti}
+                      hidden
+                      id="documentDTI"
+                    />
+                  </Box>
+                </label>
+                {renderFilePreview(dtiFile)}
+              </Box>
 
-            <div className="flex flex-row justify-end gap-2">
-              <Button variant="contained" onClick={handleBack}>
-                Back
-              </Button>
-              <Button variant="contained" color="primary" onClick={handleNextNext}>
-                Next
-              </Button>
-            </div>
-          </div>
+              {/* Tax Clearance */}
+              <Box mb={3}>
+                <Typography fontWeight="bold" color="text.secondary">
+                  Tax Clearance
+                </Typography>
+                <label htmlFor="documentTax">
+                  <Box
+                    sx={{
+                      border: "2px dashed #ccc",
+                      borderRadius: 2,
+                      padding: 2,
+                      textAlign: "center",
+                      cursor: "pointer",
+                      "&:hover": { borderColor: "#1976D2" },
+                    }}
+                  >
+                    <CloudUploadIcon color="action" sx={{ fontSize: 40 }} />
+                    <Typography variant="body2">
+                      {taxFile ? "File uploaded" : "Click to upload or drag file here"}
+                    </Typography>
+                    <input
+                      required
+                      name="documentTax"
+                      type="file"
+                      accept="application/pdf, image/*"
+                      onChange={handleFileTax}
+                      hidden
+                      id="documentTax"
+                    />
+                  </Box>
+                </label>
+                {renderFilePreview(taxFile)}
+              </Box>
+
+              {/* Mayor's Permit */}
+              <Box mb={3}>
+                <Typography fontWeight="bold" color="text.secondary">
+                  Mayor&apos;s Permit
+                </Typography>
+                <label htmlFor="documentPermit">
+                  <Box
+                    sx={{
+                      border: "2px dashed #ccc",
+                      borderRadius: 2,
+                      padding: 2,
+                      textAlign: "center",
+                      cursor: "pointer",
+                      "&:hover": { borderColor: "#1976D2" },
+                    }}
+                  >
+                    <CloudUploadIcon color="action" sx={{ fontSize: 40 }} />
+                    <Typography variant="body2">
+                      {permitFile ? "File uploaded" : "Click to upload or drag file here"}
+                    </Typography>
+                    <input
+                      required
+                      name="documentPermit"
+                      type="file"
+                      accept="application/pdf, image/*"
+                      onChange={handleFilePermit}
+                      hidden
+                      id="documentPermit"
+                    />
+                  </Box>
+                </label>
+                {renderFilePreview(permitFile)}
+              </Box>
+
+              {/* Action Buttons */}
+              <Box display="flex" justifyContent="flex-end" gap={2}>
+                <Button variant="outlined" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button variant="contained" color="primary" onClick={handleNextNext}>
+                  Next
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         )}
 
         {activeStep === 2 && (
           <div className="flex flex-col gap-4 justify-between h-96 w-full">
-            <div className="flex flex-row gap-16 justify-between">
+            <div className="flex flex-col gap-16 justify-between">
               <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
                 <Typography variant="body2">Shop Profile</Typography>
 

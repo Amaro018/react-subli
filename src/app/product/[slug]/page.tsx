@@ -37,6 +37,7 @@ import getAllRentItems from "../../queries/getAllRentItems"
 import { start } from "repl"
 import Footer from "../../components/Footer"
 import { button } from "@nextui-org/theme"
+import { toast } from "sonner"
 
 const ProductPage = ({ params }: any) => {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -108,12 +109,12 @@ const ProductPage = ({ params }: any) => {
 
   const handleClickCart = async () => {
     if (!currentUser) {
-      alert("please login first")
+      toast.error("Please login first")
       return
     }
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
-      alert("Please select a color and size")
+      toast.error("Please select a color and size")
       return
     }
 
@@ -123,18 +124,23 @@ const ProductPage = ({ params }: any) => {
     )
 
     if (!selectedVariant) {
-      alert("Selected variant not found")
+      toast.error("Selected variant not found")
       return
     }
 
     // Ensure start and end dates are selected and valid
     if (!startDate || !endDate) {
-      alert("Please select both start and end dates")
+      toast.error("Please select both start and end dates")
       return
     }
 
     if (endDate <= startDate) {
-      alert("End date must be after the start date")
+      toast.error("End date must be after the start date")
+      return
+    }
+
+    if (quantity <= 0) {
+      toast.error("Quantity must be greater than 0")
       return
     }
 
@@ -153,11 +159,10 @@ const ProductPage = ({ params }: any) => {
 
     try {
       await invoke(addToCart, formData)
-      alert("Successfully added to cart")
+      toast.success("Item added to cart successfully!")
       refetch()
     } catch (error) {
       console.error("Error adding to cart:", error)
-      alert(error)
     }
     // Perform your action here, like calling an API or adding to the cart
     // For example: invoke(addToCart, formData);
@@ -165,13 +170,13 @@ const ProductPage = ({ params }: any) => {
 
   const handleClickRent = async () => {
     if (!currentUser) {
-      alert("please login first")
+      toast.error("Please login first")
       return
     }
 
     // Ensure color and size are selected
     if (!selectedColor || !selectedSize) {
-      alert("Please select a color and size")
+      toast.error("Please select a color and size")
       return
     }
 
@@ -181,28 +186,28 @@ const ProductPage = ({ params }: any) => {
     )
 
     if (!selectedVariant) {
-      alert("Selected variant not found")
+      toast.error("Selected variant not found")
       return
     }
 
     // Ensure start and end dates are selected and valid
     if (!startDate || !endDate) {
-      alert("Please select both start and end dates")
+      toast.error("Please select both start and end dates")
       return
     }
 
     if (endDate <= startDate) {
-      alert("End date must be after the start date")
+      toast.error("End date must be after the start date")
       return
     }
 
     if (quantity <= 0) {
-      alert("Quantity must be greater than 0")
+      toast.error("Quantity must be greater than 0")
       return
     }
 
     if (!selectedDelivery === null) {
-      alert("Please select a delivery method")
+      toast.error("Please select a delivery method")
       return
     } else {
       setOpen(true)
@@ -221,11 +226,11 @@ const ProductPage = ({ params }: any) => {
 
       try {
         await invoke(addToCart, formData)
-        alert("Thanks for renting")
+        toast.success("Successfully added to cart")
         refetch()
       } catch (error) {
         console.error("Error adding to cart:", error)
-        alert("Error adding to cart")
+        toast.error("Failed to add to cart. Please try again.")
       }
     }
     // Perform your action here, like calling an API or adding to the cart
@@ -245,9 +250,9 @@ const ProductPage = ({ params }: any) => {
 
   const handleCountMinus = () => {
     if (!selectedColor || !selectedSize) {
-      alert("Please select a color and size")
+      toast.error("Please select a color and size first")
     } else if (quantity === 0) {
-      alert("You cannot decrease the count below 0")
+      toast.error("You cannot decrease the count below 0")
     } else {
       const selectedVariant = product.variants.find(
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
@@ -259,13 +264,13 @@ const ProductPage = ({ params }: any) => {
 
   const handleCountPlus = () => {
     if (!selectedColor || !selectedSize) {
-      alert("Please select a color and size")
+      toast.error("Please select a color and size first")
     } else {
       const selectedVariant = product.variants.find(
         (variant) => variant.color.id === selectedColor && variant.size === selectedSize
       )
       if (quantity === availableQuantity) {
-        alert("You cannot increase the count above the available quantity")
+        toast.error("You cannot increase the count above the available quantity")
       } else setQuantity((prev) => prev + 1)
     }
   }
@@ -278,7 +283,7 @@ const ProductPage = ({ params }: any) => {
     setQuantity(0)
 
     if (!selectedColor || !selectedSize) {
-      alert("Please select a color and size first")
+      toast.error("Please select a color and size first")
       return
     }
     // Convert the string to a Date object
@@ -307,7 +312,7 @@ const ProductPage = ({ params }: any) => {
     console.log("the total quantity", totalQuantity)
     setAvailableQuantity(selectedVariant?.quantity - totalQuantity)
     if (totalQuantity >= selectedVariant?.quantity) {
-      alert("item is not available at this date")
+      toast.error("This item is not available at this date")
       setStartDate(null)
       setEndDate(null)
       return
@@ -320,7 +325,7 @@ const ProductPage = ({ params }: any) => {
 
     // Check if the selected date is in the future
     if (selectedDateObject < new Date()) {
-      alert("Please select a future date")
+      toast.error("Please select a future date")
       setStartDate(null) // Reset the date value to null if invalid
     } else {
       setStartDate(selectedDateObject) // Set the valid date
@@ -352,7 +357,7 @@ const ProductPage = ({ params }: any) => {
 
     setAvailableQuantity(selectedVariant?.quantity - totalQuantity)
     if (totalQuantity >= selectedVariant?.quantity) {
-      alert("item is not available at this date")
+      toast.error("item is not available at this date")
       setStartDate(null)
       return
     }
