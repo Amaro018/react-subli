@@ -73,7 +73,7 @@ const ProductPage = ({ params }: any) => {
       : null
   )
 
-  console.log("the delivery system is :", selectedDelivery)
+  // console.log("the delivery system is :", selectedDelivery)
 
   // console.log("the delivery system is :", selectedDelivery)
   const [open, setOpen] = React.useState(false)
