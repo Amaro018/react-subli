@@ -265,6 +265,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
       console.log("Shop created successfully:", newShop)
       router.push("/renter/shop-register/pending")
       alert("Shop registered successfully!")
+      router.push("/renter/shop-register/pending")
       setLoading(false)
     } catch (error) {
       console.error("Error creating shop:", error)
