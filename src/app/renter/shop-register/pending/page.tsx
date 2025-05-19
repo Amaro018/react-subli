@@ -17,7 +17,7 @@ export default async function Page() {
         <Navbar currentUser={currentUser} />
       </div>
       <main className="flex flex-row gap-2">
-        <div className="w-64 ">
+        <div className="w-64 z-0">
           <Sidebar currentUser={currentUser} />
         </div>
         <div className="p-16 mt-8 w-full">
