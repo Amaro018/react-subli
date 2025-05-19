@@ -52,7 +52,7 @@ export default function DrawerCart(props: any) {
   useEffect(() => {
     if (cartItems?.length > 0) {
       const initialMethods = cartItems.reduce((acc, item) => {
-        acc[item.variantId] = item.deliveryMethod || "pickup" // Default to "pickup"
+        acc[item.variantId] = item.deliveryMethod
         return acc
       }, {})
       setDeliveryMethods(initialMethods)
@@ -83,7 +83,7 @@ export default function DrawerCart(props: any) {
   }
 
   const checkboxChange = (e: any, item: any) => {
-    console.log("delivery method is :", deliveryMethods)
+    console.log("ito deliver method mo:", deliveryMethods)
     const checked = e.target.checked
 
     // Calculate item price based on quantity, price, and duration
@@ -209,16 +209,14 @@ export default function DrawerCart(props: any) {
     }
   }
   const updateCartItemDetails = async (variantId, updates) => {
-    const cartItem = cartItems.find((item) => item.variantId === variantId)
+    const cartItem = cartItems?.find((item) => item.variantId === variantId)
     if (!cartItem) {
       toast.error("Cart item not found.")
       return
     }
 
-    // Destructure updates for clarity
     const { newQuantity, deliveryMethod } = updates
 
-    // Handle quantity validation
     if (newQuantity !== undefined) {
       if (newQuantity > cartItem.variant.quantity) {
         toast.error("You cannot add more than the available quantity.")
@@ -229,25 +227,25 @@ export default function DrawerCart(props: any) {
       }
     }
 
-    // Update local state for delivery method
-    if (deliveryMethod !== null) {
+    // Only update deliveryMethods state if deliveryMethod is provided
+    if (deliveryMethod !== undefined) {
       setDeliveryMethods((prev) => ({
         ...prev,
         [variantId]: deliveryMethod,
       }))
-      console.log(deliveryMethod)
     }
+
     try {
-      // Perform the mutation to update the cart item
       await updateCartItem({
         variantId,
         quantity: newQuantity !== undefined ? newQuantity : cartItem.quantity,
-        deliveryMethod: deliveryMethod,
-        startDate: cartItem.startDate, // Pass other necessary fields if required
+        deliveryMethod:
+          deliveryMethod !== undefined
+            ? deliveryMethod
+            : deliveryMethods[variantId] || cartItem.deliveryMethod,
+        startDate: cartItem.startDate,
         endDate: cartItem.endDate,
       })
-
-      // Refresh the cart items
       refetch()
     } catch (error) {
       toast.error("Failed to update cart item. Please try again.")
@@ -311,12 +309,12 @@ export default function DrawerCart(props: any) {
                         {item.product.deliveryOption === "BOTH" ? (
                           <select
                             className="bg-transparent border-2 border-white rounded-lg p-2 text-white"
-                            value={item.deliveryMethod}
+                            value={deliveryMethods[item.variantId] || item.deliveryMethod}
                             onChange={(e) =>
                               updateCartItemDetails(item.variantId, {
                                 deliveryMethod: e.target.value,
                               })
-                            } // Pass item ID and selected value
+                            }
                           >
                             <option value="pickup" className="text-slate-600 bg-transparent">
                               PICKUP
