@@ -53,10 +53,13 @@ model Shop {
   imageBg        String?
   documentDTI    String?
   dtiStatus      String    @default("pending")
+  dtiNotes       String    @default("pending")
   documentPermit String?
   permitStatus   String    @default("pending")
+  permitNotes    String    @default("pending")
   documentTax    String?
   taxStatus      String    @default("pending")
+  taxNotes       String    @default("pending")
   linkFacebook   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
