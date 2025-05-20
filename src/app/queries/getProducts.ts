@@ -11,7 +11,7 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
   // Find the shop associated with the current user
   const shop = await db.shop.findUnique({
     where: {
-      userId: userId, // Assuming `ownerId` links users to their shops
+      userId: userId,
     },
   })
 
