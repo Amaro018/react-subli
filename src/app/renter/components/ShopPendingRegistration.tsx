@@ -181,6 +181,9 @@ export const ShopPendingRegistration = (props: any) => {
                 Status
               </th>
               <th scope="col" className="text-center py-3">
+                Note
+              </th>
+              <th scope="col" className="text-center py-3">
                 Action
               </th>
             </tr>
@@ -218,6 +221,16 @@ export const ShopPendingRegistration = (props: any) => {
                     <CancelIcon className="text-red-500" />
                     <p>rejected</p>
                   </div>
+                )}
+              </td>
+              <td className="text-center py-4">
+                {currentUser.shop.dtiNotes === "pending" ? (
+                  <div className="flex flex-row justify-center gap-2 items-center">
+                    <PendingIcon className="text-red-500" />
+                    <p>pending</p>
+                  </div>
+                ) : (
+                  currentUser.shop.dtiNotes
                 )}
               </td>
               <td className="text-center py-4">
@@ -274,6 +287,16 @@ export const ShopPendingRegistration = (props: any) => {
                 )}
               </td>
               <td className="text-center py-4">
+                {currentUser.shop.permitNotes === "pending" ? (
+                  <div className="flex flex-row justify-center gap-2 items-center">
+                    <PendingIcon className="text-red-500" />
+                    <p>pending</p>
+                  </div>
+                ) : (
+                  currentUser.shop.permitNotes
+                )}
+              </td>
+              <td className="text-center py-4">
                 <input
                   required
                   name="documentPermit"
@@ -324,6 +347,16 @@ export const ShopPendingRegistration = (props: any) => {
                     <CancelIcon className="text-red-500" />
                     <p>rejected</p>
                   </div>
+                )}
+              </td>
+              <td className="text-center py-4">
+                {currentUser.shop.taxNotes === "pending" ? (
+                  <div className="flex flex-row justify-center gap-2 items-center">
+                    <PendingIcon className="text-red-500" />
+                    <p>pending</p>
+                  </div>
+                ) : (
+                  currentUser.shop.taxNotes
                 )}
               </td>
               <td className="text-center py-4">
