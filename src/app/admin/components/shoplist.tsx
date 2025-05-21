@@ -30,24 +30,45 @@ export default function ShopList() {
   const [shops, { refetch }] = useQuery(getShops, null)
   const [open, setOpen] = React.useState(false)
   const [selectedShop, setSelectedShop] = React.useState(null)
+  const [confirmModalOpen, setConfirmModalOpen] = React.useState(false)
+  const [pendingAction, setPendingAction] = React.useState<{
+    documentType: string
+    status: string
+  } | null>(null)
+  const [note, setNote] = React.useState("")
   const handleOpen = (shop: any) => {
     setSelectedShop(shop)
     setOpen(true)
   }
   const handleClose = () => setOpen(false)
 
-  const handleUpdateStatus = async (documentType: string, status: string) => {
+  const openConfirmModal = (documentType: string, status: string) => {
+    setPendingAction({ documentType, status })
+    setNote("")
+    setConfirmModalOpen(true)
+  }
+
+  const handleConfirm = async () => {
+    if (!pendingAction) return
+    await handleUpdateStatus(pendingAction.documentType, pendingAction.status, note)
+    setConfirmModalOpen(false)
+    setPendingAction(null)
+    setNote("")
+    console.log("Confirmed:", pendingAction.documentType, pendingAction.status, note)
+  }
+
+  const handleUpdateStatus = async (documentType: string, status: string, note?: string) => {
     try {
       const updatedShop = await updateStatusMutation({
         shopId: selectedShop?.id,
         documentType,
         status,
         shopUserId: selectedShop?.userId,
+        note, // Pass note to mutation if needed
       })
       refetch()
       setSelectedShop(updatedShop)
       alert(`Successfully updated to ${status}`)
-
       console.log(updatedShop)
     } catch (error) {
       console.error("Failed to update status:", error)
@@ -187,13 +208,13 @@ export default function ShopList() {
                 <div className="flex flex-row gap-2 justify-center">
                   <button
                     className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                    onClick={() => handleUpdateStatus("DTI", "approved")}
+                    onClick={() => openConfirmModal("DTI", "approved")}
                   >
                     Approve
                   </button>
                   <button
                     className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                    onClick={() => handleUpdateStatus("DTI", "rejected")}
+                    onClick={() => openConfirmModal("DTI", "rejected")}
                   >
                     Reject
                   </button>
@@ -224,13 +245,13 @@ export default function ShopList() {
                 <div className="flex flex-row gap-2 justify-center">
                   <button
                     className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                    onClick={() => handleUpdateStatus("PERMIT", "approved")}
+                    onClick={() => openConfirmModal("PERMIT", "approved")}
                   >
                     Approve
                   </button>
                   <button
                     className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                    onClick={() => handleUpdateStatus("PERMIT", "rejected")}
+                    onClick={() => openConfirmModal("PERMIT", "rejected")}
                   >
                     Reject
                   </button>
@@ -261,13 +282,13 @@ export default function ShopList() {
                 <div className="flex flex-row gap-2 justify-center">
                   <button
                     className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                    onClick={() => handleUpdateStatus("TAX_CLEARANCE", "approved")}
+                    onClick={() => openConfirmModal("TAX_CLEARANCE", "approved")}
                   >
                     Approve
                   </button>
                   <button
                     className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                    onClick={() => handleUpdateStatus("TAX_CLEARANCE", "rejected")}
+                    onClick={() => openConfirmModal("TAX_CLEARANCE", "rejected")}
                   >
                     Reject
                   </button>
@@ -275,6 +296,36 @@ export default function ShopList() {
               </td>
             </tr>
           </table>
+        </Box>
+      </Modal>
+
+      <Modal open={confirmModalOpen} onClose={() => setConfirmModalOpen(false)}>
+        <Box sx={{ ...style, width: 400 }}>
+          <h2 className="text-xl font-bold mb-2">
+            {pendingAction?.status === "approved" ? "Approve" : "Reject"} Document
+          </h2>
+          <textarea
+            className="w-full border rounded p-2 mb-4"
+            rows={4}
+            placeholder="Enter a note (required)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              className="bg-gray-400 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
+              onClick={() => setConfirmModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              disabled={!note.trim()}
+              onClick={handleConfirm}
+            >
+              Confirm
+            </button>
+          </div>
         </Box>
       </Modal>
     </>
