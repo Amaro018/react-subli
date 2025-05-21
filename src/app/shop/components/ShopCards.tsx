@@ -5,13 +5,17 @@ import getProducts from "../../queries/getProducts"
 import { useQuery } from "@blitzjs/rpc"
 import getRentItemsByShop from "../../queries/getRentItemsByShop"
 import { useParams } from "next/navigation"
+import getCurrentUser from "./../../users/queries/getCurrentUser"
 
 import { BarChart } from "@mui/x-charts/BarChart"
 export default function ShopCards() {
   const [products, { refetch }] = useQuery(getProducts, {})
-  const { shopId } = useParams()
+  const [currentUser] = useQuery(getCurrentUser, null)
+  const shopId = currentUser?.shop?.id
   const productCount = products ? products.length : 0
-  const [rentItems] = useQuery(getRentItemsByShop, { shopId })
+  const [rentItems = []] = useQuery(getRentItemsByShop, shopId ? { shopId } : { shopId: 0 }, {
+    enabled: !!shopId,
+  })
   const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear())
 
   // const getPayments = rentItems.map((rentItem) => {

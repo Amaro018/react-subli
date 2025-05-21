@@ -161,6 +161,8 @@ export default function DrawerCart(props: any) {
       }
     })
 
+    console.log("Items for checkout:", items)
+
     // Construct formData
     const formData = {
       userId: currentUser.id, // Ensure userId is valid
