@@ -21,6 +21,7 @@ import CheckOutDrawer from "../../components/CheckOutDrawer"
 
 import getAllCartItem from "../../queries/getAllCartItem"
 import CalendarEvent from "../../components/CalendarEvent"
+import Link from "next/link"
 import {
   FormControl,
   FormControlLabel,
@@ -388,7 +389,9 @@ const ProductPage = ({ params }: any) => {
           <ProductCarousel product={product} />
         </div>
         <div className="w-full bg-gray-50 p-12 gap-2">
-          <h1 className="text-2xl font-bold mb-4">{product.shop.shopName}</h1>
+          <Link href={`/shopview/${product.shop.id}`}>
+            <h1 className="text-2xl font-bold mb-4">{product.shop.shopName}</h1>
+          </Link>
           <div className="flex flex-row justify-between">
             <h1 className="text-xl font-bold capitalize">{product.name}</h1>
             <p className="flex items-center gap-2 font-bold">

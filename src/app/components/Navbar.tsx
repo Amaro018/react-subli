@@ -6,7 +6,7 @@ import getAllCartItem from "../queries/getAllCartItem"
 import { useQuery } from "@blitzjs/rpc"
 import DrawerCart from "./DrawerCart"
 import { Drawer } from "@mui/material"
-const Navbar = ({ currentUser }) => {
+const Navbar = ({ currentUser }: any) => {
   //  const currentUser = props.currentUser
   //  const {toggleDrawer} = props
   const [isOpen, setIsOpen] = useState(false)
