@@ -388,11 +388,15 @@ const ProductPage = ({ params }: any) => {
           <ProductCarousel product={product} />
         </div>
         <div className="w-full bg-gray-50 p-12 gap-2">
+          <h1 className="text-2xl font-bold mb-4">{product.shop.shopName}</h1>
           <div className="flex flex-row justify-between">
-            <h1 className="text-2xl font-bold capitalize">{product.name}</h1>
+            <h1 className="text-xl font-bold capitalize">{product.name}</h1>
             <p className="flex items-center gap-2 font-bold">
-              {isNaN(average) ? 0 : average}
-              <Rating name="review" value={average} precision={0.25} readOnly />
+              {isNaN(average) ? (
+                "no reviews yet"
+              ) : (
+                <Rating name="review" value={average} precision={0.25} readOnly />
+              )}
             </p>
           </div>
           <div className="mt-4 border-t">
