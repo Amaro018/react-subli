@@ -390,7 +390,7 @@ export const OrderList = () => {
             </FormControl>
             <TextField
               fullWidth
-              label="Description"
+              label="Payment Note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />

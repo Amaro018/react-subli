@@ -39,10 +39,10 @@ const Navbar = ({ currentUser }) => {
               isOpen ? "translate-y-0" : "hidden"
             }`}
           >
-           <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
+            <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
               <a href="/">Home</a>
             </li>
-             { /* <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
+            {/* <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
               <a href="#about">About</a>
             </li>
             <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
@@ -61,11 +61,11 @@ const Navbar = ({ currentUser }) => {
                   </li>
                 ) : currentUser.role === "USER" ? (
                   <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                    <a href="/renter">Dashboard</a>
+                    <a href="/renter">Orders</a>
                   </li>
                 ) : currentUser.role === "SHOP" ? (
                   <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                    <a href="/shop">Dashboard</a>
+                    <a href="/shop">Shop</a>
                   </li>
                 ) : (
                   <a href="/">Home</a>
