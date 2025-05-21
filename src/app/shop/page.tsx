@@ -5,6 +5,13 @@ import CreateProductForm from "./components/CreateProductForm"
 import ShopCards from "./components/ShopCards"
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
+  const getCurrentUser = async () => {
+    const user = await getUser()
+    setCurrentUser(user)
+  }
+  useEffect(() => {
+    getCurrentUser()
+  }, [])
   return (
     <div className="flex flex-row w-full gap-2 ">
       <div className="relative">
