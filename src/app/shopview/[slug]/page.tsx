@@ -6,6 +6,8 @@ import Navbar from "../../components/Navbar"
 import getUser from "../../utils/getUser"
 import getShopById from "../../queries/getShopById"
 import Image from "next/image"
+import ShopProducts from "../components/shop-products"
+// import ShopProducts from "./components/shop-products"
 
 export default function Page({ params }: any) {
   const { slug } = params
@@ -48,6 +50,14 @@ export default function Page({ params }: any) {
         ) : (
           <p>Loading shop details...</p>
         )}
+      </div>
+      <div className="px-16">
+        <h2 className="text-xl font-semibold p-4">Shop Products</h2>
+        {/* Here you can include the component to display shop products */}
+        {/* <ShopProducts shopId={slug} /> */}
+        <div className="p-4">
+          <ShopProducts />
+        </div>
       </div>
     </>
   )
