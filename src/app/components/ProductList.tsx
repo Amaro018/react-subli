@@ -11,6 +11,7 @@ export default function ProductList() {
 
   // State for filtering, searching, and pagination
   const [filterCategory, setFilterCategory] = useState("Categories") // Category filter
+  const [filterLocation, setFilterLocation] = useState("Set Location")
   const [searchTerm, setSearchTerm] = useState("") // Search input
   const [priceRange, setPriceRange] = useState([0, 10000]) // Price range
   const [filterColor, setFilterColor] = useState("") // Color filter
@@ -32,6 +33,7 @@ export default function ProductList() {
       products.flatMap((product) => product.variants.flatMap((variant) => variant.color.name))
     )
   )
+  const locations = ["Set Location", ...new Set(products.map((product) => product.shop.street))]
 
   const filteredProducts = products
     .filter((product) => {
@@ -51,8 +53,17 @@ export default function ProductList() {
       // Check search term filter
       const matchesSearchTerm = product.name.toLowerCase().includes(searchTerm.toLowerCase())
 
+      const matchesSetLocation =
+        filterLocation === "Set Location" || filterLocation === product.shop.street
+
       // Combine all filters
-      return matchesCategory && matchesColor && matchesPriceRange && matchesSearchTerm
+      return (
+        matchesCategory &&
+        matchesColor &&
+        matchesPriceRange &&
+        matchesSearchTerm &&
+        matchesSetLocation
+      )
     })
     // Implement pagination
     .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
@@ -84,6 +95,18 @@ export default function ProductList() {
           <h1 className="text-2xl font-bold mb-4">Products</h1>
           {/* Filter Section */}
           <div className="flex flex-col gap-4 mb-4">
+            <Select
+              value={filterLocation}
+              onChange={(e) => setFilterLocation(e.target.value)}
+              size="small"
+            >
+              {locations.map((location) => (
+                <MenuItem value={location} key={location}>
+                  {location}
+                </MenuItem>
+              ))}
+            </Select>
+
             <Select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
