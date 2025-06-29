@@ -29,7 +29,7 @@ export default resolver.pipe(
     } else if (paymentStatus === "canceled") {
       updateStatus = "canceled"
     } else {
-      updateStatus = "completed"
+      updateStatus = "rendering"
     }
 
     // Update a single rentItem's status

@@ -6,7 +6,7 @@ import Navbar from "../../components/Navbar"
 import getUser from "../../utils/getUser"
 import getShopById from "../../queries/getShopById"
 import Image from "next/image"
-import ShopProducts from "../components/shop-products"
+// import ShopProducts from "../components/shop-products"
 // import ShopProducts from "./components/shop-products"
 
 export default function Page({ params }: any) {
