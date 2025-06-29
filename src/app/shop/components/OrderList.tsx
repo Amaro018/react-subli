@@ -22,7 +22,7 @@ import getCurrentUser from "./../../users/queries/getCurrentUser"
 const statuses = [
   { value: "ALL", label: "ALL" },
   { value: "pending", label: "PENDING" },
-  { value: "rendering", label: "RENDERING" },
+  { value: "rendering", label: "On Hand" },
   { value: "completed", label: "COMPLETED" },
   { value: "canceled", label: "CANCELED" },
 ]
@@ -60,6 +60,7 @@ export const OrderList = () => {
   const [sumOfPayment, setSumOfPayment] = useState(0)
   const [addPaymentMutation] = useMutation(addPayment)
   const [open, setOpen] = useState(false)
+  const [openComplete, setOpenComplete] = useState(false)
 
   const filteredRentItems =
     statusFilter === "ALL" ? rentItems : rentItems.filter((item) => item.status === statusFilter)
@@ -106,6 +107,31 @@ export const OrderList = () => {
     setOpen(false)
     setPayments([])
     setSelectedItem(null)
+  }
+
+  const handleOpenComplete = (rentItem: any) => {
+    setOpenComplete(true)
+    setSelectedItem(rentItem)
+  }
+  const handleCloseComplete = () => {
+    setOpenComplete(false)
+  }
+
+  const handleComplete = async (rentItem: any) => {
+    handleOpenComplete(rentItem)
+    // try {
+    //   await addPaymentMutation({
+    //     rentItemId: rentItem.id,
+    //     amount: 0,
+    //     status: "completed",
+    //     note: "Payment completed",
+    //   })
+    //   alert("Payment completed successfully!")
+    //   onClose()
+    //   refetch()
+    // } catch (error) {
+    //   alert("Failed to complete payment")
+    // }
   }
 
   const handleCancel = async (rentItem: any) => {
@@ -267,7 +293,7 @@ export const OrderList = () => {
                       <StepLabel>Pending</StepLabel>
                     </Step>
                     <Step>
-                      <StepLabel>Rendering</StepLabel>
+                      <StepLabel>On Hand</StepLabel>
                     </Step>
                     <Step>
                       <StepLabel>Completed</StepLabel>
@@ -296,12 +322,12 @@ export const OrderList = () => {
                         ? "bg-red-600"
                         : "bg-red-500 hover:bg-red-700"
                     } text-white font-bold py-2 px-4 rounded w-full`}
-                    onClick={() => handleCancel(rentItem)}
-                    disabled={
-                      rentItem.status === "completed" ||
-                      rentItem.status === "canceled" ||
+                    onClick={() =>
                       rentItem.status === "rendering"
+                        ? handleComplete(rentItem)
+                        : handleCancel(rentItem)
                     }
+                    disabled={rentItem.status === "completed" || rentItem.status === "canceled"}
                   >
                     {rentItem.status === "completed"
                       ? "Order Completed"
@@ -317,6 +343,51 @@ export const OrderList = () => {
           ))
         )}
       </div>
+
+      <Modal open={openComplete} onClose={handleCloseComplete}>
+        <Box sx={style}>
+          <div className="flex flex-col ">
+            <p className="font-semibold text-2xl mb-4">
+              Completing order for {selectedItem?.productVariant.product.name}
+            </p>
+            <div className="flex flex-row gap-4 items-center justify-start">
+              <TextField
+                fullWidth
+                label="Rented Quantity"
+                value={selectedItem?.quantity}
+                InputProps={{
+                  readOnly: true,
+                }}
+                inputProps={{
+                  tabIndex: -1, // prevent keyboard focus
+                  style: { pointerEvents: "none" }, // prevent mouse input
+                }}
+                // onChange={(e) => setNote(e.target.value)}
+              />
+
+              <TextField
+                fullWidth
+                label="Number of Damaged Product"
+                type="number"
+                // onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end mt-4">
+              <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                submit
+              </button>
+              <button
+                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2"
+                onClick={handleCloseComplete}
+              >
+                cancel
+              </button>
+            </div>
+          </div>
+        </Box>
+      </Modal>
+
       <Modal open={open} onClose={onClose}>
         <Box sx={style}>
           <div className="flex flex-row justify-between items-center">
