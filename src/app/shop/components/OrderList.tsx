@@ -22,7 +22,7 @@ import getCurrentUser from "./../../users/queries/getCurrentUser"
 const statuses = [
   { value: "ALL", label: "ALL" },
   { value: "pending", label: "PENDING" },
-  { value: "rendering", label: "On Hand" },
+  { value: "rendering", label: "ON HAND" },
   { value: "completed", label: "COMPLETED" },
   { value: "canceled", label: "CANCELED" },
 ]
@@ -61,6 +61,22 @@ export const OrderList = () => {
   const [addPaymentMutation] = useMutation(addPayment)
   const [open, setOpen] = useState(false)
   const [openComplete, setOpenComplete] = useState(false)
+  const [NumberOfDamageProduct, setNumberOfDamageProduct] = useState(0)
+
+  const [valueOfDamageProduct, setValueOfDamageProduct] = useState(0)
+
+  const handleChangeOfDamageProduct = (value: string) => {
+    const parsedValue = parseInt(value, 10)
+    if (!isNaN(parsedValue)) {
+      setNumberOfDamageProduct(parsedValue)
+    } else {
+      setNumberOfDamageProduct(0)
+    }
+
+    setValueOfDamageProduct(NumberOfDamageProduct * selectedItem?.price)
+  }
+
+  console.log("BAYADAN", valueOfDamageProduct)
 
   const filteredRentItems =
     statusFilter === "ALL" ? rentItems : rentItems.filter((item) => item.status === statusFilter)
@@ -115,6 +131,7 @@ export const OrderList = () => {
   }
   const handleCloseComplete = () => {
     setOpenComplete(false)
+    setValueOfDamageProduct(0)
   }
 
   const handleComplete = async (rentItem: any) => {
@@ -332,7 +349,7 @@ export const OrderList = () => {
                     {rentItem.status === "completed"
                       ? "Order Completed"
                       : rentItem.status === "rendering"
-                      ? "Item on Render"
+                      ? "Return Status"
                       : rentItem.status === "canceled"
                       ? "Order Canceled"
                       : "Cancel Order"}
@@ -347,9 +364,13 @@ export const OrderList = () => {
       <Modal open={openComplete} onClose={handleCloseComplete}>
         <Box sx={style}>
           <div className="flex flex-col ">
-            <p className="font-semibold text-2xl mb-4">
-              Completing order for {selectedItem?.productVariant.product.name}
-            </p>
+            <div className="flex justify-between items-center">
+              <p className="font-semibold text-2xl mb-4">
+                Completing order for {selectedItem?.productVariant.product.name}
+              </p>
+              <p>Product Price: {selectedItem?.price}</p>
+            </div>
+
             <div className="flex flex-row gap-4 items-center justify-start">
               <TextField
                 fullWidth
@@ -362,27 +383,32 @@ export const OrderList = () => {
                   tabIndex: -1, // prevent keyboard focus
                   style: { pointerEvents: "none" }, // prevent mouse input
                 }}
-                // onChange={(e) => setNote(e.target.value)}
               />
 
               <TextField
                 fullWidth
                 label="Number of Damaged Product"
                 type="number"
-                // onChange={(e) => setNote(e.target.value)}
+                value={NumberOfDamageProduct}
+                inputProps={{ max: selectedItem?.quantity, min: 0 }}
+                onChange={(e) => handleChangeOfDamageProduct(e.target.value)}
               />
             </div>
 
-            <div className="flex justify-end mt-4">
-              <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                submit
-              </button>
-              <button
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2"
-                onClick={handleCloseComplete}
-              >
-                cancel
-              </button>
+            <div className="flex justify-between mt-4 items-center">
+              <div>Total Added Balance: {NumberOfDamageProduct * (selectedItem?.price ?? 0)}</div>
+
+              <div>
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                  submit
+                </button>
+                <button
+                  className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2"
+                  onClick={handleCloseComplete}
+                >
+                  cancel
+                </button>
+              </div>
             </div>
           </div>
         </Box>
