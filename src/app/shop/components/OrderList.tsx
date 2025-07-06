@@ -79,8 +79,6 @@ export const OrderList = () => {
     setValueOfDamageProduct(NumberOfDamageProduct * selectedItem?.price)
   }
 
-  console.log("BAYADAN", valueOfDamageProduct)
-
   const filteredRentItems =
     statusFilter === "ALL" ? rentItems : rentItems.filter((item) => item.status === statusFilter)
 
@@ -170,36 +168,25 @@ export const OrderList = () => {
     }
   }
 
-  const handleSubmit = async () => {
-    if (!selectedItem) return
-    try {
-      await addPaymentMutation({
-        rentItemId: selectedItem.id,
-        amount,
-        status,
-        note,
-      })
-      alert("Payment added successfully!")
-      onClose()
-      setAmount(0)
-      setStatus("Partial")
-      setNote("")
-      refetch()
-    } catch (error) {
-      alert("Failed to add payment")
-    }
-  }
-
   const daysRenting = Math.ceil(
     (new Date(selectedItem?.endDate).getTime() - new Date(selectedItem?.startDate).getTime()) /
       (1000 * 60 * 60 * 24) +
       1
   )
   const addedPenaltyFee = selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee
+
+  const lastPaymentPenaltyFee =
+    selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee ?? 0
+  console.log("penaltyFee", lastPaymentPenaltyFee)
+
+  const totalPayment = selectedItem?.payments?.reduce((total, payment) => total + payment.amount, 0)
+
   const remainingBalance =
     selectedItem?.price * selectedItem?.quantity * daysRenting -
-    selectedItem?.payments?.reduce((acc, p) => acc + p.amount, 0) +
-    addedPenaltyFee
+    totalPayment +
+    lastPaymentPenaltyFee
+
+  console.log("remainingBalance", remainingBalance)
 
   const handleAmountChange = (value: number) => {
     setAmount(value)
@@ -219,7 +206,7 @@ export const OrderList = () => {
     try {
       await addPaymentMutation({
         rentItemId: selectedItem.id,
-        amount: computedPenalty,
+        amount,
         status,
         penaltyFee: computedPenalty,
         note: note || "Penalty Fee",
@@ -237,7 +224,44 @@ export const OrderList = () => {
     }
   }
 
-  console.log("penaltyFee", selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee)
+  const handleSubmit = async () => {
+    if (!selectedItem) return
+
+    // Calculate how many payments there are already
+    const paymentCount = payments.length
+
+    // Determine if full payment is made
+    const isFullyPaid = amount >= remainingBalance
+    console.log("amount", amount)
+    console.log("remainingBalance", remainingBalance)
+
+    console.log("isFullyPaid", isFullyPaid)
+    // Decide final status to send to the mutation
+    const computedStatus =
+      selectedItem.status === "canceled"
+        ? "canceled"
+        : paymentCount >= 1 || isFullyPaid
+        ? "completed"
+        : "rendering"
+
+    try {
+      await addPaymentMutation({
+        rentItemId: selectedItem.id,
+        amount,
+        status: computedStatus,
+        note,
+      })
+      toast.success("Payment added successfully!")
+      onClose()
+      setAmount(0)
+      setStatus("Partial")
+      setNote("")
+      refetch()
+    } catch (error) {
+      console.error("Payment submission failed", error)
+      toast.error("Failed to add payment")
+    }
+  }
 
   return (
     <>

@@ -20,20 +20,41 @@ export default resolver.pipe(
         rentItemId,
         amount,
         status,
-        ...(penaltyFee !== undefined && { penaltyFee }), // only include if defined
+        ...(penaltyFee !== undefined && { penaltyFee }),
         note: note || "Payment",
       },
     })
 
-    // Determine rentItem status update
-    const paymentStatus = status
-    let updateStatus = ""
-    if (paymentStatus === "Partial") {
-      updateStatus = "rendering"
-    } else if (paymentStatus === "canceled") {
+    // Get all payments to calculate total paid
+    const payments = await db.payment.findMany({
+      where: { rentItemId },
+    })
+
+    const rentItem = await db.rentItem.findUnique({
+      where: { id: rentItemId },
+      include: { rent: true }, // for rentId
+    })
+
+    if (!rentItem) throw new Error("Rent item not found")
+
+    const daysRented = Math.ceil(
+      (new Date(rentItem.endDate).getTime() - new Date(rentItem.startDate).getTime()) /
+        (1000 * 60 * 60 * 24) +
+        1
+    )
+
+    const baseTotal = rentItem.price * rentItem.quantity * daysRented
+
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
+    const totalPenalty = payments.reduce((sum, p) => sum + (p.penaltyFee ?? 0), 0)
+
+    const remainingBalance = baseTotal - totalPaid + totalPenalty
+
+    let updateStatus = "rendering"
+    if (status === "canceled") {
       updateStatus = "canceled"
-    } else {
-      updateStatus = "rendering"
+    } else if (remainingBalance <= 0) {
+      updateStatus = "completed"
     }
 
     // Update the specific rentItem's status
@@ -42,24 +63,17 @@ export default resolver.pipe(
       data: { status: updateStatus },
     })
 
-    // Get rentId from the rentItem
-    const rentItem = await db.rentItem.findUnique({
-      where: { id: rentItemId },
-      select: { rentId: true },
-    })
-
     // Check if all rentItems under that rent are completed
     const allRemaining = await db.rentItem.findMany({
       where: {
-        rentId: rentItem?.rentId,
+        rentId: rentItem.rentId,
         NOT: { status: "completed" },
       },
     })
 
-    // If all rentItems are completed, update rent status to completed
     if (allRemaining.length === 0) {
       await db.rent.update({
-        where: { id: rentItem?.rentId },
+        where: { id: rentItem.rentId },
         data: { status: "completed" },
       })
     }
