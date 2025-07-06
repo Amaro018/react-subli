@@ -18,6 +18,7 @@ import Image from "next/image"
 import addPayment from "../../mutations/addPayment"
 import getPaymentByRentId from "../../queries/getPaymentByRentId"
 import getCurrentUser from "./../../users/queries/getCurrentUser"
+import { toast } from "sonner"
 
 const statuses = [
   { value: "ALL", label: "ALL" },
@@ -64,6 +65,8 @@ export const OrderList = () => {
   const [NumberOfDamageProduct, setNumberOfDamageProduct] = useState(0)
 
   const [valueOfDamageProduct, setValueOfDamageProduct] = useState(0)
+
+  const [penaltyFee, setPenaltyFee] = useState(0)
 
   const handleChangeOfDamageProduct = (value: string) => {
     const parsedValue = parseInt(value, 10)
@@ -186,6 +189,55 @@ export const OrderList = () => {
       alert("Failed to add payment")
     }
   }
+
+  const daysRenting = Math.ceil(
+    (new Date(selectedItem?.endDate).getTime() - new Date(selectedItem?.startDate).getTime()) /
+      (1000 * 60 * 60 * 24) +
+      1
+  )
+  const addedPenaltyFee = selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee
+  const remainingBalance =
+    selectedItem?.price * selectedItem?.quantity * daysRenting -
+    selectedItem?.payments?.reduce((acc, p) => acc + p.amount, 0) +
+    addedPenaltyFee
+
+  const handleAmountChange = (value: number) => {
+    setAmount(value)
+    if (value >= remainingBalance) {
+      setStatus("Full")
+    } else {
+      setStatus("Partial")
+    }
+  }
+
+  const handleSubmitPenaltyFee = async () => {
+    const computedPenalty = Number(selectedItem?.price) * NumberOfDamageProduct
+    setPenaltyFee(computedPenalty)
+
+    console.log("computedPenalty", computedPenalty)
+
+    try {
+      await addPaymentMutation({
+        rentItemId: selectedItem.id,
+        amount: computedPenalty,
+        status,
+        penaltyFee: computedPenalty,
+        note: note || "Penalty Fee",
+      })
+
+      toast.success("Penalty Fee added successfully!")
+      onClose()
+      setAmount(0)
+      setPenaltyFee(0)
+      setNote("")
+      refetch()
+    } catch (error) {
+      console.error("Add payment error:", error)
+      alert("Failed to add payment")
+    }
+  }
+
+  console.log("penaltyFee", selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee)
 
   return (
     <>
@@ -399,7 +451,10 @@ export const OrderList = () => {
               <div>Total Added Balance: {NumberOfDamageProduct * (selectedItem?.price ?? 0)}</div>
 
               <div>
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                <button
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  onClick={handleSubmitPenaltyFee}
+                >
                   submit
                 </button>
                 <button
@@ -443,7 +498,9 @@ export const OrderList = () => {
                           ) -
                           sumOfPayment +
                           (selectedItem?.additionalPrice ?? 0)
-                      )
+                      ) +
+                        (selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee ??
+                          0)
                     )}
               </p>
               <p>
@@ -472,13 +529,21 @@ export const OrderList = () => {
               fullWidth
               label="Amount"
               type="number"
+              inputProps={{
+                min: 0,
+                max: remainingBalance,
+              }}
               value={amount}
-              onChange={(e) => setAmount(parseFloat(e.target.value))}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value) || 0
+                handleAmountChange(value)
+              }}
             />
             <FormControl fullWidth>
               <Select
                 labelId="payment-method-label"
                 value={status}
+                readOnly
                 onChange={(e) => setStatus(e.target.value)}
               >
                 <MenuItem value="Partial">Partial</MenuItem>
@@ -519,7 +584,9 @@ export const OrderList = () => {
                           day: "2-digit",
                         })}
                       </td>
-                      <td className="border border-slate-300 p-2">{payment.amount}</td>
+                      <td className="border border-slate-300 p-2">
+                        {payment.penaltyFee ? `+${payment.penaltyFee}` : payment.amount}
+                      </td>
                       <td className="border border-slate-300 p-2">{payment.status}</td>
                       <td className="border border-slate-300 p-2">{payment.note}</td>
                     </tr>

@@ -7,12 +7,12 @@ import getUser from "../../utils/getUser"
 import getShopById from "../../queries/getShopById"
 import Image from "next/image"
 // import ShopProducts from "../components/shop-products"
-// import ShopProducts from "./components/shop-products"
+import ShopProducts from "../../components/ShopProducts"
 
 export default function Page({ params }: any) {
   const { slug } = params
   const [currentUser, setCurrentUser] = useState<any>(null)
-
+  console.log("shop id", slug)
   useEffect(() => {
     const fetchUser = async () => {
       const user = await getUser()
@@ -23,7 +23,6 @@ export default function Page({ params }: any) {
 
   // Fetch shop details using the slug (assuming it's the shop ID)
   const [shop] = useQuery(getShopById, { id: slug })
-
   return (
     <>
       <Navbar currentUser={currentUser} />
@@ -56,7 +55,7 @@ export default function Page({ params }: any) {
         {/* Here you can include the component to display shop products */}
         {/* <ShopProducts shopId={slug} /> */}
         <div className="p-4">
-          <ShopProducts />
+          <ShopProducts shop={shop} />
         </div>
       </div>
     </>
