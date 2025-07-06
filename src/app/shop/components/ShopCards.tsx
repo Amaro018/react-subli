@@ -168,7 +168,7 @@ export default function ShopCards() {
         </div>
 
         <div className="bg-slate-600 p-4 flex flex-col justify-center items-center rounded-lg w-1/4 gap-4 shadow-lg shadow-slate-500">
-          <p className="text-3xl">RENDERED</p>
+          <p className="text-3xl">ON HAND</p>
 
           <p className="text-2xl">{renderedItems}</p>
         </div>

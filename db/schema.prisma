@@ -237,6 +237,7 @@ model Payment {
   amount     Float // Payment amount
   status     String // Payment status (e.g., 'partial', 'paid', 'unpaid')
   note       String? // Payment description
+  penaltyFee Float? // Penalty fee
   createdAt  DateTime @default(now())
 }
 

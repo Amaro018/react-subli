@@ -230,9 +230,15 @@ export const ShopPendingRegistration = (props: any) => {
                     <p>pending</p>
                   </div>
                 ) : (
-                  currentUser.shop.dtiNotes
+                  <div
+                    className="max-w-[100px] overflow-hidden whitespace-nowrap text-ellipsis mx-auto"
+                    title={currentUser.shop.dtiNotes}
+                  >
+                    {currentUser.shop.dtiNotes}
+                  </div>
                 )}
               </td>
+
               <td className="text-center py-4">
                 <input
                   required
@@ -293,7 +299,12 @@ export const ShopPendingRegistration = (props: any) => {
                     <p>pending</p>
                   </div>
                 ) : (
-                  currentUser.shop.permitNotes
+                  <div
+                    className="max-w-[100px] overflow-hidden whitespace-nowrap text-ellipsis mx-auto"
+                    title={currentUser.shop.permitNotes}
+                  >
+                    {currentUser.shop.permitNotes}
+                  </div>
                 )}
               </td>
               <td className="text-center py-4">
@@ -356,7 +367,12 @@ export const ShopPendingRegistration = (props: any) => {
                     <p>pending</p>
                   </div>
                 ) : (
-                  currentUser.shop.taxNotes
+                  <div
+                    className="max-w-[100px] overflow-hidden whitespace-nowrap text-ellipsis mx-auto"
+                    title={currentUser.shop.taxNotes}
+                  >
+                    {currentUser.shop.taxNotes}
+                  </div>
                 )}
               </td>
               <td className="text-center py-4">

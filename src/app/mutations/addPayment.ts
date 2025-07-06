@@ -5,23 +5,27 @@ import z from "zod"
 const AddPayment = z.object({
   rentItemId: z.number(), // ID of the RentItem
   amount: z.number(), // Amount being paid
-  status: z.string(), // Payment method
+  status: z.string(), // Payment method or status
+  penaltyFee: z.number().optional(), // Optional penalty
   note: z.string().optional(), // Optional description
 })
 
 export default resolver.pipe(
   resolver.zod(AddPayment),
   resolver.authorize(),
-  async ({ rentItemId, amount, status, note }) => {
+  async ({ rentItemId, amount, status, note, penaltyFee }) => {
+    // Create payment
     const payment = await db.payment.create({
       data: {
         rentItemId,
         amount,
         status,
+        ...(penaltyFee !== undefined && { penaltyFee }), // only include if defined
         note: note || "Payment",
       },
     })
 
+    // Determine rentItem status update
     const paymentStatus = status
     let updateStatus = ""
     if (paymentStatus === "Partial") {
@@ -32,24 +36,28 @@ export default resolver.pipe(
       updateStatus = "rendering"
     }
 
-    // Update a single rentItem's status
+    // Update the specific rentItem's status
     await db.rentItem.update({
       where: { id: rentItemId },
       data: { status: updateStatus },
     })
 
-    // Check if all rentItems for the same rentId are completed
+    // Get rentId from the rentItem
     const rentItem = await db.rentItem.findUnique({
       where: { id: rentItemId },
       select: { rentId: true },
     })
 
-    const allCompleted = await db.rentItem.findMany({
-      where: { rentId: rentItem?.rentId, NOT: { status: "completed" } },
+    // Check if all rentItems under that rent are completed
+    const allRemaining = await db.rentItem.findMany({
+      where: {
+        rentId: rentItem?.rentId,
+        NOT: { status: "completed" },
+      },
     })
 
-    // If no incomplete rentItems remain, update the rent's status to "completed"
-    if (allCompleted.length === 0) {
+    // If all rentItems are completed, update rent status to completed
+    if (allRemaining.length === 0) {
       await db.rent.update({
         where: { id: rentItem?.rentId },
         data: { status: "completed" },
