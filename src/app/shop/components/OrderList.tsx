@@ -54,7 +54,7 @@ export const OrderList = () => {
 
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [selectedItem, setSelectedItem] = useState<any>(null)
-  const [amount, setAmount] = useState(0)
+  const [amount, setAmount] = useState()
   const [status, setStatus] = useState("Partial")
   const [note, setNote] = useState("")
   const [payments, setPayments] = useState<any[]>([])
@@ -67,6 +67,8 @@ export const OrderList = () => {
   const [valueOfDamageProduct, setValueOfDamageProduct] = useState(0)
 
   const [penaltyFee, setPenaltyFee] = useState(0)
+
+  const [isSubmitDisabled, setIsSubmitDisabled] = useState(true)
 
   const handleChangeOfDamageProduct = (value: string) => {
     const parsedValue = parseInt(value, 10)
@@ -190,10 +192,12 @@ export const OrderList = () => {
 
   const handleAmountChange = (value: number) => {
     setAmount(value)
-    if (value >= remainingBalance) {
-      setStatus("Full")
+
+    if (value === "" || isNaN(value) || value < 1 || value > remainingBalance) {
+      setIsSubmitDisabled(true)
     } else {
-      setStatus("Partial")
+      setStatus(value >= remainingBalance ? "Full" : "Partial")
+      setIsSubmitDisabled(false)
     }
   }
 
@@ -225,6 +229,13 @@ export const OrderList = () => {
   }
 
   const handleSubmit = async () => {
+    if (amount < remainingBalance / 2) {
+      alert(`Partial should be a minimum of ₱${remainingBalance / 2}`)
+      return
+    }
+  }
+
+  const handleSubmit1 = async () => {
     if (!selectedItem) return
 
     // Calculate how many payments there are already
@@ -539,7 +550,7 @@ export const OrderList = () => {
                 variant="contained"
                 color="primary"
                 onClick={handleSubmit}
-                disabled={selectedItem?.status === "completed"}
+                disabled={selectedItem?.status === "completed" || isSubmitDisabled}
               >
                 Submit
               </Button>
@@ -553,14 +564,20 @@ export const OrderList = () => {
               fullWidth
               label="Amount"
               type="number"
-              inputProps={{
-                min: 0,
-                max: remainingBalance,
+              onKeyDown={(e) => {
+                // Block e, +, -, .
+                if (["e", "E", "+", "-", "."].includes(e.key)) {
+                  e.preventDefault()
+                }
               }}
               value={amount}
               onChange={(e) => {
                 const value = parseFloat(e.target.value) || 0
                 handleAmountChange(value)
+              }}
+              inputProps={{
+                min: 1,
+                max: remainingBalance, // <- your variable here
               }}
             />
             <FormControl fullWidth>
