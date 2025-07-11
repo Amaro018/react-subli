@@ -19,6 +19,7 @@ import addPayment from "../../mutations/addPayment"
 import getPaymentByRentId from "../../queries/getPaymentByRentId"
 import getCurrentUser from "./../../users/queries/getCurrentUser"
 import { toast } from "sonner"
+import { set } from "zod"
 
 const statuses = [
   { value: "ALL", label: "ALL" },
@@ -54,7 +55,7 @@ export const OrderList = () => {
 
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [selectedItem, setSelectedItem] = useState<any>(null)
-  const [amount, setAmount] = useState()
+  const [amount, setAmount] = useState<string | number>("")
   const [status, setStatus] = useState("Partial")
   const [note, setNote] = useState("")
   const [payments, setPayments] = useState<any[]>([])
@@ -69,16 +70,26 @@ export const OrderList = () => {
   const [penaltyFee, setPenaltyFee] = useState(0)
 
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(true)
+  const [isReturnDisabled, setIsReturnDisabled] = useState(false)
 
-  const handleChangeOfDamageProduct = (value: string) => {
+  const handleChangeOfDamageProduct1 = (value: number | string) => {
     const parsedValue = parseInt(value, 10)
+
     if (!isNaN(parsedValue)) {
+      setIsReturnDisabled(false)
       setNumberOfDamageProduct(parsedValue)
+      if (parsedValue > selectedItem?.quantity || parsedValue < 1) {
+        setIsReturnDisabled(true)
+        return
+      }
+      // setValueOfDamageProduct(parsedValue * (selectedItem?.price || 0))
     } else {
       setNumberOfDamageProduct(0)
+      // setValueOfDamageProduct(0)
+      setIsReturnDisabled(true)
     }
 
-    setValueOfDamageProduct(NumberOfDamageProduct * selectedItem?.price)
+    // setValueOfDamageProduct(NumberOfDamageProduct * selectedItem?.price)
   }
 
   const filteredRentItems =
@@ -190,18 +201,59 @@ export const OrderList = () => {
 
   console.log("remainingBalance", remainingBalance)
 
-  const handleAmountChange = (value: number) => {
-    setAmount(value)
+  const handleAmountChange = (value: number | string) => {
+    const numericValue = typeof value === "string" ? parseFloat(value) : value
 
-    if (value === "" || isNaN(value) || value < 1 || value > remainingBalance) {
+    if (numericValue <= 0) setAmount("")
+
+    if (
+      value === "" ||
+      isNaN(numericValue) ||
+      numericValue < 1 ||
+      numericValue > remainingBalance
+    ) {
       setIsSubmitDisabled(true)
+      setStatus(amount !== "" ? "Amount exceeds remaining balance!" : "Partial")
     } else {
       setStatus(value >= remainingBalance ? "Full" : "Partial")
       setIsSubmitDisabled(false)
     }
   }
 
+  const handleChangeOfDamageProduct = (value: React.ChangeEvent<HTMLInputElement>) => {
+    const input = value.replace(/^0+(?!$)/, "")
+
+    if (input > selectedItem?.quantity) return
+
+    if (isNaN(input) || input > (selectedItem?.quantity || 0)) {
+      setIsReturnDisabled(true)
+      setNumberOfDamageProduct(0)
+      setValueOfDamageProduct(0)
+      return
+    }
+
+    setIsReturnDisabled(false)
+    setNumberOfDamageProduct(input)
+    setValueOfDamageProduct(input * (selectedItem?.price || 0))
+  }
+
   const handleSubmitPenaltyFee = async () => {
+    alert(valueOfDamageProduct)
+
+    try {
+      await addPaymentMutation({
+        rentItemId: selectedItem.id,
+        amount,
+        status,
+        penaltyFee: computedPenalty,
+        note: note || "Penalty Fee",
+      })
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  const handleSubmitPenaltyFee1 = async () => {
     const computedPenalty = Number(selectedItem?.price) * NumberOfDamageProduct
     setPenaltyFee(computedPenalty)
 
@@ -487,10 +539,11 @@ export const OrderList = () => {
 
               <div>
                 <button
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
                   onClick={handleSubmitPenaltyFee}
+                  disabled={isReturnDisabled}
                 >
-                  submit
+                  return
                 </button>
                 <button
                   className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2"
@@ -572,8 +625,10 @@ export const OrderList = () => {
               }}
               value={amount}
               onChange={(e) => {
-                const value = parseFloat(e.target.value) || 0
-                handleAmountChange(value)
+                const input = e.target.value
+                // const value = input === '' ? '' : parseFloat(input);
+                setAmount(input)
+                handleAmountChange(input)
               }}
               inputProps={{
                 min: 1,
@@ -589,6 +644,10 @@ export const OrderList = () => {
               >
                 <MenuItem value="Partial">Partial</MenuItem>
                 <MenuItem value="Full">Full</MenuItem>
+                <MenuItem value="Amount exceeds remaining balance!">
+                  Amount exceeds remaining balance!
+                </MenuItem>
+                <MenuItem value="Completed">Completed</MenuItem>
               </Select>
             </FormControl>
             <TextField
