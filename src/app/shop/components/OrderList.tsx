@@ -15,7 +15,8 @@ import {
   TextField,
 } from "@mui/material"
 import Image from "next/image"
-import addPayment from "../../mutations/addPayment"
+// import addPayment from "../../mutations/addPayment"
+import addPayment from "../../mutations/addPaymentNew"
 import getPaymentByRentId from "../../queries/getPaymentByRentId"
 import getCurrentUser from "./../../users/queries/getCurrentUser"
 import { toast } from "sonner"
@@ -27,6 +28,7 @@ const statuses = [
   { value: "rendering", label: "ON HAND" },
   { value: "completed", label: "COMPLETED" },
   { value: "canceled", label: "CANCELED" },
+  { value: "returned", label: "RETURNED" },
 ]
 
 const style = {
@@ -55,11 +57,12 @@ export const OrderList = () => {
 
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [selectedItem, setSelectedItem] = useState<any>(null)
-  const [amount, setAmount] = useState<string | number>("")
+  const [amount, setAmount] = useState<string | number>(0)
   const [status, setStatus] = useState("Partial")
   const [note, setNote] = useState("")
   const [payments, setPayments] = useState<any[]>([])
   const [sumOfPayment, setSumOfPayment] = useState(0)
+  const [sumOfPFee, setSumOfPFee] = useState(0)
   const [addPaymentMutation] = useMutation(addPayment)
   const [open, setOpen] = useState(false)
   const [openComplete, setOpenComplete] = useState(false)
@@ -113,19 +116,25 @@ export const OrderList = () => {
           1
       )
     const additionalPrice = daysPassed * basePrice
+    const damagedFee = rentItem.price * rentItem.returnedDamagedQty
 
     const updatedItem = {
       ...rentItem,
       additionalPrice,
       basePrice,
       daysPassed,
+      damagedFee,
     }
+
     setSelectedItem(updatedItem)
 
     try {
       const payments = await getPaymentByRentId({ rentItemId: rentItem.id })
-      const sum = payments.reduce((acc, p) => acc + p.amount, 0)
-      setSumOfPayment(sum)
+      const paymentSum = payments.reduce((acc, p) => acc + p.amount, 0)
+      const pFee = payments.reduce((acc, p) => acc + p.penaltyFee, 0)
+
+      setSumOfPayment(paymentSum)
+      setSumOfPFee(pFee)
       setPayments(payments)
     } catch (error) {
       setPayments([])
@@ -190,16 +199,17 @@ export const OrderList = () => {
 
   const lastPaymentPenaltyFee =
     selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee ?? 0
-  console.log("penaltyFee", lastPaymentPenaltyFee)
+  // console.log("penaltyFee", lastPaymentPenaltyFee)
 
   const totalPayment = selectedItem?.payments?.reduce((total, payment) => total + payment.amount, 0)
 
   const remainingBalance =
     selectedItem?.price * selectedItem?.quantity * daysRenting -
     totalPayment +
-    lastPaymentPenaltyFee
+    lastPaymentPenaltyFee +
+    sumOfPFee
 
-  console.log("remainingBalance", remainingBalance)
+  // console.log("remainingBalance", remainingBalance)
 
   const handleAmountChange = (value: number | string) => {
     const numericValue = typeof value === "string" ? parseFloat(value) : value
@@ -237,17 +247,22 @@ export const OrderList = () => {
     setValueOfDamageProduct(input * (selectedItem?.price || 0))
   }
 
+  // dito ako darrel naz
   const handleSubmitPenaltyFee = async () => {
-    alert(valueOfDamageProduct)
+    const damagedQty = parseInt(NumberOfDamageProduct)
+    const itemStatus = damagedQty !== 0 ? "returned_damaged" : "returned"
 
     try {
       await addPaymentMutation({
         rentItemId: selectedItem.id,
-        amount,
-        status,
-        penaltyFee: computedPenalty,
-        note: note || "Penalty Fee",
+        amount: Number(amount),
+        status: itemStatus,
+        returnedDamagedQty: damagedQty,
+        penaltyFee: valueOfDamageProduct,
+        note: note || "Damage penalty fee",
       })
+      handleCloseComplete()
+      refetch()
     } catch (error) {
       console.error(error)
     }
@@ -281,9 +296,45 @@ export const OrderList = () => {
   }
 
   const handleSubmit = async () => {
-    if (amount < remainingBalance / 2) {
-      alert(`Partial should be a minimum of ₱${remainingBalance / 2}`)
+    if (!selectedItem) return
+
+    const newAmount = parseInt(amount)
+
+    // Prevent payment if below 50% of remaining balance
+    const minPartial = remainingBalance / 2
+    if (newAmount < minPartial) {
+      alert(`Partial should be a minimum of ₱${minPartial}`)
       return
+    }
+
+    // Determine payment status
+    let computedStatus: "full" | "partial" | "overpaid"
+    console.log(newAmount)
+    console.log(remainingBalance)
+    if (newAmount === remainingBalance) {
+      computedStatus = "full"
+    } else if (newAmount < remainingBalance) {
+      computedStatus = "partial"
+    } else {
+      computedStatus = "overpaid"
+    }
+
+    // Try submitting payment
+    try {
+      const createdPayment = await addPaymentMutation({
+        rentItemId: selectedItem.id,
+        amount: newAmount,
+        status: computedStatus,
+        note,
+      })
+      onClose()
+      setAmount(0)
+      setNote("")
+      toast.success("Payment added successfully!")
+      refetch()
+    } catch (error) {
+      console.error("Payment submission failed", error)
+      toast.error("Failed to add payment")
     }
   }
 
@@ -438,7 +489,9 @@ export const OrderList = () => {
                     activeStep={
                       rentItem.status === "pending"
                         ? 0
-                        : rentItem.status === "rendering"
+                        : rentItem.status === "rendering" ||
+                          rentItem.status === "returned_damaged" ||
+                          rentItem.status === "returned"
                         ? 1
                         : rentItem.status === "completed"
                         ? 2
@@ -449,7 +502,11 @@ export const OrderList = () => {
                       <StepLabel>Pending</StepLabel>
                     </Step>
                     <Step>
-                      <StepLabel>On Hand</StepLabel>
+                      <StepLabel>
+                        {rentItem.status === "returned_damaged" || rentItem.status === "returned"
+                          ? "Returned"
+                          : "On Hand"}
+                      </StepLabel>
                     </Step>
                     <Step>
                       <StepLabel>Completed</StepLabel>
@@ -476,6 +533,8 @@ export const OrderList = () => {
                         ? "bg-yellow-400"
                         : rentItem.status === "canceled"
                         ? "bg-red-600"
+                        : rentItem.status === "returned_damaged" || rentItem.status === "returned"
+                        ? "bg-gray-500"
                         : "bg-red-500 hover:bg-red-700"
                     } text-white font-bold py-2 px-4 rounded w-full`}
                     onClick={() =>
@@ -483,7 +542,12 @@ export const OrderList = () => {
                         ? handleComplete(rentItem)
                         : handleCancel(rentItem)
                     }
-                    disabled={rentItem.status === "completed" || rentItem.status === "canceled"}
+                    disabled={
+                      rentItem.status === "completed" ||
+                      rentItem.status === "canceled" ||
+                      rentItem.status === "returned" ||
+                      rentItem.status === "returned_damaged"
+                    }
                   >
                     {rentItem.status === "completed"
                       ? "Order Completed"
@@ -491,6 +555,8 @@ export const OrderList = () => {
                       ? "Return Status"
                       : rentItem.status === "canceled"
                       ? "Order Canceled"
+                      : rentItem.status === "returned_damaged" || rentItem.status === "returned"
+                      ? "Returned"
                       : "Cancel Order"}
                   </button>
                 </div>
@@ -564,7 +630,7 @@ export const OrderList = () => {
               <p>
                 Total Price :
                 {Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
-                  selectedItem?.basePrice ?? 0
+                  selectedItem?.basePrice + sumOfPFee ?? 0
                 )}
               </p>
             </div>
@@ -572,6 +638,9 @@ export const OrderList = () => {
               <p>
                 Remaining Balance :{" "}
                 {selectedItem?.status === "completed"
+                  ? "No balance"
+                  : `₱${Number(selectedItem?.basePrice + sumOfPFee - sumOfPayment).toFixed(2)}`}
+                {/* {selectedItem?.status === "completed"
                   ? "No Balance"
                   : Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(
                       Math.max(
@@ -588,14 +657,14 @@ export const OrderList = () => {
                           (selectedItem?.additionalPrice ?? 0)
                       ) +
                         (selectedItem?.payments?.[selectedItem.payments.length - 1]?.penaltyFee ??
-                          0)
-                    )}
+                          0) 
+                    )} */}
               </p>
               <p>
                 Penalty:{" "}
-                {selectedItem?.status === "completed"
-                  ? "No Penalty"
-                  : selectedItem?.additionalPrice ?? 0}
+                {selectedItem?.status === "returned_damaged" || selectedItem?.status === "returned"
+                  ? `₱${Number(selectedItem?.damagedFee).toFixed(2)}`
+                  : "No Penalty"}
               </p>
             </div>
             <div>
@@ -603,7 +672,11 @@ export const OrderList = () => {
                 variant="contained"
                 color="primary"
                 onClick={handleSubmit}
-                disabled={selectedItem?.status === "completed" || isSubmitDisabled}
+                disabled={
+                  selectedItem?.status === "completed" ||
+                  selectedItem?.status === "canceled" ||
+                  isSubmitDisabled
+                }
               >
                 Submit
               </Button>
@@ -617,6 +690,7 @@ export const OrderList = () => {
               fullWidth
               label="Amount"
               type="number"
+              disabled={remainingBalance === 0}
               onKeyDown={(e) => {
                 // Block e, +, -, .
                 if (["e", "E", "+", "-", "."].includes(e.key)) {
@@ -653,6 +727,7 @@ export const OrderList = () => {
             <TextField
               fullWidth
               label="Payment Note"
+              disabled={remainingBalance === 0}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />

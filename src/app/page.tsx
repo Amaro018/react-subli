@@ -16,11 +16,14 @@ export default async function Home() {
 
   return (
     <>
-      <Navbar currentUser={currentUser} />
-      <div className="h-full">
-        <ProductList />
+      <div className="min-h-screen flex flex-col">
+        <Navbar currentUser={currentUser} />
+        {/* <div className="h-full"> */}
+        <main className="flex-grow">
+          <ProductList />
+        </main>
+        <Footer />
       </div>
-      <Footer />
     </>
   )
 }

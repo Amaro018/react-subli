@@ -212,22 +212,24 @@ model Rent {
 }
 
 model RentItem {
-  id               Int            @id @default(autoincrement())
-  rentId           Int
-  rent             Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
-  productVariantId Int
-  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
-  quantity         Int
-  price            Float
-  status           String
-  deliveryMethod   String
-  startDate        DateTime
-  endDate          DateTime
-  isReviewed       Boolean        @default(false)
-  reviews          Review[]
-  payments         Payment[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                 Int            @id @default(autoincrement())
+  rentId             Int
+  rent               Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  productVariantId   Int
+  productVariant     ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity           Int
+  price              Float
+  status             String
+  deliveryMethod     String
+  startDate          DateTime
+  endDate            DateTime
+  isReviewed         Boolean        @default(false)
+  reviews            Review[]
+  payments           Payment[]
+  returnedDamagedQty Int            @default(0)
+  isRepaired         Boolean?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 }
 
 model Payment {

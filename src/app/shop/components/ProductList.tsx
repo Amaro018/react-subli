@@ -117,7 +117,51 @@ const ProductList = (props) => {
                           </tr>
                         </thead>
                         <tbody>
-                          {product.variants.map((variant, index) => (
+                          {product.variants.map((variant, index) => {
+                            // Compute total rented quantity
+                            // const totalRented = variant.rentItems
+                            //   .filter((rent) => !rent.isRepaired)
+                            //   .reduce((sum, rent) => sum + rent.returnedDamagedQty, 0);
+
+                            // const totalRented = variant.rentItems
+                            //   .filter((rent) => rent.status === "rendering")
+                            //   .reduce((sum, rent) => sum + rent.quantity, 0);
+
+                            const totalRented = variant.rentItems.reduce((sum, rent) => {
+                              if (rent.status === "rendering") {
+                                return sum + rent.quantity
+                              } else if (!rent.isRepaired) {
+                                return sum + rent.returnedDamagedQty
+                              }
+                              return sum
+                            }, 0)
+
+                            // Compute available quantity
+                            const availableQuantity = variant.quantity - totalRented
+
+                            return (
+                              <tr key={index} className="text-center">
+                                <td className="border border-gray-300 px-4 py-2">{variant.id}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <div className="flex items-center justify-center gap-4">
+                                    <div
+                                      style={{ backgroundColor: variant.color.hexCode }}
+                                      className="w-8 h-8 rounded-full"
+                                    ></div>
+                                    <div className="text-sm">{variant.color.name}</div>
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  ₱{variant.price.toFixed(2)}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  {availableQuantity}
+                                </td>
+                              </tr>
+                            )
+                          })}
+
+                          {/* {product.variants.map((variant, index) => (
                             <tr key={index} className="text-center">
                               <td className="border border-gray-300 px-4 py-2">{variant.id}</td>
                               <td className="border border-gray-300 px-4 py-2">
@@ -136,7 +180,7 @@ const ProductList = (props) => {
                                 {variant.quantity}
                               </td>
                             </tr>
-                          ))}
+                          ))} */}
                         </tbody>
                       </table>
                     </td>

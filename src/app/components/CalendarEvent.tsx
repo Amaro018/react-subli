@@ -14,7 +14,7 @@ export default function Calendar({
   // Fetch rent dates using the productId
   const [rents] = useQuery(getProductEventsById, { productId: product.id })
 
-  console.log({ selectedVariant })
+  // console.log({ selectedVariant })
 
   // Map rent dates to FullCalendar's `events` format
   const events = useMemo(() => {

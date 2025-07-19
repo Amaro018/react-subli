@@ -89,7 +89,7 @@ export default function ProductList() {
   )
 
   return (
-    <div className="w-full mt-24 p-8 flex flex-row gap-4">
+    <div className="w-full mt-24 p-8 pb-16 flex flex-row gap-4">
       <div className="w-full rounded-lg flex flex-row gap-8">
         <div className="flex flex-col w-64">
           <h1 className="text-2xl font-bold mb-4">Products</h1>
@@ -185,15 +185,18 @@ export default function ProductList() {
               filteredProducts.map((product) => (
                 <Link href={`/product/${product.id}`} key={product.id}>
                   <div className="w-64 h-80 bg-white rounded shadow-lg flex flex-col items-center overflow-hidden py-2">
-                    {/* Image Section */}
-                    <div className="w-full h-2/3 flex items-center justify-center bg-gray-100">
-                      <Image
-                        src={`/uploads/products/${product.images[0]?.url}`}
-                        alt={product.name}
-                        width={200}
-                        height={200}
-                        className="object-contain"
-                      />
+                    <div className="w-full h-2/3 flex items-center justify-center bg-gray-100 overflow-hidden">
+                      {/* <div className="w-full h-2/3 flex items-center justify-center bg-gray-100"> */}
+                      <div className="w-full h-full relative">
+                        <Image
+                          src={`/uploads/products/${product.images[0]?.url}`}
+                          alt={product.name}
+                          // width={200}
+                          // height={200}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
                     </div>
 
                     {/* Text Section */}
