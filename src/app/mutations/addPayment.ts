@@ -45,12 +45,19 @@ export default resolver.pipe(
 
     const baseTotal = rentItem.price * rentItem.quantity * daysRented
 
-    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
-    const totalPenalty = payments.reduce((sum, p) => sum + (p.penaltyFee ?? 0), 0)
+    // const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
+    // const totalPenalty = payments.reduce((sum, p) => sum + (p.penaltyFee ?? 0), 0)
+    let totalPaid = 0
+    let totalPenalty = 0
+    for (const p of payments) {
+      totalPaid += p.amount
+      totalPenalty += p.penaltyFee ?? 0
+    }
 
     const remainingBalance = baseTotal - totalPaid + totalPenalty
 
-    let updateStatus = "rendering"
+    // let updateStatus = "rendering"
+    let updateStatus = rentItem.status
     if (status === "canceled") {
       updateStatus = "canceled"
     } else if (remainingBalance <= 0) {

@@ -294,21 +294,23 @@ const ProductPage = ({ params }: any) => {
 
     const filteredData = allRents.filter((rent) => rent.productVariantId === selectedVariant?.id)
 
+    console.log(filteredData)
+
     const totalQuantity = filteredData.reduce((sum, rent) => {
       const startDate = new Date(rent.startDate)
       const endDate = new Date(rent.endDate)
 
-      // Check if the selectedDateObject is within the range of startDate and endDate
       if (
         selectedDateObject >= startDate &&
         selectedDateObject <= endDate &&
         rent.status === "rendering"
       ) {
-        // Add the quantity to the sum
-        return sum + rent.quantity // Assuming each rent object has a `quantity` property
+        return sum + rent.quantity
+      } else if (!rent.isRepaired) {
+        return sum + rent.returnedDamagedQty
       }
       return sum
-    }, 0) // Initial sum is 0
+    }, 0)
 
     console.log("the total quantity", totalQuantity)
     setAvailableQuantity(selectedVariant?.quantity - totalQuantity)
@@ -351,6 +353,8 @@ const ProductPage = ({ params }: any) => {
       if (isOverlapping && rent.status === "rendering") {
         // Add the quantity if there is an overlap
         return sum + rent.quantity // Assuming each rent object has a `quantity` property
+      } else if (!rent.isRepaired) {
+        return sum + rent.returnedDamagedQty
       }
 
       return sum
@@ -379,7 +383,7 @@ const ProductPage = ({ params }: any) => {
 
   const sum = product.reviews?.reduce((acc, review) => acc + review.rating, 0)
   const average = sum / product.reviews?.length
-  console.log(`The average rating is ${average}`)
+  // console.log(`The average rating is ${average}`)
 
   return (
     <>

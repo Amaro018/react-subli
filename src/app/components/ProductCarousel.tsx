@@ -23,7 +23,7 @@ const ProductCarousel = ({ product }) => {
   return (
     <div className="relative  mx-auto">
       {/* Carousel Container */}
-      <div className="overflow-hidden">
+      <div className="overflow-hidden w-[400px] h-[400px]">
         <div
           className="flex transition-transform duration-500"
           style={{
@@ -31,13 +31,16 @@ const ProductCarousel = ({ product }) => {
           }}
         >
           {product.images.map((image, index) => (
-            <div key={index} className="w-full flex-shrink-0 flex justify-center items-center">
+            <div
+              key={index}
+              className="w-[400px] h-[400px] w-full flex-shrink-0 flex justify-center items-center bg-white"
+            >
               <Image
                 src={`/uploads/products/${image.url}`}
                 alt={image.id}
                 width={400}
                 height={400}
-                className="object-cover"
+                className="object-contain w-full h-full"
               />
             </div>
           ))}
