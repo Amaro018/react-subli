@@ -136,13 +136,13 @@ export default function ProductList() {
 
             <div className="flex flex-col items-center gap-4">
               <Typography>Price Range:</Typography>
-              <Slider
+              {/* <Slider
                 value={priceRange}
                 onChange={(e, newValue) => setPriceRange(newValue)}
                 valueLabelDisplay="auto"
                 min={0}
                 max={10000}
-              />
+              /> */}
               <TextField
                 label="Min Range"
                 variant="outlined"
