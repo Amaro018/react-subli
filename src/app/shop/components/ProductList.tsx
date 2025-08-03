@@ -14,6 +14,7 @@ import { useQuery } from "@blitzjs/rpc"
 import getProducts from "../../queries/getProducts"
 import { Create } from "@mui/icons-material"
 import CreateProductForm from "./CreateProductForm"
+import EditProductForm from "./EditProductForm"
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp"
 
@@ -33,11 +34,24 @@ const ProductList = (props) => {
   const currentUser = props.currentUser
   const [products, { isLoading, isError, error }] = useQuery(getProducts, null)
   const [open, setOpen] = React.useState(false)
+  const [openEdit, setOpenEdit] = React.useState(false)
+
+  const [selectedProduct, setSelectedProduct] = React.useState(null)
 
   const [rowToggle, setRowToggle] = React.useState({}) // Store toggle state for each row
 
   const handleOpen = () => setOpen(true)
   const handleClose = () => setOpen(false)
+
+  const handleOpenEdit = (product: any) => {
+    setSelectedProduct(product)
+    setOpenEdit(true)
+  }
+
+  const handleCloseEdit = () => {
+    setOpenEdit(false)
+    setSelectedProduct(null)
+  }
 
   const toggleRow = (id) => {
     setRowToggle((prev) => ({
@@ -99,7 +113,12 @@ const ProductList = (props) => {
                   </td>
                   <td className="border border-gray-300 px-4 py-2">{product.category.name}</td>
                   <td className="border border-gray-300 px-4 py-2">
-                    <button>Edit</button>
+                    <button
+                      onClick={() => handleOpenEdit(product)}
+                      className="bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800"
+                    >
+                      Edit
+                    </button>
                   </td>
                 </tr>
 
@@ -207,6 +226,22 @@ const ProductList = (props) => {
           }}
         >
           <CreateProductForm currentUser={currentUser} handleClose={handleClose} />
+        </Box>
+      </Modal>
+
+      <Modal open={openEdit} onClose={handleCloseEdit}>
+        <Box
+          sx={{
+            ...style,
+            overflow: "auto",
+            maxHeight: "calc(100vh - 200px)",
+          }}
+        >
+          <EditProductForm
+            editProduct={selectedProduct}
+            currentUser={currentUser}
+            handleClose={handleCloseEdit}
+          />
         </Box>
       </Modal>
     </>
