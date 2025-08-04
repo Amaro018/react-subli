@@ -85,9 +85,9 @@ const ProductList = (props) => {
             <tr className="bg-gray-100">
               <th className="border border-gray-300 px-4 py-2"></th>
               <th className="border border-gray-300 px-4 py-2">Name</th>
-              <th className="border border-gray-300 px-4 py-2">Status</th>
-              <th className="border border-gray-300 px-4 py-2">Delivery</th>
               <th className="border border-gray-300 px-4 py-2">Category</th>
+              <th className="border border-gray-300 px-4 py-2">Delivery</th>
+              <th className="border border-gray-300 px-4 py-2">Status</th>
               <th className="border border-gray-300 px-4 py-2">Actions</th>
             </tr>
           </thead>
@@ -105,13 +105,13 @@ const ProductList = (props) => {
                     </button>
                   </td>
                   <td className="border border-gray-300 px-4 py-2">{product.name}</td>
-                  <td className="border border-gray-300 px-4 py-2">{product.status}</td>
+                  <td className="border border-gray-300 px-4 py-2">{product.category.name}</td>
                   <td className="border border-gray-300 px-4 py-2">
                     {product.deliveryOption === "BOTH"
                       ? "Pick up or Delivery"
                       : product.deliveryOption}
                   </td>
-                  <td className="border border-gray-300 px-4 py-2">{product.category.name}</td>
+                  <td className="border border-gray-300 px-4 py-2">{product.status}</td>
                   <td className="border border-gray-300 px-4 py-2">
                     <button
                       onClick={() => handleOpenEdit(product)}
@@ -237,11 +237,7 @@ const ProductList = (props) => {
             maxHeight: "calc(100vh - 200px)",
           }}
         >
-          <EditProductForm
-            editProduct={selectedProduct}
-            currentUser={currentUser}
-            handleClose={handleCloseEdit}
-          />
+          <EditProductForm currentUser={selectedProduct} handleClose={handleCloseEdit} />
         </Box>
       </Modal>
     </>
