@@ -1,23 +1,39 @@
 import React, { useState, useEffect } from "react"
 import { TextField, MenuItem, Button, CircularProgress } from "@mui/material"
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
+import { useQuery } from "@blitzjs/rpc"
+import getColors from "../../queries/getColors"
+import getCategories from "../../queries/getCategories"
+
+type Color = {
+  id: string
+  name: string
+}
+
+type Category = {
+  id: string
+  name: string
+}
 
 type Variant = {
   id: string
-  color: string
+  color: Color
   price: number
-  stock: number
+  quantity: number
 }
 
 type Product = {
-  productName: string
+  name: string
   status: string
   deliveryOption: string
-  category: string
+  category: Category
   variants: Variant[]
 }
 
 const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => void }) => {
+  const [colors] = useQuery(getColors, null)
+  const [categories] = useQuery(getCategories, null)
+
   const [formData, setFormData] = useState<Product>(props.currentUser)
   const [loading, setLoading] = useState(false)
 
@@ -58,10 +74,10 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
       <div className="flex flex-row gap-2">
         <TextField
           required
-          name="productName"
+          name="name"
           label="Product Name"
           fullWidth
-          value={formData.productName}
+          value={formData.name}
           onChange={handleInputChange}
         />
 
@@ -70,12 +86,18 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
           label="Category"
           select
           fullWidth
-          value={formData.category}
+          value={formData.category.name}
           onChange={handleInputChange}
         >
           {/* Replace with dynamic categories */}
-          <MenuItem value="category1">Category 1</MenuItem>
-          <MenuItem value="category2">Category 2</MenuItem>
+          {categories.map((category) => (
+            <MenuItem value={category.name}>{category.name}</MenuItem>
+          ))}
+          {/* <MenuItem value="Electronics">Electronics</MenuItem>
+          <MenuItem value="Fashion">Fashion</MenuItem>
+          <MenuItem value="Home & Garden">Home & Garden</MenuItem>
+          <MenuItem value="Sports">Sports</MenuItem>
+          <MenuItem value="Books">Books</MenuItem> */}
         </TextField>
 
         <TextField
@@ -99,50 +121,43 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
           value={formData.status}
           onChange={handleInputChange}
         >
-          <MenuItem value="ACTIVE">Active</MenuItem>
-          <MenuItem value="INACTIVE">Inactive</MenuItem>
+          <MenuItem value="active">Active</MenuItem>
+          <MenuItem value="inactive">Inactive</MenuItem>
         </TextField>
       </div>
 
       <div>
         <label className="block text-sm font-medium my-2">Product Variants</label>
-        {/* {formData.variants.map((variant, index) => (
+        {formData.variants.map((variant, index) => (
           <div key={index} className="flex gap-2 items-center my-4">
-            <TextField
-              name="id"
-              label="Variant ID"
-              fullWidth
-              value={variant.id}
-              disabled
-            />
+            <TextField name="id" label="Variant ID" fullWidth value={variant.id} disabled />
             <TextField
               name="color"
               label="Color"
+              select
               fullWidth
-              value={variant.color}
-              onChange={(e) =>
-                handleVariantChange(index, "color", e.target.value)
-              }
-            />
+              value={variant.color.name}
+              onChange={(e) => handleVariantChange(index, "color", e.target.value)}
+            >
+              {colors.map((color) => (
+                <MenuItem value={color.name}>{color.name}</MenuItem>
+              ))}
+            </TextField>
             <TextField
               name="price"
               label="Price"
               type="number"
               fullWidth
               value={variant.price}
-              onChange={(e) =>
-                handleVariantChange(index, "price", Number(e.target.value))
-              }
+              onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
             />
             <TextField
-              name="stock"
-              label="Stock"
+              name="quantity"
+              label="Quantity"
               type="number"
               fullWidth
-              value={variant.stock}
-              onChange={(e) =>
-                handleVariantChange(index, "stock", Number(e.target.value))
-              }
+              value={variant.quantity}
+              onChange={(e) => handleVariantChange(index, "quantity", Number(e.target.value))}
             />
 
             {index > 0 && (
@@ -155,7 +170,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
               </button>
             )}
           </div>
-        ))} */}
+        ))}
       </div>
 
       <Button type="submit" variant="contained" color="primary" disabled={loading}>
