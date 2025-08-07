@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getRentItemsByShop from "../../queries/getRentItemsByShop"
 import {
@@ -208,6 +208,12 @@ export const OrderList = () => {
     totalPayment +
     lastPaymentPenaltyFee +
     sumOfPFee
+
+  useEffect(() => {
+    if (!isNaN(remainingBalance)) {
+      setAmount(remainingBalance / 2)
+    }
+  }, [remainingBalance])
 
   // console.log("remainingBalance", remainingBalance)
 
@@ -675,6 +681,7 @@ export const OrderList = () => {
                 disabled={
                   selectedItem?.status === "completed" ||
                   selectedItem?.status === "canceled" ||
+                  remainingBalance === 0 ||
                   isSubmitDisabled
                 }
               >
@@ -705,7 +712,7 @@ export const OrderList = () => {
                 handleAmountChange(input)
               }}
               inputProps={{
-                min: 1,
+                min: remainingBalance / 2,
                 max: remainingBalance, // <- your variable here
               }}
             />

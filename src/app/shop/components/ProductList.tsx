@@ -30,7 +30,22 @@ const style = {
   p: 4,
   borderRadius: "10px",
 }
-const ProductList = (props) => {
+
+import { User, Session, Token, PersonalInfo, Shop, CartItem } from "@prisma/client"
+
+type ExtendedUser = User & {
+  sessions: Session[]
+  tokens: Token[]
+  personalInfo: PersonalInfo | null
+  shop: Shop | null
+  cartItems: CartItem[]
+}
+
+type ProductListProps = {
+  currentUser: ExtendedUser | null
+}
+
+const ProductList = (props: ProductListProps) => {
   const currentUser = props.currentUser
   const [products, { isLoading, isError, error }] = useQuery(getProducts, null)
   const [open, setOpen] = React.useState(false)
@@ -165,7 +180,7 @@ const ProductList = (props) => {
                                   <div className="flex items-center justify-center gap-4">
                                     <div
                                       style={{ backgroundColor: variant.color.hexCode }}
-                                      className="w-8 h-8 rounded-full"
+                                      className="w-8 h-8 rounded-full border-2 border-solid"
                                     ></div>
                                     <div className="text-sm">{variant.color.name}</div>
                                   </div>

@@ -61,12 +61,23 @@ export default resolver.pipe(
 
       // Step 5: Decide rentItem status
       let updateStatus = rentItem.status
+
+      const hasReturned = payments.some(
+        (payment) => payment.status === "returned_damaged" || payment.status === "returned"
+      )
+
       if (status === "canceled") {
         updateStatus = "canceled"
-      } else if (remainingBalance <= 0) {
-        updateStatus = "completed"
       } else if (status === "returned_damaged" || status === "returned") {
-        updateStatus = status
+        updateStatus = remainingBalance === 0 ? "completed" : "rendering"
+      } else if (payments && payments.length > 0) {
+        updateStatus = hasReturned
+          ? remainingBalance === 0
+            ? "completed"
+            : "rendering"
+          : "rendering"
+      } else if (remainingBalance === 0) {
+        updateStatus = "completed"
       }
 
       // Step 6: Update rentItem status
