@@ -129,6 +129,101 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
       <div>
         <label className="block text-sm font-medium my-2">Product Variants</label>
         {formData.variants.map((variant, index) => (
+          <div key={index} className="border p-4 rounded-md my-4">
+            <div className="flex gap-2 items-center mb-4">
+              <TextField name="id" label="Variant ID" fullWidth value={variant.id} disabled />
+              <TextField
+                name="color"
+                label="Color"
+                select
+                fullWidth
+                value={variant.color.name}
+                onChange={(e) => handleVariantChange(index, "color", e.target.value)}
+              >
+                {colors.map((color) => (
+                  <MenuItem key={color.name} value={color.name}>
+                    {color.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                name="price"
+                label="Price"
+                type="number"
+                fullWidth
+                value={variant.price}
+                onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
+              />
+              <TextField
+                name="quantity"
+                label="Quantity"
+                type="number"
+                fullWidth
+                value={variant.quantity}
+                onChange={(e) => handleVariantChange(index, "quantity", Number(e.target.value))}
+              />
+
+              {index > 0 && (
+                <button
+                  type="button"
+                  onClick={() => removeVariant(index)}
+                  className="bg-red-500 text-white p-2 rounded"
+                >
+                  <DeleteForeverIcon />
+                </button>
+              )}
+            </div>
+
+            {/* New section for repair & replacement costs */}
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                name="replacementCost"
+                label="Replacement Cost"
+                type="number"
+                fullWidth
+                value={variant.replacementCost || ""}
+                onChange={(e) =>
+                  handleVariantChange(index, "replacementCost", Number(e.target.value))
+                }
+              />
+              <TextField
+                name="minorRepairCost"
+                label="Minor Repair Cost"
+                type="number"
+                fullWidth
+                value={variant.minorRepairCost || ""}
+                onChange={(e) =>
+                  handleVariantChange(index, "minorRepairCost", Number(e.target.value))
+                }
+              />
+              <TextField
+                name="moderateRepairCost"
+                label="Moderate Repair Cost"
+                type="number"
+                fullWidth
+                value={variant.moderateRepairCost || ""}
+                onChange={(e) =>
+                  handleVariantChange(index, "moderateRepairCost", Number(e.target.value))
+                }
+              />
+              <TextField
+                name="majorRepairCost"
+                label="Major Repair Cost"
+                type="number"
+                fullWidth
+                value={variant.majorRepairCost || ""}
+                onChange={(e) =>
+                  handleVariantChange(index, "majorRepairCost", Number(e.target.value))
+                }
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* <div>
+        <label className="block text-sm font-medium my-2">Product Variants</label>
+        {formData.variants.map((variant, index) => (
           <div key={index} className="flex gap-2 items-center my-4">
             <TextField name="id" label="Variant ID" fullWidth value={variant.id} disabled />
             <TextField
@@ -171,7 +266,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
             )}
           </div>
         ))}
-      </div>
+      </div> */}
 
       <Button type="submit" variant="contained" color="primary" disabled={loading}>
         {loading ? <CircularProgress size={20} /> : "Update Product"}

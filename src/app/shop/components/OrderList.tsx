@@ -99,6 +99,9 @@ export const OrderList = () => {
     statusFilter === "ALL" ? rentItems : rentItems.filter((item) => item.status === statusFilter)
 
   const handleOpen = async (rentItem: any) => {
+    setStatus("Partial")
+    setIsSubmitDisabled(false)
+
     setOpen(true)
     // Calculate additional price and base price
     const today = new Date()
@@ -211,29 +214,78 @@ export const OrderList = () => {
 
   useEffect(() => {
     if (!isNaN(remainingBalance)) {
-      setAmount(remainingBalance / 2)
+      setAmount(Math.ceil(remainingBalance / 2))
     }
   }, [remainingBalance])
+
+  // useEffect(() => {
+  //   setStatus("Partial");
+  // }, [status]);
 
   // console.log("remainingBalance", remainingBalance)
 
   const handleAmountChange = (value: number | string) => {
+    // const numericValue = typeof value === "string" ? parseFloat(value) : value
+
+    // if (numericValue <= 0) setAmount("")
+
+    // if (
+    //   value === "" ||
+    //   isNaN(numericValue) ||
+    //   numericValue < 1 ||
+    //   numericValue > remainingBalance
+    // ) {
+    //   setIsSubmitDisabled(true)
+    //   setStatus(amount !== "" ? "Amount exceeds remaining balance!" : "Partial")
+    // } else {
+    //   setStatus(value >= remainingBalance ? "Full" : "Partial")
+    //   setIsSubmitDisabled(false)
+    // }
+
+    // (remainingBalance/2) > numericValue ? setAmount(remainingBalance/2) : setAmount(numericValue)
+
     const numericValue = typeof value === "string" ? parseFloat(value) : value
 
-    if (numericValue <= 0) setAmount("")
+    const minAllowed = Math.ceil(remainingBalance / 2)
 
-    if (
-      value === "" ||
-      isNaN(numericValue) ||
-      numericValue < 1 ||
-      numericValue > remainingBalance
-    ) {
+    setAmount(numericValue)
+
+    const isEmpty = value === ""
+    const isInvalid = isNaN(numericValue) || numericValue <= 0
+    const exceedsBalance = numericValue > remainingBalance
+
+    if (isEmpty || isInvalid) {
       setIsSubmitDisabled(true)
-      setStatus(amount !== "" ? "Amount exceeds remaining balance!" : "Partial")
+      setStatus("Is invalid")
+      return
+    }
+
+    if (exceedsBalance) {
+      setIsSubmitDisabled(true)
+      setStatus("Amount exceeds remaining balance!")
+      return
+    }
+
+    console.log(numericValue)
+    console.log(remainingBalance)
+
+    if (numericValue === remainingBalance) {
+      setStatus("Full")
+      setIsSubmitDisabled(false)
+    } else if (numericValue < minAllowed) {
+      setStatus("Amount is below the minimum partial payment.")
+      setIsSubmitDisabled(true)
     } else {
-      setStatus(value >= remainingBalance ? "Full" : "Partial")
+      setStatus("Partial")
       setIsSubmitDisabled(false)
     }
+
+    // Status: Full or Partial
+    // setStatus(numericValue === remainingBalance ? "Full" : "Partial");
+    // setIsSubmitDisabled(false);
+
+    // Apply half-balance rule if needed
+    // setAmount(numericValue < minAllowed ? minAllowed : numericValue);
   }
 
   const handleChangeOfDamageProduct = (value: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,7 +359,7 @@ export const OrderList = () => {
     const newAmount = parseInt(amount)
 
     // Prevent payment if below 50% of remaining balance
-    const minPartial = remainingBalance / 2
+    const minPartial = Math.ceil(remainingBalance / 2)
     if (newAmount < minPartial) {
       alert(`Partial should be a minimum of ₱${minPartial}`)
       return
@@ -551,19 +603,22 @@ export const OrderList = () => {
                     disabled={
                       rentItem.status === "completed" ||
                       rentItem.status === "canceled" ||
-                      rentItem.status === "returned" ||
-                      rentItem.status === "returned_damaged"
+                      rentItem.payments?.some(
+                        (p) => p.status === "returned" || p.status === "returned_damaged"
+                      )
                     }
                   >
                     {rentItem.status === "completed"
-                      ? "Order Completed"
+                      ? "order completed"
+                      : rentItem.payments?.some(
+                          (p) => p.status === "returned" || p.status === "returned_damaged"
+                        )
+                      ? "item returned"
                       : rentItem.status === "rendering"
-                      ? "Return Status"
+                      ? "return status"
                       : rentItem.status === "canceled"
-                      ? "Order Canceled"
-                      : rentItem.status === "returned_damaged" || rentItem.status === "returned"
-                      ? "Returned"
-                      : "Cancel Order"}
+                      ? "order canceled"
+                      : "canceled"}
                   </button>
                 </div>
               </div>
@@ -699,7 +754,7 @@ export const OrderList = () => {
               type="number"
               disabled={remainingBalance === 0}
               onKeyDown={(e) => {
-                // Block e, +, -, .
+                // Block e, E, +, -, .
                 if (["e", "E", "+", "-", "."].includes(e.key)) {
                   e.preventDefault()
                 }
@@ -707,15 +762,15 @@ export const OrderList = () => {
               value={amount}
               onChange={(e) => {
                 const input = e.target.value
-                // const value = input === '' ? '' : parseFloat(input);
-                setAmount(input)
-                handleAmountChange(input)
+                const numericValue = input.replace(/\D/g, "") // remove non-digits
+                handleAmountChange(numericValue ? Number(numericValue) : 0)
               }}
               inputProps={{
-                min: remainingBalance / 2,
-                max: remainingBalance, // <- your variable here
+                min: Math.ceil(remainingBalance / 2),
+                max: remainingBalance,
               }}
             />
+
             <FormControl fullWidth>
               <Select
                 labelId="payment-method-label"
@@ -725,6 +780,10 @@ export const OrderList = () => {
               >
                 <MenuItem value="Partial">Partial</MenuItem>
                 <MenuItem value="Full">Full</MenuItem>
+                <MenuItem value="Is invalid">Is invalid</MenuItem>
+                <MenuItem value="Amount is below the minimum partial payment.">
+                  Amount is below the minimum partial payment.
+                </MenuItem>
                 <MenuItem value="Amount exceeds remaining balance!">
                   Amount exceeds remaining balance!
                 </MenuItem>
