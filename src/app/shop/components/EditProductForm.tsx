@@ -5,6 +5,8 @@ import { useQuery } from "@blitzjs/rpc"
 import getColors from "../../queries/getColors"
 import getCategories from "../../queries/getCategories"
 
+import { InputAdornment } from "@mui/material"
+
 type Color = {
   id: string
   name: string
@@ -91,7 +93,9 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
         >
           {/* Replace with dynamic categories */}
           {categories.map((category) => (
-            <MenuItem value={category.name}>{category.name}</MenuItem>
+            <MenuItem key={category.id ?? category.name} value={category.name}>
+              {category.name}
+            </MenuItem>
           ))}
           {/* <MenuItem value="Electronics">Electronics</MenuItem>
           <MenuItem value="Fashion">Fashion</MenuItem>
@@ -129,7 +133,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
       <div>
         <label className="block text-sm font-medium my-2">Product Variants</label>
         {formData.variants.map((variant, index) => (
-          <div key={index} className="border p-4 rounded-md my-4">
+          <div key={variant.id ?? `variant-${index}`} className="border p-4 rounded-md my-4">
             <div className="flex gap-2 items-center mb-4">
               <TextField name="id" label="Variant ID" fullWidth value={variant.id} disabled />
               <TextField
@@ -141,7 +145,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                 onChange={(e) => handleVariantChange(index, "color", e.target.value)}
               >
                 {colors.map((color) => (
-                  <MenuItem key={color.name} value={color.name}>
+                  <MenuItem key={color.id ?? color.name} value={color.name}>
                     {color.name}
                   </MenuItem>
                 ))}
@@ -186,36 +190,101 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                   handleVariantChange(index, "replacementCost", Number(e.target.value))
                 }
               />
-              <TextField
-                name="minorRepairCost"
-                label="Minor Repair Cost"
-                type="number"
-                fullWidth
-                value={variant.minorRepairCost || ""}
-                onChange={(e) =>
-                  handleVariantChange(index, "minorRepairCost", Number(e.target.value))
-                }
-              />
-              <TextField
-                name="moderateRepairCost"
-                label="Moderate Repair Cost"
-                type="number"
-                fullWidth
-                value={variant.moderateRepairCost || ""}
-                onChange={(e) =>
-                  handleVariantChange(index, "moderateRepairCost", Number(e.target.value))
-                }
-              />
-              <TextField
-                name="majorRepairCost"
-                label="Major Repair Cost"
-                type="number"
-                fullWidth
-                value={variant.majorRepairCost || ""}
-                onChange={(e) =>
-                  handleVariantChange(index, "majorRepairCost", Number(e.target.value))
-                }
-              />
+              {/* Minor Repair */}
+              <div className="grid grid-cols-2 gap-4">
+                <TextField
+                  name="minorRepairCost"
+                  label="Minor Repair Cost"
+                  type="number"
+                  fullWidth
+                  value={
+                    variant.damagePolicies?.find((p) => p.damageSeverity === "minor")
+                      .damageSeverityPercent * (variant.replacementCost / 100).toFixed(2) || ""
+                  }
+                  onChange={(e) =>
+                    handleVariantChange(index, "minorRepairCost", Number(e.target.value))
+                  }
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                  }}
+                />
+                <TextField
+                  name="minorRepairPercent"
+                  label="Minor Repair %"
+                  type="number"
+                  placeholder="10 - 29"
+                  fullWidth
+                  value={
+                    variant.damagePolicies?.find((p) => p.damageSeverity === "minor")
+                      .damageSeverityPercent || ""
+                  }
+                  onChange={(e) =>
+                    handleVariantChange(index, "minorRepairPercent", Number(e.target.value))
+                  }
+                />
+              </div>
+
+              {/* Moderate Repair */}
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <TextField
+                  name="moderateRepairCost"
+                  label="Moderate Repair Cost"
+                  type="number"
+                  fullWidth
+                  value={
+                    variant.damagePolicies?.find((p) => p.damageSeverity === "moderate")
+                      .damageSeverityPercent * (variant.replacementCost / 100).toFixed(2) || ""
+                  }
+                  onChange={(e) =>
+                    handleVariantChange(index, "moderateRepairCost", Number(e.target.value))
+                  }
+                />
+                <TextField
+                  name="moderateRepairPercent"
+                  label="Moderate Repair %"
+                  type="number"
+                  placeholder="30 - 59"
+                  fullWidth
+                  value={
+                    variant.damagePolicies?.find((p) => p.damageSeverity === "moderate")
+                      .damageSeverityPercent || ""
+                  }
+                  onChange={(e) =>
+                    handleVariantChange(index, "moderateRepairPercent", Number(e.target.value))
+                  }
+                />
+              </div>
+
+              {/* Major Repair */}
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <TextField
+                  name="majorRepairCost"
+                  label="Major Repair Cost"
+                  type="number"
+                  fullWidth
+                  value={
+                    variant.damagePolicies?.find((p) => p.damageSeverity === "major")
+                      .damageSeverityPercent * (variant.replacementCost / 100).toFixed(2) || ""
+                  }
+                  onChange={(e) =>
+                    handleVariantChange(index, "majorRepairCost", Number(e.target.value))
+                  }
+                />
+                <TextField
+                  name="majorRepairPercent"
+                  label="Major Repair %"
+                  type="number"
+                  placeholder="60 - 75"
+                  fullWidth
+                  value={
+                    variant.damagePolicies?.find((p) => p.damageSeverity === "major")
+                      .damageSeverityPercent || ""
+                  }
+                  onChange={(e) =>
+                    handleVariantChange(index, "majorRepairPercent", Number(e.target.value))
+                  }
+                />
+              </div>
             </div>
           </div>
         ))}

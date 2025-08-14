@@ -29,6 +29,7 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
         include: {
           color: true, // Include the associated Color for each variant
           rentItems: true,
+          damagePolicies: true,
         },
       },
       category: true,
