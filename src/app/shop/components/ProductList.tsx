@@ -252,7 +252,7 @@ const ProductList = (props: ProductListProps) => {
             maxHeight: "calc(100vh - 200px)",
           }}
         >
-          <EditProductForm currentUser={selectedProduct} handleClose={handleCloseEdit} />
+          <EditProductForm currentUser={selectedProduct} handleCloseEdit={handleCloseEdit} />
         </Box>
       </Modal>
     </>
