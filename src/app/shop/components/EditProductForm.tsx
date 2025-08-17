@@ -105,8 +105,6 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
           : variant
       ),
     })
-
-    console.log(formData)
   }
 
   const removeVariant = (index: number) => {
@@ -143,19 +141,27 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
           fullWidth
           value={formData.name}
           onChange={handleInputChange}
+          sx={{
+            "& .MuiInputLabel-root": { color: "blue" },
+            "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+          }}
         />
 
         <TextField
-          name="category"
+          name="categoryid"
           label="Category"
           select
           fullWidth
-          value={formData.category.name}
+          value={formData.categoryid}
           onChange={handleInputChange}
+          sx={{
+            "& .MuiInputLabel-root": { color: "blue" },
+            "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+          }}
         >
           {/* Replace with dynamic categories */}
           {categories.map((category) => (
-            <MenuItem key={category.id ?? category.name} value={category.name}>
+            <MenuItem key={category.id} value={category.id}>
               {category.name}
             </MenuItem>
           ))}
@@ -173,6 +179,10 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
           fullWidth
           value={formData.deliveryOption}
           onChange={handleInputChange}
+          sx={{
+            "& .MuiInputLabel-root": { color: "blue" },
+            "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+          }}
         >
           <MenuItem value="DELIVERY">Delivery</MenuItem>
           <MenuItem value="PICKUP">Pick Up</MenuItem>
@@ -186,6 +196,10 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
           fullWidth
           value={formData.status}
           onChange={handleInputChange}
+          sx={{
+            "& .MuiInputLabel-root": { color: "blue" },
+            "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+          }}
         >
           <MenuItem value="active">Active</MenuItem>
           <MenuItem value="inactive">Inactive</MenuItem>
@@ -203,6 +217,8 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
 
           return (
             <div key={variant.id ?? `variant-${index}`} className="border p-4 rounded-md my-4">
+              <label className="block text-sm font-medium mb-8">Variant Details</label>
+
               <div className="flex gap-2 items-center mb-4">
                 <TextField name="id" label="Variant ID" fullWidth value={variant.id} disabled />
                 <TextField
@@ -225,7 +241,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                 </TextField>
                 <TextField
                   name="price"
-                  label="Price"
+                  label="Rent Price"
                   sx={{
                     "& .MuiInputLabel-root": { color: "blue" },
                     "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
@@ -234,6 +250,9 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                   fullWidth
                   value={variant.price}
                   onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                  }}
                 />
                 <TextField
                   name="quantity"
@@ -296,7 +315,11 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                     startAdornment: <InputAdornment position="start">₱</InputAdornment>,
                   }}
                 />
+              </div>
 
+              <label className="block text-sm font-medium my-8">Repair Cost Severity</label>
+
+              <div className="grid grid-cols-2 gap-4">
                 {/* Minor Repair */}
                 <TextField
                   name="minorRepairCost"
@@ -331,9 +354,10 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                   //     .damageSeverityPercent || ""
                   // }
                   onChange={(e) => {
-                    const raw = Number(e.target.value)
-                    const { min, max } = repairPercentRanges["minor"]
-                    const clamped = Math.max(min, Math.min(max, raw))
+                    // const raw = Number(e.target.value)
+                    // const { min, max } = repairPercentRanges["minor"]
+                    // const clamped = Math.max(min, Math.min(max, raw))
+                    const clamped = Number(e.target.value)
                     handleRepairCost(index, "damageSeverityPercent", "minor", clamped)
                   }}
                   sx={{
