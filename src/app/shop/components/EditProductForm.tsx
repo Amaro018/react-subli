@@ -13,6 +13,7 @@ import AccountCircle from "@mui/icons-material/AccountCircle"
 import Email from "@mui/icons-material/Email"
 import Clear from "@mui/icons-material/Clear"
 import Visibility from "@mui/icons-material/Visibility"
+import { string } from "zod"
 
 type Color = {
   id: number
@@ -21,12 +22,12 @@ type Color = {
 }
 
 type Category = {
-  id: string
+  id: number
   name: string
 }
 
 type Variant = {
-  id: number
+  id: any
   color: Color
   size: string
   colorid: number
@@ -65,7 +66,7 @@ const repairPercentRanges: Record<string, { min: number; max: number }> = {
 type EditProductFormProps = {
   currentUser: Product
   handleCloseEdit: () => void
-  refetchProducts: () => void
+  refetchProducts: () => Promise<any>
 }
 
 const EditProductForm = (props: EditProductFormProps) => {
@@ -76,6 +77,9 @@ const EditProductForm = (props: EditProductFormProps) => {
   const [loading, setLoading] = useState(false)
 
   const [isMinorValid, setIsMinorValid] = useState(false)
+
+  // Inside your component
+  const [rowToggle, setRowToggle] = React.useState<{ [id: number]: boolean }>({})
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -167,6 +171,7 @@ const EditProductForm = (props: EditProductFormProps) => {
 
       const product = await updateProduct({
         id: formData.id,
+        name: formData.name,
         deliveryOption: formData.deliveryOption,
         description: formData.description,
         status: formData.status,
@@ -198,19 +203,35 @@ const EditProductForm = (props: EditProductFormProps) => {
   }
 
   const emptyVariant: Variant = {
-    id: Math.random(), // 0 means new (not yet in DB)
+    id: Date.now(),
     color: {
       id: 1,
       name: "",
       hexCode: "",
     },
     size: "",
-    colorid: 0,
-    quantity: 0,
-    price: 0,
-    replacementCost: 0,
-    manualRepairCost: 0,
-    damagePolicies: [],
+    colorid: 1,
+    quantity: 1,
+    price: 100,
+    replacementCost: 100,
+    manualRepairCost: 100,
+    damagePolicies: [
+      {
+        id: Date.now(), // or another unique ID
+        damageSeverity: "minor",
+        damageSeverityPercent: 10,
+      },
+      {
+        id: Date.now() + 1,
+        damageSeverity: "moderate",
+        damageSeverityPercent: 30,
+      },
+      {
+        id: Date.now() + 2,
+        damageSeverity: "major",
+        damageSeverityPercent: 50,
+      },
+    ],
   }
 
   // useEffect(() => {
@@ -226,6 +247,13 @@ const EditProductForm = (props: EditProductFormProps) => {
       console.log(updated)
       return updated
     })
+  }
+
+  const toggleRow = (id: number) => {
+    setRowToggle((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
   }
 
   return (
@@ -258,17 +286,11 @@ const EditProductForm = (props: EditProductFormProps) => {
             "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
           }}
         >
-          {/* Replace with dynamic categories */}
           {categories.map((category) => (
             <MenuItem key={category.id} value={category.id}>
               {category.name}
             </MenuItem>
           ))}
-          {/* <MenuItem value="Electronics">Electronics</MenuItem>
-          <MenuItem value="Fashion">Fashion</MenuItem>
-          <MenuItem value="Home & Garden">Home & Garden</MenuItem>
-          <MenuItem value="Sports">Sports</MenuItem>
-          <MenuItem value="Books">Books</MenuItem> */}
         </TextField>
 
         <TextField
@@ -353,91 +375,98 @@ const EditProductForm = (props: EditProductFormProps) => {
           )
           const majorPolicy = formData.variants[index].damagePolicies?.[majorPolicyIndex]
 
-          // const moderatePolicy = variant.damagePolicies?.find(
-          //   (p) => p.damageSeverity === "moderate"
-          // )
-          // const majorPolicy = variant.damagePolicies?.find((p) => p.damageSeverity === "major")
-
           const replacementCost = formData.variants[index].replacementCost
+
+          const isOpen = rowToggle[variant.id] || false
 
           return (
             <div key={variant.id ?? `variant-${index}`} className="border p-4 rounded-md my-4">
-              <label className="block text-sm font-medium mb-8">Variant Details</label>
+              {/* <label className="block text-sm font-medium mb-8">Variant Details</label> */}
 
-              <div className="flex gap-2 items-center mb-4">
-                <TextField
-                  key={`id-${index}`}
-                  name="id"
-                  label="Variant ID"
-                  fullWidth
-                  value={formData.variants[index].id}
-                  disabled
-                />
-                <TextField
-                  key={`color-${index}`}
-                  name="color"
-                  label="Color"
-                  sx={{
-                    "& .MuiInputLabel-root": { color: "blue" },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                  }}
-                  select
-                  fullWidth
-                  value={formData.variants[index].color.id}
-                  onChange={(e) => handleVariantChange(index, "color", Number(e.target.value))}
-                >
-                  {colors.map((color) => (
-                    <MenuItem key={color.id} value={color.id}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded-full border"
-                          style={{ backgroundColor: color.hexCode }}
-                        ></div>
-                        {color.name}
-                      </div>
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  key={`price-${index}`}
-                  name="price"
-                  label="Rent Price"
-                  sx={{
-                    "& .MuiInputLabel-root": { color: "blue" },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                  }}
-                  type="number"
-                  fullWidth
-                  value={formData.variants[index].price}
-                  onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">₱</InputAdornment>,
-                  }}
-                />
-                <TextField
-                  key={`quantity-${index}`}
-                  name="quantity"
-                  label="Quantity"
-                  sx={{
-                    "& .MuiInputLabel-root": { color: "blue" },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                  }}
-                  type="number"
-                  fullWidth
-                  value={formData.variants[index].quantity}
-                  onChange={(e) => handleVariantChange(index, "quantity", Number(e.target.value))}
-                />
-
-                {index > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => removeVariant(index)}
-                    className="bg-red-500 text-white p-2 rounded"
-                  >
-                    <DeleteForeverIcon />
-                  </button>
-                )}
+              <div
+                className="flex justify-between items-center mb-4 cursor-pointer"
+                onClick={() => toggleRow(variant.id)}
+              >
+                <label className="block text-sm font-medium">Variant Details</label>
+                <span>{isOpen ? "▲" : "▼"}</span>
               </div>
+
+              {isOpen && (
+                <div className="flex gap-2 items-center mb-4">
+                  <TextField
+                    key={`id-${index}`}
+                    name="id"
+                    label="Variant ID"
+                    fullWidth
+                    value={formData.variants[index].id}
+                    disabled
+                  />
+                  <TextField
+                    key={`color-${index}`}
+                    name="color"
+                    label="Color"
+                    sx={{
+                      "& .MuiInputLabel-root": { color: "blue" },
+                      "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+                    }}
+                    select
+                    fullWidth
+                    value={formData.variants[index].color.id}
+                    onChange={(e) => handleVariantChange(index, "color", Number(e.target.value))}
+                  >
+                    {colors.map((color) => (
+                      <MenuItem key={color.id} value={color.id}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded-full border"
+                            style={{ backgroundColor: color.hexCode }}
+                          ></div>
+                          {color.name}
+                        </div>
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    key={`price-${index}`}
+                    name="price"
+                    label="Rent Price"
+                    sx={{
+                      "& .MuiInputLabel-root": { color: "blue" },
+                      "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+                    }}
+                    type="number"
+                    fullWidth
+                    value={formData.variants[index].price}
+                    onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                    }}
+                  />
+                  <TextField
+                    key={`quantity-${index}`}
+                    name="quantity"
+                    label="Quantity"
+                    sx={{
+                      "& .MuiInputLabel-root": { color: "blue" },
+                      "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+                    }}
+                    type="number"
+                    fullWidth
+                    value={formData.variants[index].quantity}
+                    onChange={(e) => handleVariantChange(index, "quantity", Number(e.target.value))}
+                  />
+
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(index)}
+                      className="bg-red-500 text-white p-2 rounded"
+                    >
+                      <DeleteForeverIcon />
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* New section for repair & replacement costs */}
               <div className="grid grid-cols-2 gap-4">
@@ -492,7 +521,11 @@ const EditProductForm = (props: EditProductFormProps) => {
                   label="Minor Repair Cost"
                   type="number"
                   fullWidth
-                  value={minorPolicy?.damageSeverityPercent * (replacementCost / 100)}
+                  value={
+                    minorPolicy?.damageSeverityPercent
+                      ? minorPolicy?.damageSeverityPercent * (replacementCost / 100)
+                      : 0
+                  }
                   slotProps={{
                     input: {
                       readOnly: true,
@@ -507,7 +540,7 @@ const EditProductForm = (props: EditProductFormProps) => {
                   type="number"
                   placeholder="10 - 29"
                   fullWidth
-                  value={minorPolicy?.damageSeverityPercent}
+                  value={minorPolicy?.damageSeverityPercent ?? 0}
                   error={
                     minorPolicy?.damageSeverityPercent < 10 ||
                     minorPolicy?.damageSeverityPercent > 29
@@ -543,17 +576,16 @@ const EditProductForm = (props: EditProductFormProps) => {
                   label="Moderate Repair Cost"
                   type="number"
                   fullWidth
-                  value={moderatePolicy?.damageSeverityPercent * (replacementCost / 100)}
-                  // value={
-                  //   variant.damagePolicies?.find((p) => p.damageSeverity === "moderate")
-                  //     .damageSeverityPercent * (variant.replacementCost / 100).toFixed(2) || ""
-                  // }
-                  // onChange={(e) =>
-                  //   handleRepairCost(index, "moderateRepairCost", Number(e.target.value))
-                  // }
-                  InputProps={{
-                    readOnly: true,
-                    startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                  value={
+                    moderatePolicy?.damageSeverityPercent
+                      ? moderatePolicy?.damageSeverityPercent * (replacementCost / 100)
+                      : 0
+                  }
+                  slotProps={{
+                    input: {
+                      readOnly: true,
+                      startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                    },
                   }}
                 />
                 <TextField
@@ -563,11 +595,17 @@ const EditProductForm = (props: EditProductFormProps) => {
                   type="number"
                   placeholder="30 - 59"
                   fullWidth
-                  value={moderatePolicy?.damageSeverityPercent || ""}
-                  // value={
-                  //   variant.damagePolicies?.find((p) => p.damageSeverity === "moderate")
-                  //     .damageSeverityPercent || ""
-                  // }
+                  value={moderatePolicy?.damageSeverityPercent ?? 0}
+                  error={
+                    moderatePolicy?.damageSeverityPercent < 30 ||
+                    moderatePolicy?.damageSeverityPercent > 49
+                  }
+                  helperText={
+                    moderatePolicy?.damageSeverityPercent < 30 ||
+                    moderatePolicy?.damageSeverityPercent > 49
+                      ? "Value must be between 30 and 49"
+                      : ""
+                  }
                   onChange={(e) =>
                     handleRepairCost(
                       index,
@@ -580,8 +618,11 @@ const EditProductForm = (props: EditProductFormProps) => {
                     "& .MuiInputLabel-root": { color: "blue" },
                     "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
                   }}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  slotProps={{
+                    input: {
+                      inputProps: { min: 30, max: 49 },
+                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                    },
                   }}
                 />
                 {/* Major Repair */}
@@ -591,7 +632,11 @@ const EditProductForm = (props: EditProductFormProps) => {
                   label="Major Repair Cost"
                   type="number"
                   fullWidth
-                  value={majorPolicy?.damageSeverityPercent * (replacementCost / 100)}
+                  value={
+                    majorPolicy?.damageSeverityPercent
+                      ? majorPolicy?.damageSeverityPercent * (replacementCost / 100)
+                      : 0
+                  }
                   slotProps={{
                     input: {
                       readOnly: true,
@@ -606,7 +651,17 @@ const EditProductForm = (props: EditProductFormProps) => {
                   type="number"
                   placeholder="50 - 69"
                   fullWidth
-                  value={majorPolicy?.damageSeverityPercent || ""}
+                  value={majorPolicy?.damageSeverityPercent ?? 0}
+                  error={
+                    majorPolicy?.damageSeverityPercent < 50 ||
+                    majorPolicy?.damageSeverityPercent > 69
+                  }
+                  helperText={
+                    majorPolicy?.damageSeverityPercent < 50 ||
+                    majorPolicy?.damageSeverityPercent > 69
+                      ? "Value must be between 50 and 69"
+                      : ""
+                  }
                   onChange={(e) =>
                     handleRepairCost(
                       index,
