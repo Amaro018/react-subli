@@ -32,6 +32,7 @@ import { z } from "zod"
 export const UpdateProductInput = z.object({
   id: z.number(),
   deliveryOption: z.string(),
+  description: z.string(),
   status: z.string(),
   categoryid: z.number(),
   variants: z.array(
@@ -56,12 +57,13 @@ export const UpdateProductInput = z.object({
 export default async function updateProduct(input: z.infer<typeof UpdateProductInput>) {
   // const { id, images, variants, ...productData } = input
 
-  const { id, deliveryOption, status, categoryid, variants } = input
+  const { id, deliveryOption, status, categoryid, description, variants } = input
 
   const product = await db.product.update({
     where: { id },
     data: {
       deliveryOption,
+      description,
       status,
       categoryid,
       variants: {

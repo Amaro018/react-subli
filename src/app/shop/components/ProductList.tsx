@@ -47,7 +47,7 @@ type ProductListProps = {
 
 const ProductList = (props: ProductListProps) => {
   const currentUser = props.currentUser
-  const [products, { isLoading, isError, error }] = useQuery(getProducts, null)
+  const [products, { isLoading, isError, error, refetch }] = useQuery(getProducts, null)
   const [open, setOpen] = React.useState(false)
   const [openEdit, setOpenEdit] = React.useState(false)
 
@@ -252,7 +252,11 @@ const ProductList = (props: ProductListProps) => {
             maxHeight: "calc(100vh - 200px)",
           }}
         >
-          <EditProductForm currentUser={selectedProduct} handleCloseEdit={handleCloseEdit} />
+          <EditProductForm
+            currentUser={selectedProduct}
+            handleCloseEdit={handleCloseEdit}
+            refetchProducts={refetch}
+          />
         </Box>
       </Modal>
     </>
