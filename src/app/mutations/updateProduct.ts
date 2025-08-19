@@ -1,36 +1,9 @@
 import db from "db"
 import { z } from "zod"
 
-// Schema for updating product
-// export const UpdateProductInput = z.object({
-//   id: z.number(),
-//   name: z.string().optional(),
-//   description: z.string().optional(),
-//   status: z.string().optional(),
-//   deliveryOption: z.string().optional(),
-//   categoryId: z.number().nullable().optional(),
-//   images: z.array(z.object({ id: z.number().optional(), url: z.string() })).optional(),
-//   variants: z.array(
-//     z.object({
-//       id: z.number(),
-//       colorId: z.number().nullable(),
-//       price: z.number(),
-//       quantity: z.number(),
-//       replacementCost: z.number(),
-//       manualRepairCost: z.number(),
-//       damagePolicies: z.array(
-//         z.object({
-//           id: z.number(),
-//           damageSeverity: z.string(),
-//           damageSeverityPercent: z.number(),
-//         })
-//       ),
-//     })
-//   ).optional(),
-// })
-
 export const UpdateProductInput = z.object({
   id: z.number(),
+  name: z.string(),
   deliveryOption: z.string(),
   description: z.string(),
   status: z.string(),
@@ -55,13 +28,12 @@ export const UpdateProductInput = z.object({
 })
 
 export default async function updateProduct(input: z.infer<typeof UpdateProductInput>) {
-  // const { id, images, variants, ...productData } = input
-
-  const { id, deliveryOption, status, categoryid, description, variants } = input
+  const { id, name, deliveryOption, status, categoryid, description, variants } = input
 
   const product = await db.product.update({
     where: { id },
     data: {
+      name,
       deliveryOption,
       description,
       status,

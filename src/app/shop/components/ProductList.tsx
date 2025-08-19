@@ -44,6 +44,59 @@ type ExtendedUser = User & {
 type ProductListProps = {
   currentUser: ExtendedUser | null
 }
+type Color = {
+  id: number
+  name: string
+  hexCode: string
+}
+
+type DamagePolicies = {
+  id: number
+  damageSeverity: string
+  damageSeverityPercent: number
+}
+
+type Category = {
+  id: number
+  name: string
+}
+
+type Variant = {
+  id: number
+  color: Color
+  size: string
+  colorid: number
+  price: number
+  quantity: number
+  replacementCost: number
+  manualRepairCost: number
+  damagePolicies: DamagePolicies[]
+}
+
+type Product = {
+  id: number
+  name: string
+  status: string
+  description: string
+  deliveryOption: string
+  category: Category
+  categoryid: number
+  variants: Variant[]
+}
+
+const emptyProduct: Product = {
+  id: 0,
+  name: "",
+  status: "",
+  description: "",
+  deliveryOption: "",
+  category: {
+    id: 0,
+    name: "",
+  },
+  categoryid: 0,
+  variants: [],
+}
 
 const ProductList = (props: ProductListProps) => {
   const currentUser = props.currentUser
@@ -51,9 +104,10 @@ const ProductList = (props: ProductListProps) => {
   const [open, setOpen] = React.useState(false)
   const [openEdit, setOpenEdit] = React.useState(false)
 
-  const [selectedProduct, setSelectedProduct] = React.useState(null)
+  const [selectedProduct, setSelectedProduct] = React.useState<Product>(emptyProduct)
+  // const [selectedProduct, setSelectedProduct] = React.useState(null)
 
-  const [rowToggle, setRowToggle] = React.useState({}) // Store toggle state for each row
+  const [rowToggle, setRowToggle] = React.useState<Record<number, boolean>>({}) // Store toggle state for each row
 
   const handleOpen = () => setOpen(true)
   const handleClose = () => setOpen(false)
@@ -65,10 +119,10 @@ const ProductList = (props: ProductListProps) => {
 
   const handleCloseEdit = () => {
     setOpenEdit(false)
-    setSelectedProduct(null)
+    setSelectedProduct(emptyProduct)
   }
 
-  const toggleRow = (id) => {
+  const toggleRow = (id: number) => {
     setRowToggle((prev) => ({
       ...prev,
       [id]: !prev[id], // Toggle the current row's state
@@ -76,7 +130,14 @@ const ProductList = (props: ProductListProps) => {
   }
 
   if (isLoading) return <CircularProgress />
-  if (isError) return <Alert severity="error">{error?.message}</Alert>
+  // if (isError) return <Alert severity="error">{error?.message}</Alert>
+
+  if (isError) {
+    if (error instanceof Error) {
+      return <Alert severity="error">{error.message}</Alert>
+    }
+    return <Alert severity="error">Something went wrong</Alert>
+  }
 
   return (
     <>
