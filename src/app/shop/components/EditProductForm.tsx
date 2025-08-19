@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { TextField, MenuItem, Button, CircularProgress } from "@mui/material"
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
 import { useQuery } from "@blitzjs/rpc"
@@ -7,6 +7,7 @@ import getCategories from "../../queries/getCategories"
 
 import updateProduct from "../../mutations/updateProduct"
 
+import { Plus } from "lucide-react"
 import { InputAdornment } from "@mui/material"
 import AccountCircle from "@mui/icons-material/AccountCircle"
 import Email from "@mui/icons-material/Email"
@@ -17,8 +18,6 @@ type Color = {
   id: number
   name: string
   hexCode: string
-  createdAt: Date
-  updatedAt: Date
 }
 
 type Category = {
@@ -27,9 +26,10 @@ type Category = {
 }
 
 type Variant = {
-  id: string
+  id: number
   color: Color
-  colorId: number
+  size: string
+  colorid: number
   price: number
   quantity: number
   replacementCost: number
@@ -44,10 +44,13 @@ type DamagePolicies = {
 }
 
 type Product = {
+  id: number
   name: string
   status: string
+  description: string
   deliveryOption: string
   category: Category
+  categoryid: number
   variants: Variant[]
 }
 
@@ -59,34 +62,76 @@ const repairPercentRanges: Record<string, { min: number; max: number }> = {
   // replacement: { min: 91, max: 100 },
 }
 
-const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => void }) => {
+type EditProductFormProps = {
+  currentUser: Product
+  handleCloseEdit: () => void
+  refetchProducts: () => void
+}
+
+const EditProductForm = (props: EditProductFormProps) => {
   const [colors] = useQuery(getColors, null)
   const [categories] = useQuery(getCategories, null)
 
   const [formData, setFormData] = useState<Product>(props.currentUser)
   const [loading, setLoading] = useState(false)
 
+  const [isMinorValid, setIsMinorValid] = useState(false)
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleVariantChange = (index: number, key: keyof Variant, value: string | number) => {
+  const handleVariantChange = (index: number, key: keyof Variant, value: number) => {
     const updatedVariants = [...formData.variants]
 
     if (key === "color") {
       const selectedColor = colors.find((c) => c.id === value)
       if (selectedColor) {
-        updatedVariants[index].color = selectedColor
-        updatedVariants[index].colorId = selectedColor.id
+        updatedVariants[index] = {
+          ...updatedVariants[index],
+          color: selectedColor,
+          colorid: selectedColor.id,
+        }
       }
     } else {
-      updatedVariants[index][key] = value as never
+      updatedVariants[index] = {
+        ...updatedVariants[index],
+        [key]: value,
+      }
     }
 
-    setFormData({ ...formData, variants: updatedVariants })
+    setFormData((prev) => ({
+      ...prev,
+      variants: updatedVariants,
+    }))
   }
 
   const handleRepairCost = (
+    variantIndex: number,
+    key: keyof DamagePolicies,
+    severity: "minor" | "moderate" | "major",
+    value: number
+  ) => {
+    setFormData((prev) => {
+      const updatedVariants = [...prev.variants]
+
+      const variant = updatedVariants[variantIndex]
+
+      // clone policies
+      const updatedPolicies = variant.damagePolicies.map((p) =>
+        p.damageSeverity === severity ? { ...p, [key]: value } : p
+      )
+
+      updatedVariants[variantIndex] = {
+        ...variant,
+        damagePolicies: updatedPolicies,
+      }
+
+      return { ...prev, variants: updatedVariants }
+    })
+  }
+
+  const handleRepairCost1 = (
     index: number,
     key: keyof DamagePolicies,
     severity: string,
@@ -118,15 +163,69 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
 
     try {
       // your update logic here
-      const product = await updateProduct(formData)
+      console.log(formData.id)
+
+      const product = await updateProduct({
+        id: formData.id,
+        deliveryOption: formData.deliveryOption,
+        description: formData.description,
+        status: formData.status,
+        categoryid: formData.categoryid,
+        variants: formData.variants.map((v) => ({
+          id: v.id,
+          size: v.size,
+          colorid: v.colorid,
+          quantity: v.quantity,
+          price: v.price,
+          replacementCost: v.replacementCost,
+          manualRepairCost: v.manualRepairCost,
+          damagePolicies: v.damagePolicies.map((dp) => ({
+            id: dp.id,
+            damageSeverityPercent: dp.damageSeverityPercent,
+          })),
+        })),
+      })
       console.log("Product updated:", product)
       console.log("Submitting edited product:", formData)
+
+      await props.refetchProducts()
       props.handleCloseEdit()
     } catch (error) {
       console.error("Edit failed", error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const emptyVariant: Variant = {
+    id: Math.random(), // 0 means new (not yet in DB)
+    color: {
+      id: 1,
+      name: "",
+      hexCode: "",
+    },
+    size: "",
+    colorid: 0,
+    quantity: 0,
+    price: 0,
+    replacementCost: 0,
+    manualRepairCost: 0,
+    damagePolicies: [],
+  }
+
+  // useEffect(() => {
+  //   console.log("Updated formData:", formData);
+  // }, [formData]);
+
+  const handleAddVariant = () => {
+    setFormData((prevData) => {
+      const updated = {
+        ...prevData,
+        variants: [...prevData.variants, { ...emptyVariant }],
+      }
+      console.log(updated)
+      return updated
+    })
   }
 
   return (
@@ -207,21 +306,75 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
       </div>
 
       <div>
-        <label className="block text-sm font-medium my-2">Product Variants</label>
-        {formData.variants.map((variant, index) => {
-          const minorPolicy = variant.damagePolicies?.find((p) => p.damageSeverity === "minor")
-          const moderatePolicy = variant.damagePolicies?.find(
+        <TextField
+          required
+          multiline
+          rows={4}
+          id="productDescription"
+          name="description"
+          label="Product Description"
+          fullWidth
+          value={formData.description}
+          onChange={handleInputChange}
+          sx={{
+            "& .MuiInputLabel-root": { color: "blue" },
+            "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
+          }}
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between my-2">
+          <label className="block text-sm font-medium">Product Variants</label>
+          <button
+            type="button"
+            onClick={handleAddVariant}
+            className="flex items-center gap-1 px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600"
+          >
+            <Plus size={16} />
+            Add New Variant
+          </button>
+        </div>
+
+        {/* {formData.variants.map((variant, index) => { */}
+        {[...formData.variants].reverse().map((variant, index) => {
+          const minorPolicyIndex = variant.damagePolicies?.findIndex(
+            (p) => p.damageSeverity === "minor"
+          )
+          const minorPolicy = formData.variants[index].damagePolicies?.[minorPolicyIndex]
+
+          const moderatePolicyIndex = variant.damagePolicies?.findIndex(
             (p) => p.damageSeverity === "moderate"
           )
-          const majorPolicy = variant.damagePolicies?.find((p) => p.damageSeverity === "major")
+          const moderatePolicy = formData.variants[index].damagePolicies?.[moderatePolicyIndex]
+
+          const majorPolicyIndex = variant.damagePolicies?.findIndex(
+            (p) => p.damageSeverity === "major"
+          )
+          const majorPolicy = formData.variants[index].damagePolicies?.[majorPolicyIndex]
+
+          // const moderatePolicy = variant.damagePolicies?.find(
+          //   (p) => p.damageSeverity === "moderate"
+          // )
+          // const majorPolicy = variant.damagePolicies?.find((p) => p.damageSeverity === "major")
+
+          const replacementCost = formData.variants[index].replacementCost
 
           return (
             <div key={variant.id ?? `variant-${index}`} className="border p-4 rounded-md my-4">
               <label className="block text-sm font-medium mb-8">Variant Details</label>
 
               <div className="flex gap-2 items-center mb-4">
-                <TextField name="id" label="Variant ID" fullWidth value={variant.id} disabled />
                 <TextField
+                  key={`id-${index}`}
+                  name="id"
+                  label="Variant ID"
+                  fullWidth
+                  value={formData.variants[index].id}
+                  disabled
+                />
+                <TextField
+                  key={`color-${index}`}
                   name="color"
                   label="Color"
                   sx={{
@@ -230,16 +383,23 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                   }}
                   select
                   fullWidth
-                  value={variant.color.id}
-                  onChange={(e) => handleVariantChange(index, "color", e.target.value)}
+                  value={formData.variants[index].color.id}
+                  onChange={(e) => handleVariantChange(index, "color", Number(e.target.value))}
                 >
                   {colors.map((color) => (
                     <MenuItem key={color.id} value={color.id}>
-                      {color.name}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: color.hexCode }}
+                        ></div>
+                        {color.name}
+                      </div>
                     </MenuItem>
                   ))}
                 </TextField>
                 <TextField
+                  key={`price-${index}`}
                   name="price"
                   label="Rent Price"
                   sx={{
@@ -248,13 +408,14 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                   }}
                   type="number"
                   fullWidth
-                  value={variant.price}
+                  value={formData.variants[index].price}
                   onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
                   InputProps={{
                     startAdornment: <InputAdornment position="start">₱</InputAdornment>,
                   }}
                 />
                 <TextField
+                  key={`quantity-${index}`}
                   name="quantity"
                   label="Quantity"
                   sx={{
@@ -263,7 +424,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                   }}
                   type="number"
                   fullWidth
-                  value={variant.quantity}
+                  value={formData.variants[index].quantity}
                   onChange={(e) => handleVariantChange(index, "quantity", Number(e.target.value))}
                 />
 
@@ -281,11 +442,12 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
               {/* New section for repair & replacement costs */}
               <div className="grid grid-cols-2 gap-4">
                 <TextField
+                  key={`replacementCost-${index}`}
                   name="replacementCost"
                   label="Replacement Cost"
                   type="number"
                   fullWidth
-                  value={variant.replacementCost || ""}
+                  value={replacementCost || ""}
                   onChange={(e) =>
                     handleVariantChange(index, "replacementCost", Number(e.target.value))
                   }
@@ -299,11 +461,12 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                 />
 
                 <TextField
+                  key={`manualRepairCost-${index}`}
                   name="manualRepairCost"
                   label="Manual Repair Cost"
                   type="number"
                   fullWidth
-                  value={variant.manualRepairCost || ""}
+                  value={formData.variants[index].manualRepairCost || ""}
                   onChange={(e) =>
                     handleVariantChange(index, "manualRepairCost", Number(e.target.value))
                   }
@@ -311,8 +474,10 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                     "& .MuiInputLabel-root": { color: "blue" },
                     "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
                   }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                  slotProps={{
+                    input: {
+                      startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                    },
                   }}
                 />
               </div>
@@ -322,37 +487,37 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
               <div className="grid grid-cols-2 gap-4">
                 {/* Minor Repair */}
                 <TextField
+                  key={`minorRepairCost-${index}`}
                   name="minorRepairCost"
                   label="Minor Repair Cost"
                   type="number"
                   fullWidth
-                  value={
-                    minorPolicy?.damageSeverityPercent *
-                      (variant.replacementCost / 100).toFixed(2) || ""
-                  }
-                  // value={
-                  //   variant.damagePolicies?.find((p) => p.damageSeverity === "minor")
-                  //     .damageSeverityPercent * (variant.replacementCost / 100).toFixed(2) || ""
-                  // }
-                  // onChange={(e) =>
-                  //   handleRepairCost(index, "minorRepairCost", Number(e.target.value))
-                  // }
-                  InputProps={{
-                    readOnly: true,
-                    startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                  value={minorPolicy?.damageSeverityPercent * (replacementCost / 100)}
+                  slotProps={{
+                    input: {
+                      readOnly: true,
+                      startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                    },
                   }}
                 />
                 <TextField
+                  key={`minorRepairPercent-${index}`}
                   name="minorRepairPercent"
                   label="Minor Repair %"
                   type="number"
                   placeholder="10 - 29"
                   fullWidth
-                  value={minorPolicy?.damageSeverityPercent || ""}
-                  // value={
-                  //   variant.damagePolicies?.find((p) => p.damageSeverity === "minor")
-                  //     .damageSeverityPercent || ""
-                  // }
+                  value={minorPolicy?.damageSeverityPercent}
+                  error={
+                    minorPolicy?.damageSeverityPercent < 10 ||
+                    minorPolicy?.damageSeverityPercent > 29
+                  }
+                  helperText={
+                    minorPolicy?.damageSeverityPercent < 10 ||
+                    minorPolicy?.damageSeverityPercent > 29
+                      ? "Value must be between 10 and 29"
+                      : ""
+                  }
                   onChange={(e) => {
                     // const raw = Number(e.target.value)
                     // const { min, max } = repairPercentRanges["minor"]
@@ -364,21 +529,21 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                     "& .MuiInputLabel-root": { color: "blue" },
                     "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
                   }}
-                  InputProps={{
-                    inputProps: { min: 10, max: 29 },
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  slotProps={{
+                    input: {
+                      inputProps: { min: 10, max: 29 },
+                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                    },
                   }}
                 />
                 {/* Moderate Repair */}
                 <TextField
+                  key={`moderateRepairCost-${index}`}
                   name="moderateRepairCost"
                   label="Moderate Repair Cost"
                   type="number"
                   fullWidth
-                  value={
-                    moderatePolicy?.damageSeverityPercent *
-                      (variant.replacementCost / 100).toFixed(2) || ""
-                  }
+                  value={moderatePolicy?.damageSeverityPercent * (replacementCost / 100)}
                   // value={
                   //   variant.damagePolicies?.find((p) => p.damageSeverity === "moderate")
                   //     .damageSeverityPercent * (variant.replacementCost / 100).toFixed(2) || ""
@@ -392,6 +557,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                   }}
                 />
                 <TextField
+                  key={`moderateRepairPercent-${index}`}
                   name="moderateRepairPercent"
                   label="Moderate Repair %"
                   type="number"
@@ -420,37 +586,27 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                 />
                 {/* Major Repair */}
                 <TextField
+                  key={`majorRepairCost-${index}`}
                   name="majorRepairCost"
                   label="Major Repair Cost"
                   type="number"
                   fullWidth
-                  value={
-                    majorPolicy?.damageSeverityPercent *
-                      (variant.replacementCost / 100).toFixed(2) || ""
-                  }
-                  // value={
-                  //   variant.damagePolicies?.find((p) => p.damageSeverity === "major")
-                  //     .damageSeverityPercent * (variant.replacementCost / 100).toFixed(2) || ""
-                  // }
-                  // onChange={(e) =>
-                  //   handleRepairCost(index, "majorRepairCost", Number(e.target.value))
-                  // }
-                  InputProps={{
-                    readOnly: true,
-                    startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                  value={majorPolicy?.damageSeverityPercent * (replacementCost / 100)}
+                  slotProps={{
+                    input: {
+                      readOnly: true,
+                      startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                    },
                   }}
                 />
                 <TextField
+                  key={`majorRepairPercent-${index}`}
                   name="majorRepairPercent"
                   label="Major Repair %"
                   type="number"
-                  placeholder="60 - 75"
+                  placeholder="50 - 69"
                   fullWidth
                   value={majorPolicy?.damageSeverityPercent || ""}
-                  // value={
-                  //   variant.damagePolicies?.find((p) => p.damageSeverity === "major")
-                  //     .damageSeverityPercent || ""
-                  // }
                   onChange={(e) =>
                     handleRepairCost(
                       index,
@@ -463,8 +619,11 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
                     "& .MuiInputLabel-root": { color: "blue" },
                     "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
                   }}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  slotProps={{
+                    input: {
+                      inputProps: { min: 50, max: 69 },
+                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                    },
                   }}
                 />
               </div>
@@ -473,53 +632,7 @@ const EditProductForm = (props: { currentUser: Product; handleCloseEdit: () => v
         })}
       </div>
 
-      {/* <div>
-        <label className="block text-sm font-medium my-2">Product Variants</label>
-        {formData.variants.map((variant, index) => (
-          <div key={index} className="flex gap-2 items-center my-4">
-            <TextField name="id" label="Variant ID" fullWidth value={variant.id} disabled />
-            <TextField
-              name="color"
-              label="Color"
-              select
-              fullWidth
-              value={variant.color.name}
-              onChange={(e) => handleVariantChange(index, "color", e.target.value)}
-            >
-              {colors.map((color) => (
-                <MenuItem value={color.name}>{color.name}</MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              name="price"
-              label="Price"
-              type="number"
-              fullWidth
-              value={variant.price}
-              onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
-            />
-            <TextField
-              name="quantity"
-              label="Quantity"
-              type="number"
-              fullWidth
-              value={variant.quantity}
-              onChange={(e) => handleVariantChange(index, "quantity", Number(e.target.value))}
-            />
-
-            {index > 0 && (
-              <button
-                type="button"
-                onClick={() => removeVariant(index)}
-                className="bg-red-500 text-white p-2 rounded"
-              >
-                <DeleteForeverIcon />
-              </button>
-            )}
-          </div>
-        ))}
-      </div> */}
-
+      {/* <Button type="submit" variant="contained" color="primary" disabled={loading}> */}
       <Button type="submit" variant="contained" color="primary" disabled={loading}>
         {loading ? <CircularProgress size={20} /> : "Update Product"}
       </Button>
