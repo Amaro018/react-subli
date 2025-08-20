@@ -5,20 +5,24 @@ import { z } from "zod"
 // Zod schema for input validation
 const CreateProductInput = z.object({
   shopId: z.number().int().positive("Shop ID is required"),
-  productName: z.string().nonempty("Product name is required"),
-  description: z.string().optional(),
-  status: z.enum(["active", "inactive"]).optional(),
+  name: z.string().nonempty("Product name is required"),
+  description: z.string(),
+  status: z.enum(["active", "inactive"]),
   deliveryOption: z.enum(["DELIVERY", "PICKUP", "BOTH"]),
-  productImages: z.array(z.string().nonempty("Image URL is required")),
+  images: z.array(z.string().nonempty("Image URL is required")),
   variants: z.array(
     z.object({
-      size: z.string().optional(),
-      color: z.number().int().optional(),
+      size: z.string(),
+      colorId: z.number().int(),
       quantity: z.number().min(0, "Quantity must be a positive number"),
       price: z.number().min(0, "Price must be a positive number"),
     })
   ),
-  category: z.number(),
+  categoryid: z.number(),
+  category: z.object({
+    id: z.number(),
+    name: z.string(),
+  }),
 })
 
 export default async function createProduct(input: z.infer<typeof CreateProductInput>) {
@@ -26,23 +30,23 @@ export default async function createProduct(input: z.infer<typeof CreateProductI
 
   const product = await db.product.create({
     data: {
-      name: data.productName,
+      name: data.name,
       description: data.description,
       status: data.status ?? "active",
       deliveryOption: data.deliveryOption,
       images: {
-        create: data.productImages.map((url) => ({ url })), // Create associated images
+        create: data.images.map((url) => ({ url })), // Create associated images
       },
       variants: {
         create: data.variants.map((variant) => ({
           size: variant.size,
-          colorId: variant.color, // Associate color with colorId
           quantity: variant.quantity,
           price: variant.price,
+          colorId: variant.colorId, // Associate color with colorId
         })), // Create associated variants
       },
       category: {
-        connect: { id: data.category }, // Connect category via its ID
+        connect: { id: data.categoryid },
       },
       shop: {
         connect: { id: data.shopId },

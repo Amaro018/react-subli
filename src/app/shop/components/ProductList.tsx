@@ -44,6 +44,7 @@ type ExtendedUser = User & {
 type ProductListProps = {
   currentUser: ExtendedUser | null
 }
+
 type Color = {
   id: number
   name: string
@@ -62,10 +63,10 @@ type Category = {
 }
 
 type Variant = {
-  id: number
+  id: any
   color: Color
   size: string
-  colorid: number
+  colorId: number
   price: number
   quantity: number
   replacementCost: number
@@ -73,7 +74,7 @@ type Variant = {
   damagePolicies: DamagePolicies[]
 }
 
-type Product = {
+type ProductFormData = {
   id: number
   name: string
   status: string
@@ -84,7 +85,7 @@ type Product = {
   variants: Variant[]
 }
 
-const emptyProduct: Product = {
+const emptyProduct: ProductFormData = {
   id: 0,
   name: "",
   status: "",
@@ -104,7 +105,7 @@ const ProductList = (props: ProductListProps) => {
   const [open, setOpen] = React.useState(false)
   const [openEdit, setOpenEdit] = React.useState(false)
 
-  const [selectedProduct, setSelectedProduct] = React.useState<Product>(emptyProduct)
+  const [selectedProduct, setSelectedProduct] = React.useState<ProductFormData>(emptyProduct)
   // const [selectedProduct, setSelectedProduct] = React.useState(null)
 
   const [rowToggle, setRowToggle] = React.useState<Record<number, boolean>>({}) // Store toggle state for each row
