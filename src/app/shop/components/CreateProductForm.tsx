@@ -9,21 +9,126 @@ import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
 import uploadShopBg from "../../mutations/uploadShopBg"
 import createProduct from "../../mutations/createProduct"
 import { useRouter } from "next/navigation"
+
+type Image = {
+  id: number
+  url: string
+}
+
+type Color = {
+  id: number
+  name: string
+  hexCode: string
+}
+
+type DamagePolicies = {
+  id: number
+  damageSeverity: string
+  damageSeverityPercent: number
+}
+
+type Category = {
+  id: number
+  name: string
+}
+
+type Variant = {
+  id: any
+  color: Color
+  size: string
+  colorId: number
+  price: number
+  quantity: number
+  replacementCost: number
+  manualRepairCost: number
+  damagePolicies: DamagePolicies[]
+}
+
+type ProductFormData = {
+  id: number
+  shopId: number
+  name: string
+  status: "active" | "inactive"
+  description: string
+  deliveryOption: "DELIVERY" | "PICKUP" | "BOTH"
+  category: Category
+  categoryid: number
+  variants: Variant[]
+  images: Image[]
+}
+
+const notEmptyDamagePolicies: DamagePolicies[] = [
+  {
+    id: Date.now(),
+    damageSeverity: "minor",
+    damageSeverityPercent: 10,
+  },
+  {
+    id: Date.now(),
+    damageSeverity: "moderate",
+    damageSeverityPercent: 30,
+  },
+  {
+    id: Date.now(),
+    damageSeverity: "major",
+    damageSeverityPercent: 50,
+  },
+]
+
+const emptyVariant: Variant = {
+  id: Date.now(),
+  color: {
+    id: 1,
+    name: "Red",
+    hexCode: "#FF0000",
+  },
+  size: "XS",
+  colorId: 1,
+  quantity: 0,
+  price: 0,
+  replacementCost: 0,
+  manualRepairCost: 0,
+  damagePolicies: notEmptyDamagePolicies,
+}
+
+const makeEmptyProduct = (currentUser: any): ProductFormData => ({
+  id: 0,
+  shopId: currentUser.shop.id,
+  name: "",
+  status: "active",
+  description: "",
+  deliveryOption: "DELIVERY",
+  category: {
+    id: 1,
+    name: "Electronics",
+  },
+  categoryid: 1,
+  variants: [emptyVariant],
+  images: [],
+})
+
 const CreateProductForm = (props: { currentUser: any; handleClose: () => void }) => {
+  const emptyProduct = makeEmptyProduct(props.currentUser)
+
   const router = useRouter()
   const { handleClose } = props
   const [loading, setLoading] = useState(false)
   const currentUser = props.currentUser
+  const [formData, setFormData] = useState<ProductFormData>(emptyProduct)
+  // const [formData, setFormData] = useState({
+  //   shopId: currentUser.shop.id,
+  //   productName: "",
+  //   category: "",
+  //   description: "",
+  //   deliveryOption: "",
+  //   productImages: [],
+  //   variants: [{ size: "", color: "", quantity: 0, price: 0 }],
+  // })
+
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
-  const [formData, setFormData] = useState({
-    shopId: currentUser.shop.id,
-    productName: "",
-    category: "",
-    description: "",
-    deliveryOption: "",
-    productImages: [],
-    variants: [{ size: "", color: "", quantity: 0, price: 0 }],
-  })
+  const [createProductMutation] = useMutation(createProduct)
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
   const [categories] = useQuery(getCategories, null)
   const [colors] = useQuery(getColors, null)
@@ -31,6 +136,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose: () => void })
   // Update state for individual fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -38,9 +144,13 @@ const CreateProductForm = (props: { currentUser: any; handleClose: () => void })
   }
 
   // Handle variant changes
-  const handleVariantChange = (index: number, field: string, value: string | number) => {
+  const handleVariantChange = (index: number, field: keyof Variant, value: string | number) => {
     const updatedVariants = [...formData.variants]
-    updatedVariants[index][field] = value
+    updatedVariants[index] = {
+      ...updatedVariants[index],
+      [field]: value,
+    }
+    // updatedVariants[index][field] = value
     setFormData((prev) => ({ ...prev, variants: updatedVariants }))
   }
 
@@ -48,7 +158,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose: () => void })
   const addVariant = () => {
     setFormData((prev) => ({
       ...prev,
-      variants: [...prev.variants, { size: "", color: "", quantity: 0, price: 0 }],
+      variants: [...prev.variants, { ...emptyVariant }],
     }))
   }
 
@@ -60,45 +170,100 @@ const CreateProductForm = (props: { currentUser: any; handleClose: () => void })
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files).map((file) => {
-        const uniqueFileName = `${Date.now()}-${file.name}`
-        const reader = new FileReader()
-        reader.onloadend = async () => {
-          const base64String = reader.result as string
-          try {
-            const fileUrl = await uploadShopBgMutation({
-              fileName: uniqueFileName,
-              data: base64String,
-              targetDirectory: "products",
-            })
-          } catch (error) {
-            console.error("file upload failed:", error)
-          }
-        }
-        reader.readAsDataURL(file)
-        return uniqueFileName
-      })
-
-      const uploadedFileName = files.map((uniqeFileName) => uniqeFileName)
-
-      console.log(uploadedFileName)
-
-      setFormData((prev) => ({ ...prev, productImages: uploadedFileName }))
+      const files = Array.from(e.target.files)
+      setSelectedFiles(files) // store files for later
     }
   }
+
+  // When user clicks "Create Product"
+  const handleCreateProduct = async () => {
+    try {
+      // First upload all selected files
+      const uploadedFileNames: string[] = []
+
+      for (const file of selectedFiles) {
+        const uniqueFileName = `${Date.now()}-${file.name}`
+        const reader = new FileReader()
+
+        // Wrap FileReader in a promise so we can await it
+        const base64String: string = await new Promise((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+
+        const fileUrl = await uploadShopBgMutation({
+          fileName: uniqueFileName,
+          data: base64String,
+          targetDirectory: "products",
+        })
+
+        uploadedFileNames.push(uniqueFileName)
+      }
+
+      // Now include uploadedFileNames in formData
+      const finalData = {
+        ...formData,
+        productImages: uploadedFileNames,
+      }
+
+      console.log("Submitting product:", finalData)
+
+      // Call your create product mutation here
+      await createProductMutation(finalData)
+    } catch (error) {
+      console.error("Product creation failed:", error)
+    }
+  }
+
+  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files) {
+  //     const files = Array.from(e.target.files).map((file) => {
+  //       const uniqueFileName = `${Date.now()}-${file.name}`
+  //       const reader = new FileReader()
+  //       reader.onloadend = async () => {
+  //         const base64String = reader.result as string
+  //         try {
+  //           const fileUrl = await uploadShopBgMutation({
+  //             fileName: uniqueFileName,
+  //             data: base64String,
+  //             targetDirectory: "products",
+  //           })
+  //         } catch (error) {
+  //           console.error("file upload failed:", error)
+  //         }
+  //       }
+  //       reader.readAsDataURL(file)
+  //       return uniqueFileName
+  //     })
+
+  //     const uploadedFileName = files.map((uniqeFileName) => uniqeFileName)
+
+  //     console.log(uploadedFileName)
+
+  //     setFormData((prev) => ({ ...prev, productImages: uploadedFileName }))
+  //   }
+  // }
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    console.log(formData)
+
     setLoading(true)
 
     try {
-      const product = await createProduct(formData)
-      console.log("Product created:", product)
-      alert("Product created successfully!")
-      handleClose()
-      setLoading(false)
+      const product = await createProductMutation({
+        ...formData,
+        images: [],
+      })
+
+      // const product = await createProduct(formData)
+      // console.log("Product created:", product)
+      // alert("Product created successfully!")
+      // handleClose()
+      // setLoading(false)
     } catch (error) {
       console.error("Error creating product:", error)
       alert("Failed to create product!")
@@ -114,11 +279,11 @@ const CreateProductForm = (props: { currentUser: any; handleClose: () => void })
       <div className="flex flex-row gap-2">
         <TextField
           required
-          id="productName"
-          name="productName"
+          id="name"
+          name="name"
           label="Product Name"
           fullWidth
-          value={formData.productName}
+          value={formData.name}
           onChange={handleInputChange}
         />
 
@@ -128,7 +293,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose: () => void })
           name="category"
           label="Select Category"
           fullWidth
-          value={formData.category}
+          value={formData.categoryid}
           onChange={handleInputChange}
         >
           {categories.map((category) => (
@@ -190,11 +355,11 @@ const CreateProductForm = (props: { currentUser: any; handleClose: () => void })
             <TextField
               id={`variantColor-${index}`}
               select
-              name="color"
+              name="colorId"
               label="Color"
               fullWidth
-              value={variant.color}
-              onChange={(e) => handleVariantChange(index, "color", e.target.value)}
+              value={variant.colorId}
+              onChange={(e) => handleVariantChange(index, "colorId", e.target.value)}
             >
               {colors.map((color) => (
                 <MenuItem key={color.id} value={color.id}>
