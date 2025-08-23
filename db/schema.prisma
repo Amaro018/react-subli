@@ -232,6 +232,7 @@ model RentItem {
   price              Float
   status             String
   deliveryMethod     String
+  note               String?
   startDate          DateTime
   endDate            DateTime
   isReviewed         Boolean        @default(false)
