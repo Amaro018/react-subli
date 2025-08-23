@@ -5,7 +5,8 @@ import CreateProductForm from "./../components/CreateProductForm"
 import ProductList from "../components/ProductList"
 import GetRentItemsByShopInput from "../../queries/getRentItemsByShop"
 import { useQuery } from "@blitzjs/rpc"
-import OrderList from "../components/OrderList"
+// import OrderList from "../components/OrderList"
+import OrderList from "../components/OrderList1"
 
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)

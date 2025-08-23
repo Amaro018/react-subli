@@ -28,6 +28,11 @@ const CreateProductInput = z.object({
 export default async function createProduct(input: z.infer<typeof CreateProductInput>) {
   const data = CreateProductInput.parse(input) // Validate input using the Zod schema
 
+  const uniqueVariants = data.variants.filter(
+    (variant, index, self) =>
+      index === self.findIndex((v) => v.size === variant.size && v.colorId === variant.colorId)
+  )
+
   const product = await db.product.create({
     data: {
       name: data.name,
@@ -38,7 +43,7 @@ export default async function createProduct(input: z.infer<typeof CreateProductI
         create: data.images.map((url) => ({ url })), // Create associated images
       },
       variants: {
-        create: data.variants.map((variant) => ({
+        create: uniqueVariants.map((variant) => ({
           size: variant.size,
           quantity: variant.quantity,
           price: variant.price,
