@@ -82,43 +82,53 @@ type RentItemType = {
 
 export const OrderList = () => {
   // third
-  const [paymentStatusdd, setPaymentStatusdd] = useState("pending")
-  const stepsdd = ["Damage Report", "Payment Pending", "Payment Completed"]
-  // second
-  const [statusdd] = useState("pending") // pending | completed
-  const conditions = ["Good", "Damaged", "Late"]
-  // first
-  const [statusd, setStatusd] = useState("pending") // pending | paid | failed
-  const paymentMethods = ["GCash", "Bank Transfer", "Cash"]
+  // const [paymentStatusdd, setPaymentStatusdd] = useState("pending")
+  // const stepsdd = ["Damage Report", "Payment Pending", "Payment Completed"]
 
-  const rentAmount = 1050
-  const repairFee = 180
+  // second
+  // const [statusdd] = useState("pending") // pending | completed
+  // const conditions = ["Good", "Damaged", "Late"]
+
+  // first
+  const [paymentStatus, setPaymentStatus] = useState("pending") // pending | paid | failed
+  const paymentMethods = ["GCash", "Bank Transfer", "Cash"]
+  const paymentType = ["full", "partial"]
+
+  // const rentAmount = 1050
+  // const repairFee = 180
+
   // paidAmount - payNow
-  const paidAmount = 500
-  const payNow = 500
+  // const paidAmount = 500
+  // const payNow = 500
+
   // boolean
   const amountError = false
   const disableConfirm = false
 
   // balance = maxPay
-  const balance = rentAmount - paidAmount
-  const maxPay = rentAmount - paidAmount
-  const totalAmount = balance + repairFee
+  // const balance = rentAmount - paidAmount
+  // const maxPay = rentAmount - paidAmount
+  // const totalAmount = balance + repairFee
+
   // selectedMethod = paymentType
-  const [selectedMethod, setSelectedMethod] = useState("Cash")
-  const [paymentType, setPaymentType] = useState("Cash")
+  // const [selectedMethod, setSelectedMethod] = useState("Cash")
+  // const [paymentType, setPaymentType] = useState("full")
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("Cash")
+  const [selectedPaymentType, setSelectedPaymentType] = useState("full")
 
   const transactions: any[] = [
     {
       id: 1,
       date: new Date(),
-      amount: paidAmount,
+      // amount: paidAmount,
+      amount: 430,
       status: "partial",
     },
     {
       id: 2,
       date: new Date(),
-      amount: paidAmount,
+      amount: 100,
+      // amount: paidAmount,
       status: "gooding",
     },
   ]
@@ -139,7 +149,7 @@ export const OrderList = () => {
   const statuse = "pending"
   const activeStep = statuse === "pending" ? 0 : statuse === "paid" ? 1 : 2
 
-  const [paymentStatus, setPaymentStatus] = useState("full")
+  // const [paymentStatus, setPaymentStatus] = useState("full")
   const [returnStatus, setReturnStatus] = useState("")
   const [repairCostType, setRepairCostType] = useState("")
 
@@ -309,6 +319,7 @@ export const OrderList = () => {
   }
 
   const handleOpenComplete = (rentItem: any) => {
+    console.log(rentItems)
     setOpenComplete(true)
     setSelectedItem(rentItem)
   }
@@ -841,476 +852,164 @@ export const OrderList = () => {
         </div>
       </div>
 
-      <Dialog open={cancelOpen} onClose={cancelClose} fullWidth>
-        <DialogTitle>Cancel Rental</DialogTitle>
-        <DialogContent>
-          <RadioGroup value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)}>
-            {reasons.map((reason, index) => (
-              <FormControlLabel key={index} value={reason} control={<Radio />} label={reason} />
-            ))}
-          </RadioGroup>
+      {selectedItem && (
+        <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm">
+          {(() => {
+            // ✅ compute values here based on selectedRentItem
+            const rentAmount = selectedItem.quantity * selectedItem.price
+            const repairFee =
+              selectedItem.payments?.reduce(
+                (total: number, payment: { penaltyFee: number }) => total + payment.penaltyFee,
+                0
+              ) ?? 0
+            const paidAmount =
+              selectedItem.payments?.reduce(
+                (total: number, payment: { amount: number }) => total + payment.amount,
+                0
+              ) ?? 0
+            const maxPay = rentAmount - paidAmount
+            const balance = rentAmount - paidAmount
+            const totalAmount = balance + repairFee
 
-          {selectedReason === "Other" && (
-            <TextField
-              fullWidth
-              label="Custom Reason"
-              value={customReason}
-              onChange={(e) => setCustomReason(e.target.value)}
-              margin="dense"
-            />
-          )}
-        </DialogContent>
+            const payNow = totalAmount / 2
 
-        <DialogActions>
-          <Button onClick={cancelClose} color="inherit">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            color="error"
-            variant="contained"
-            disabled={!selectedReason || (selectedReason === "Other" && !customReason)}
-          >
-            Confirm Cancel
-          </Button>
-        </DialogActions>
-      </Dialog>
+            return (
+              <>
+                <DialogTitle>Rental Payment</DialogTitle>
+                <DialogContent dividers>
+                  {/* Payment Summary */}
+                  <Typography variant="h6" gutterBottom>
+                    Payment Summary
+                  </Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body1">Rent Amount: ₱{rentAmount}</Typography>
+                    <Typography variant="body1">Repair / Replacement Fee: ₱{repairFee}</Typography>
+                    <Typography variant="body1" fontWeight="bold">
+                      Total Amount: ₱{totalAmount}
+                    </Typography>
+                    <Typography variant="body1" color="primary">
+                      Paid: ₱{paidAmount}
+                    </Typography>
+                    <Typography variant="body1" color={balance > 0 ? "error" : "success"}>
+                      Balance: ₱{balance}
+                    </Typography>
+                  </Box>
 
-      {/* third */}
+                  {/* Payment Type */}
+                  <FormControl component="fieldset" fullWidth margin="dense">
+                    <FormLabel>Payment Type</FormLabel>
+                    <RadioGroup
+                      row
+                      value={selectedPaymentType}
+                      onChange={(e) => setSelectedPaymentType(e.target.value)}
+                    >
+                      <FormControlLabel
+                        value="full"
+                        control={<Radio />}
+                        label={`Full (₱${maxPay})`}
+                      />
+                      <FormControlLabel value="partial" control={<Radio />} label="Partial" />
+                    </RadioGroup>
+                  </FormControl>
 
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        {/* <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm"> */}
-        <DialogTitle>Repair / Damage Cost</DialogTitle>
-        <DialogContent dividers>
-          <TextField
-            label="Damage Report"
-            fullWidth
-            margin="normal"
-            multiline
-            rows={3}
-            placeholder="e.g. Broken screen, missing charger..."
-          />
+                  {/* Amount (only for Partial, auto-filled/disabled for Full) */}
+                  <TextField
+                    label="Amount to Pay Now (₱)"
+                    type="number"
+                    fullWidth
+                    margin="dense"
+                    value={selectedPaymentType === "full" ? maxPay : payNow}
+                    onChange={(e) => setPayNow(Number(e.target.value))}
+                    disabled={selectedPaymentType === "full" || maxPay === 0}
+                    error={amountError}
+                    helperText={
+                      selectedPaymentType === "full"
+                        ? maxPay > 0
+                          ? "Will pay the remaining balance in full."
+                          : "No balance remaining."
+                        : amountError
+                        ? `Enter an amount between ₱1 and ₱${maxPay}.`
+                        : `Max you can pay now: ₱${maxPay}.`
+                    }
+                  />
 
-          <TextField label="Repair / Replacement Cost" fullWidth margin="normal" value="₱2,000" />
+                  {/* Payment Method */}
+                  <TextField
+                    select
+                    label="Payment Method"
+                    fullWidth
+                    margin="normal"
+                    value={selectedPaymentMethod}
+                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                  >
+                    {paymentMethods.map((method) => (
+                      <MenuItem key={method} value={method}>
+                        {method}
+                      </MenuItem>
+                    ))}
+                  </TextField>
 
-          {/* Status with Stepper */}
-          <Typography variant="subtitle2" gutterBottom>
-            Status:
-          </Typography>
-          <Stepper
-            activeStep={paymentStatusdd === "completed" ? 2 : paymentStatus === "pending" ? 1 : 0}
-          >
-            {stepsdd.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="contained" color="primary">
-            Confirm Payment
-          </Button>
-        </DialogActions>
-      </Dialog>
+                  {/* Status as Chip */}
+                  <Typography variant="subtitle2" gutterBottom>
+                    Status:
+                  </Typography>
+                  <Chip
+                    label={paymentStatus.toUpperCase()}
+                    color={
+                      paymentStatus === "paid"
+                        ? "success"
+                        : paymentStatus === "failed"
+                        ? "error"
+                        : "warning"
+                    }
+                    sx={{ mb: 2 }}
+                  />
 
-      {/* second */}
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        {/* <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm"> */}
-        <DialogTitle>Return Item</DialogTitle>
-        <DialogContent dividers>
-          <TextField
-            select
-            label="Return Condition"
-            fullWidth
-            margin="normal"
-            defaultValue={conditions[0]}
-          >
-            {conditions.map((cond) => (
-              <MenuItem key={cond} value={cond}>
-                {cond}
-              </MenuItem>
-            ))}
-          </TextField>
+                  {/* Transaction History */}
+                  <Typography variant="subtitle2" gutterBottom>
+                    Transaction History:
+                  </Typography>
+                  {transactions.length > 0 ? (
+                    transactions.map((tx) => (
+                      <Typography key={tx.id} variant="body2" color="text.secondary">
+                        {tx.date instanceof Date ? tx.date.toLocaleString() : String(tx.date)} — ₱
+                        {tx.amount} — {tx.status}
+                      </Typography>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No transactions yet.
+                    </Typography>
+                  )}
+                </DialogContent>
 
-          <TextField
-            label="Owner Notes"
-            fullWidth
-            margin="normal"
-            multiline
-            rows={3}
-            placeholder="e.g. Missing parts, scratches..."
-          />
-
-          {/* Status */}
-          <Typography variant="subtitle2" gutterBottom>
-            Status:
-          </Typography>
-          <Chip
-            label={statusdd === "pending" ? "Pending Inspection" : "Completed"}
-            color={statusdd === "pending" ? "warning" : "success"}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseComplete}>Close</Button>
-          <Button variant="contained" color="primary">
-            Confirm Return
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* first */}
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        {/* <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm"> */}
-        <DialogTitle>Rental Payment</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="h6" gutterBottom>
-            Amount Due: ₱1,500
-          </Typography>
-
-          <TextField
-            select
-            label="Payment Method"
-            fullWidth
-            margin="normal"
-            defaultValue={paymentMethods[0]}
-          >
-            {paymentMethods.map((method) => (
-              <MenuItem key={method} value={method}>
-                {method}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          {/* Status as Chip */}
-          <Typography variant="subtitle2" gutterBottom>
-            Status:
-          </Typography>
-          <Chip
-            label={statusd.toUpperCase()}
-            color={statusd === "paid" ? "success" : statusd === "failed" ? "error" : "warning"}
-            sx={{ mb: 2 }}
-          />
-
-          {/* Optional Transaction History */}
-          <Typography variant="subtitle2" gutterBottom>
-            Transaction History:
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            08/20 - ₱1,500 - Pending
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            08/21 - ₱1,500 - Paid
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseComplete}>Cancel</Button>
-          <Button variant="contained" color="primary">
-            Confirm Payment
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm">
-        <DialogTitle>Rental Payment</DialogTitle>
-        <DialogContent dividers>
-          {/* Payment Summary */}
-          <Typography variant="h6" gutterBottom>
-            Payment Summary
-          </Typography>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body1">Rent Amount: ₱{rentAmount}</Typography>
-            <Typography variant="body1">Repair / Replacement Fee: ₱{repairFee}</Typography>
-            <Typography variant="body1" fontWeight="bold">
-              Total Amount: ₱{totalAmount}
-            </Typography>
-            <Typography variant="body1" color="primary">
-              Paid: ₱{paidAmount}
-            </Typography>
-            <Typography variant="body1" color={balance > 0 ? "error" : "success"}>
-              Balance: ₱{balance}
-            </Typography>
-          </Box>
-
-          {/* Payment Type */}
-          <FormControl component="fieldset" fullWidth margin="dense">
-            <FormLabel>Payment Type</FormLabel>
-            <RadioGroup
-              row
-              value={paymentType}
-              onChange={(e) => onChangePaymentType(e.target.value as "full" | "partial")}
-            >
-              <FormControlLabel value="full" control={<Radio />} label={`Full (₱${maxPay})`} />
-              <FormControlLabel value="partial" control={<Radio />} label="Partial" />
-            </RadioGroup>
-          </FormControl>
-
-          {/* Amount (only for Partial, auto-filled/disabled for Full) */}
-          <TextField
-            label="Amount to Pay Now (₱)"
-            type="number"
-            fullWidth
-            margin="dense"
-            value={paymentType === "full" ? maxPay : payNow}
-            onChange={(e) => setPayNow(Number(e.target.value))}
-            disabled={paymentType === "full" || maxPay === 0}
-            error={amountError}
-            helperText={
-              paymentType === "full"
-                ? maxPay > 0
-                  ? "Will pay the remaining balance in full."
-                  : "No balance remaining."
-                : amountError
-                ? `Enter an amount between ₱1 and ₱${maxPay}.`
-                : `Max you can pay now: ₱${maxPay}.`
-            }
-          />
-
-          {/* Payment Method */}
-          <TextField
-            select
-            label="Payment Method"
-            fullWidth
-            margin="normal"
-            value={selectedMethod}
-            onChange={(e) => setSelectedMethod(e.target.value)}
-          >
-            {paymentMethods.map((method) => (
-              <MenuItem key={method} value={method}>
-                {method}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          {/* Status as Chip */}
-          <Typography variant="subtitle2" gutterBottom>
-            Status:
-          </Typography>
-          <Chip
-            label={statusd.toUpperCase()}
-            color={statusd === "paid" ? "success" : statusd === "failed" ? "error" : "warning"}
-            sx={{ mb: 2 }}
-          />
-
-          {/* Transaction History */}
-          <Typography variant="subtitle2" gutterBottom>
-            Transaction History:
-          </Typography>
-          {transactions.length > 0 ? (
-            transactions.map((tx) => (
-              <Typography key={tx.id} variant="body2" color="text.secondary">
-                {tx.date instanceof Date ? tx.date.toLocaleString() : String(tx.date)} — ₱
-                {tx.amount} — {tx.status}
-              </Typography>
-            ))
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No transactions yet.
-            </Typography>
-          )}
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={handleCloseComplete}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="primary"
-            disabled={disableConfirm}
-            onClick={
-              () => handleConfirmPayment()
-              // handleConfirmPayment({
-              //   amount: paymentType === "full" ? maxPay : payNow,
-              //   type: paymentType,
-              //   method: selectedMethod,
-              // })
-            }
-          >
-            {balance <= 0
-              ? "Paid in Full"
-              : paymentType === "full"
-              ? `Pay ₱${maxPay}`
-              : "Confirm Payment"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* MAIN */}
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        {/* <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm"> */}
-        <DialogTitle>Rental Payment</DialogTitle>
-        <DialogContent dividers>
-          {/* Payment Summary */}
-          <Typography variant="h6" gutterBottom>
-            Payment Summary
-          </Typography>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body1">Rent Amount: ₱{rentAmount}</Typography>
-            <Typography variant="body1">Repair / Replacement Fee: ₱{repairFee}</Typography>
-            <Typography variant="body1" fontWeight="bold">
-              Total Amount: ₱{rentAmount + repairFee}
-            </Typography>
-            <Typography variant="body1" color="primary">
-              Paid: ₱{paidAmount}
-            </Typography>
-            <Typography variant="body1" color={balance > 0 ? "error" : "success"}>
-              Balance: ₱{balance}
-            </Typography>
-          </Box>
-
-          {/* Payment Method */}
-          <TextField
-            select
-            label="Payment Method"
-            fullWidth
-            margin="normal"
-            value={selectedMethod}
-            onChange={(e) => setSelectedMethod(e.target.value)}
-          >
-            {paymentMethods.map((method) => (
-              <MenuItem key={method} value={method}>
-                {method}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          {/* Status as Chip */}
-          <Typography variant="subtitle2" gutterBottom>
-            Status:
-          </Typography>
-          <Chip
-            label={statusd.toUpperCase()}
-            color={statusd === "paid" ? "success" : statusd === "failed" ? "error" : "warning"}
-            sx={{ mb: 2 }}
-          />
-
-          {/* Optional Transaction History */}
-          <Typography variant="subtitle2" gutterBottom>
-            Transaction History:
-          </Typography>
-          {transactions.length > 0 ? (
-            transactions.map((tx, idx) => (
-              <Typography key={idx} variant="body2" color="text.secondary">
-                {tx.date.toLocaleString()} - ₱{tx.amount} - {tx.status}
-              </Typography>
-            ))
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No transactions yet.
-            </Typography>
-          )}
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={handleCloseComplete}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="primary"
-            disabled={balance <= 0}
-            onClick={handleConfirmPayment}
-          >
-            {balance <= 0 ? "Paid in Full" : "Confirm Payment"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* with stepper */}
-      <Modal open={open} onClose={onClose}>
-        <Box
-          sx={{
-            bgcolor: "background.paper",
-            p: 4,
-            mx: "auto",
-            mt: "10%",
-            width: 400,
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
-            Rental Payment
-          </Typography>
-
-          <Stepper activeStep={activeStep} alternativeLabel>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="body1">
-              Current Status: <b>{status}</b>
-            </Typography>
-          </Box>
-
-          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
-            <Button onClick={handleCloseComplete}>Close</Button>
-          </Box>
-        </Box>
-      </Modal>
-
-      {/* rental payment & return */}
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Rental Payment & Return</DialogTitle>
-        <DialogContent dividers>
-          {/* Payment Section */}
-          <FormControl component="fieldset" fullWidth margin="normal">
-            <FormLabel>Payment Status</FormLabel>
-            <RadioGroup
-              row
-              value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value)}
-            >
-              <FormControlLabel value="full" control={<Radio />} label="Full" />
-              <FormControlLabel value="partial" control={<Radio />} label="Partial" />
-            </RadioGroup>
-          </FormControl>
-
-          {/* Return Section */}
-          <FormControl fullWidth margin="normal">
-            <FormLabel>Return Status</FormLabel>
-            <Select
-              value={returnStatus}
-              onChange={(e) => setReturnStatus(e.target.value)}
-              displayEmpty
-            >
-              <MenuItem value="">Select Return Status</MenuItem>
-              <MenuItem value="replacement">Replacement Cost</MenuItem>
-              <MenuItem value="manualRepair">Manual Repair Cost</MenuItem>
-              <MenuItem value="percentageRepair">Percentage Repair Cost</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* If Repair is Selected */}
-          {returnStatus === "percentageRepair" && (
-            <FormControl fullWidth margin="normal">
-              <FormLabel>Repair Severity</FormLabel>
-              <Select
-                value={repairCostType}
-                onChange={(e) => setRepairCostType(e.target.value)}
-                displayEmpty
-              >
-                <MenuItem value="">Select Severity</MenuItem>
-                <MenuItem value="minor">Minor Repair</MenuItem>
-                <MenuItem value="moderate">Moderate Repair</MenuItem>
-                <MenuItem value="major">Major Repair</MenuItem>
-              </Select>
-            </FormControl>
-          )}
-
-          {/* Optional: Amount Field */}
-          <TextField margin="normal" label="Amount (₱)" type="number" fullWidth />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseComplete} color="secondary">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} variant="contained" color="primary">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+                <DialogActions>
+                  <Button onClick={handleCloseComplete}>Cancel</Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={disableConfirm}
+                    onClick={
+                      () => handleConfirmPayment()
+                      // handleConfirmPayment({
+                      //   amount: paymentType === "full" ? maxPay : payNow,
+                      //   type: paymentType,
+                      //   method: selectedMethod,
+                      // })
+                    }
+                  >
+                    {balance <= 0
+                      ? "Paid in Full"
+                      : selectedPaymentType === "full"
+                      ? `Pay ₱${maxPay}`
+                      : "Confirm Payment"}
+                  </Button>
+                </DialogActions>
+              </>
+            )
+          })()}
+        </Dialog>
+      )}
 
       {/* <Modal open={openComplete} onClose={handleCloseComplete}>
         <Box sx={style}>
