@@ -24,6 +24,7 @@ import {
   FormControlLabel,
   Radio,
   FormLabel,
+  Checkbox,
 } from "@mui/material"
 
 import CloseIcon from "@mui/icons-material/Close"
@@ -87,7 +88,7 @@ export const OrderList = () => {
 
   // second
   // const [statusdd] = useState("pending") // pending | completed
-  // const conditions = ["Good", "Damaged", "Late"]
+  const conditions = ["Good", "Damaged", "Late"]
 
   // first
   const [paymentStatus, setPaymentStatus] = useState("pending") // pending | paid | failed
@@ -102,8 +103,8 @@ export const OrderList = () => {
   // const payNow = 500
 
   // boolean
-  const amountError = false
-  const disableConfirm = false
+  // const amountError = false
+  // const disableConfirm = false
 
   // balance = maxPay
   // const balance = rentAmount - paidAmount
@@ -115,6 +116,65 @@ export const OrderList = () => {
   // const [paymentType, setPaymentType] = useState("full")
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("Cash")
   const [selectedPaymentType, setSelectedPaymentType] = useState("full")
+  const [payNow, setPayNow] = useState(0)
+  const [amountError, setAmountError] = useState(false)
+  const [disableConfirm, setDisableConfirm] = useState(false)
+
+  // RETURN
+  const [selectedItem, setSelectedItem] = useState<any>(null)
+
+  const [returnQty, setReturnQty] = useState(1)
+  const [manualFee, setManualFee] = useState(0)
+  const [manualQty, setManualQty] = useState(0)
+  const [replacementFee, setReplacementFee] = useState(0)
+  const [replacementQty, setReplacementQty] = useState(0)
+  const [repairLevel, setRepairLevel] = useState(1)
+
+  const [selectedRepairs, setSelectedRepairs] = useState<string[]>([])
+  const [repairQuantities, setRepairQuantities] = useState<{ [key: string]: number }>({})
+  const [repairFees, setRepairFees] = useState<{ [key: string]: number }>({})
+  const [totalFee, setTotalFee] = useState(0)
+
+  const manualRepairCost = selectedItem?.productVariant?.manualRepairCost ?? 0
+  const replacementCost = selectedItem?.productVariant?.replacementCost ?? 0
+
+  useEffect(() => {
+    setManualFee(manualRepairCost * manualQty)
+  }, [manualRepairCost, manualQty])
+
+  useEffect(() => {
+    setReplacementFee(replacementCost * replacementQty)
+  }, [replacementCost, replacementQty])
+
+  const handleRepairCheck = (key: string, checked: boolean) => {
+    setSelectedRepairs((prev) => (checked ? [...prev, key] : prev.filter((r) => r !== key)))
+  }
+
+  const handleRepairQuantityChange = (key: string, value: number) => {
+    setRepairQuantities((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleRepairFeeChange = (key: string, value: number) => {
+    setRepairFees((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleReturnConfirm = () => {
+    console.log("test")
+  }
+
+  const getStatusColor = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case "full":
+        return "success"
+      case "partial":
+        return "warning"
+      case "failed":
+      case "canceled":
+        return "error"
+      default:
+        return "default"
+    }
+  }
 
   const transactions: any[] = [
     {
@@ -134,15 +194,41 @@ export const OrderList = () => {
   ]
 
   const handleConfirmPayment = async () => {
-    console.log("test")
+    try {
+      const newPayment = await addPaymentMutation({
+        rentItemId: selectedItem.id,
+        amount: payNow,
+        status: selectedPaymentType,
+        note: "Payment completed",
+      })
+      alert("Payment completed successfully!")
+      onClose()
+      refetch()
+      // if (newPayment.status === "full") {
+      //   setDisableConfirm(true)
+      // }
+      console.log(selectedPaymentType)
+      // setSelectedItem()
+    } catch (error) {
+      alert("Failed to complete payment")
+    }
   }
 
-  const onChangePaymentType = (e) => {
-    console.log("test")
+  const onChangePaymentType = (minimum: number, value: string) => {
+    setSelectedPaymentType(value)
+    setPayNow(minimum)
+    setAmountError(false)
+    console.log(payNow)
   }
 
-  const setPayNow = (e) => {
-    console.log("test")
+  const onChangeAmount = (value: number, maxPay: number, minimum: number) => {
+    value > maxPay || value < minimum ? setAmountError(true) : setAmountError(false)
+
+    if (value === maxPay) {
+      setSelectedPaymentType("full")
+    }
+
+    setPayNow(value)
   }
 
   // with stepper
@@ -222,7 +308,6 @@ export const OrderList = () => {
   )
 
   const [statusFilter, setStatusFilter] = useState("ALL")
-  const [selectedItem, setSelectedItem] = useState<any>(null)
   const [amount, setAmount] = useState<string | number>(0)
   const [status, setStatus] = useState("Partial")
   const [note, setNote] = useState("")
@@ -322,10 +407,42 @@ export const OrderList = () => {
     console.log(rentItems)
     setOpenComplete(true)
     setSelectedItem(rentItem)
+    setSelectedPaymentType("full")
+
+    const rentAmount = rentItem.quantity * rentItem.price
+    const repairFee =
+      rentItem.payments?.reduce(
+        (total: number, payment: { penaltyFee: number }) => total + payment.penaltyFee,
+        0
+      ) ?? 0
+    const paidAmount =
+      rentItem.payments?.reduce(
+        (total: number, payment: { amount: number }) => total + payment.amount,
+        0
+      ) ?? 0
+
+    const toPayNow = rentAmount + repairFee - paidAmount
+
+    setPayNow(toPayNow)
+    setDisableConfirm(toPayNow === 0 ? true : false)
   }
+
   const handleCloseComplete = () => {
     setOpenComplete(false)
     setValueOfDamageProduct(0)
+    setSelectedPaymentType("full")
+    setAmountError(false)
+  }
+
+  const [openReturnRepairReplacement, setOpenReturnRepairReplacement] = useState(false)
+
+  const handleOpenReturnRepairReplacement = (rentItem: any) => {
+    setOpenReturnRepairReplacement(true)
+    setSelectedItem(rentItem)
+  }
+
+  const handleCloseReturnRepairReplacement = () => {
+    setOpenReturnRepairReplacement(false)
   }
 
   const handleComplete = async (rentItem: any) => {
@@ -358,7 +475,7 @@ export const OrderList = () => {
       await updateRentStatusMutation({
         rentItemId: rentItem.id,
         action,
-        note: "accepted",
+        noteMessage: "accepted",
       })
       await refetch()
     } catch (error) {
@@ -719,7 +836,9 @@ export const OrderList = () => {
                         rentItem.status === "accepted" ||
                         rentItem.status === "canceled"
                           ? 0
-                          : rentItem.status === "on_hand" || rentItem.status === "returned"
+                          : rentItem.status === "rendering" ||
+                            rentItem.status === "on_hand" ||
+                            rentItem.status === "returned"
                           ? 1
                           : rentItem.status === "completed"
                           ? 2
@@ -824,6 +943,7 @@ export const OrderList = () => {
                     )}
 
                     {(rentItem.status === "accepted" ||
+                      rentItem.status === "rendering" ||
                       rentItem.status === "on_hand" ||
                       rentItem.status === "returned" ||
                       rentItem.status === "returned_damaged" ||
@@ -835,7 +955,10 @@ export const OrderList = () => {
                         >
                           Payments
                         </button>
-                        <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
+                        <button
+                          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
+                          onClick={() => handleOpenReturnRepairReplacement(rentItem)}
+                        >
                           Return Status
                         </button>
                       </div>
@@ -851,6 +974,207 @@ export const OrderList = () => {
           )}
         </div>
       </div>
+
+      {/* reason */}
+      <Dialog open={cancelOpen} onClose={cancelClose} fullWidth>
+        <DialogTitle>Cancel Rental</DialogTitle>
+        <DialogContent>
+          <RadioGroup value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)}>
+            {reasons.map((reason, index) => (
+              <FormControlLabel key={index} value={reason} control={<Radio />} label={reason} />
+            ))}
+          </RadioGroup>
+
+          {selectedReason === "Other" && (
+            <TextField
+              fullWidth
+              label="Custom Reason"
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              margin="dense"
+            />
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={cancelClose} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            color="error"
+            variant="contained"
+            disabled={!selectedReason || (selectedReason === "Other" && !customReason)}
+          >
+            Confirm Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {selectedItem && (
+        <Dialog
+          open={openReturnRepairReplacement}
+          onClose={handleCloseReturnRepairReplacement}
+          fullWidth
+          maxWidth="sm"
+        >
+          {(() => {
+            return (
+              <>
+                <DialogTitle>Return Items</DialogTitle>
+                <DialogContent>
+                  {/* Quantity to Return */}
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Quantity to Return"
+                    // value={returnQty}
+                    value={selectedItem.quantity}
+                    onChange={(e) => setReturnQty(Number(e.target.value))}
+                    margin="dense"
+                  />
+
+                  {/* Manual Repair Fee with Qty + Fee */}
+                  <div className="mt-4">
+                    <h4 className="mb-2 font-semibold">Manual Repair Fee</h4>
+                    <div className="flex items-center gap-4 mb-2">
+                      <TextField
+                        type="number"
+                        label="UnitFee"
+                        value={manualRepairCost}
+                        slotProps={{
+                          input: {
+                            readOnly: true,
+                          },
+                        }}
+                        // value={manualUnitFee}
+                        // onChange={(e) => setManualUnitFee(Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      x
+                      <TextField
+                        type="number"
+                        label="Qty"
+                        value={manualQty}
+                        onChange={(e) => setManualQty(Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      =
+                      <TextField
+                        type="number"
+                        label="Fee"
+                        value={manualFee}
+                        // onChange={(e) => handleSetManualFee(manualRepairCost, manualQty)}
+                        // onChange={(e) => setManualFee((manualRepairCost * manualQty))}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Replacement Fee with Qty + Fee */}
+                  <div className="mt-4">
+                    <h4 className="mb-2 font-semibold">Replacement Fee</h4>
+                    <div className="flex items-center gap-4 mb-2">
+                      <TextField
+                        type="number"
+                        label="UnitFee"
+                        value={replacementCost}
+                        // onChange={(e) => setReplacementUnitFee(Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      x
+                      <TextField
+                        type="number"
+                        label="Qty"
+                        value={replacementQty}
+                        onChange={(e) => setReplacementQty(Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      =
+                      <TextField
+                        type="number"
+                        label="Fee"
+                        value={replacementFee}
+                        // onChange={(e) => setReplacementFee(Number(e.target.value))}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Repair Fees with Quantity */}
+                  <div className="mt-4">
+                    <h4 className="mb-2 font-semibold">
+                      Repair Percentage Fees
+                      <small className="ml-2 text-red-500">
+                        (percentage based on replacement fee)
+                      </small>
+                    </h4>
+                    {[
+                      { key: "minor", label: "Minor Repair (10%)" },
+                      { key: "moderate", label: "Moderate Repair (30%)" },
+                      { key: "major", label: "Major Repair (60%)" },
+                    ].map((repair) => (
+                      <div key={repair.key} className="flex items-center gap-4 mb-2">
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={selectedRepairs.includes(repair.key)}
+                              onChange={(e) => handleRepairCheck(repair.key, e.target.checked)}
+                            />
+                          }
+                          label={repair.label}
+                          className="flex-1"
+                        />
+                        x
+                        <TextField
+                          type="number"
+                          label="Qty"
+                          value={repairQuantities[repair.key] || ""}
+                          onChange={(e) =>
+                            handleRepairQuantityChange(repair.key, Number(e.target.value))
+                          }
+                          disabled={!selectedRepairs.includes(repair.key)}
+                          className="flex-1"
+                        />
+                        =
+                        <TextField
+                          type="number"
+                          label="Fee"
+                          value={repairFees[repair.key] || ""}
+                          onChange={(e) =>
+                            handleRepairFeeChange(repair.key, Number(e.target.value))
+                          }
+                          disabled={!selectedRepairs.includes(repair.key)}
+                          className="flex-1"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total Fee */}
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Total Fee"
+                    value={totalFee}
+                    InputProps={{ readOnly: true }}
+                    margin="dense"
+                  />
+                </DialogContent>
+
+                <DialogActions>
+                  <Button onClick={handleCloseReturnRepairReplacement} color="inherit">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleReturnConfirm} variant="contained" color="primary">
+                    Confirm Return
+                  </Button>
+                </DialogActions>
+              </>
+            )
+          })()}
+        </Dialog>
+      )}
 
       {selectedItem && (
         <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm">
@@ -869,9 +1193,9 @@ export const OrderList = () => {
               ) ?? 0
             const maxPay = rentAmount - paidAmount
             const balance = rentAmount - paidAmount
-            const totalAmount = balance + repairFee
+            const totalAmount = rentAmount + repairFee
 
-            const payNow = totalAmount / 2
+            const minimum = Math.ceil(balance / 2)
 
             return (
               <>
@@ -901,7 +1225,8 @@ export const OrderList = () => {
                     <RadioGroup
                       row
                       value={selectedPaymentType}
-                      onChange={(e) => setSelectedPaymentType(e.target.value)}
+                      onChange={(e) => onChangePaymentType(minimum, e.target.value)}
+                      // onChange={(e) => setSelectedPaymentType(e.target.value)}
                     >
                       <FormControlLabel
                         value="full"
@@ -919,8 +1244,13 @@ export const OrderList = () => {
                     fullWidth
                     margin="dense"
                     value={selectedPaymentType === "full" ? maxPay : payNow}
-                    onChange={(e) => setPayNow(Number(e.target.value))}
-                    disabled={selectedPaymentType === "full" || maxPay === 0}
+                    onChange={(e) => onChangeAmount(Number(e.target.value), maxPay, minimum)}
+                    // disabled={selectedPaymentType === "full" || maxPay === 0}
+                    slotProps={{
+                      input: {
+                        readOnly: selectedPaymentType === "full" || maxPay === 0,
+                      },
+                    }}
                     error={amountError}
                     helperText={
                       selectedPaymentType === "full"
@@ -928,7 +1258,7 @@ export const OrderList = () => {
                           ? "Will pay the remaining balance in full."
                           : "No balance remaining."
                         : amountError
-                        ? `Enter an amount between ₱1 and ₱${maxPay}.`
+                        ? `Enter an amount between ₱${minimum} and ₱${maxPay}.`
                         : `Max you can pay now: ₱${maxPay}.`
                     }
                   />
@@ -954,26 +1284,31 @@ export const OrderList = () => {
                     Status:
                   </Typography>
                   <Chip
-                    label={paymentStatus.toUpperCase()}
+                    label={
+                      selectedItem.payments.length > 0
+                        ? selectedItem.payments[
+                            selectedItem.payments.length - 1
+                          ].status.toUpperCase()
+                        : "NO RECORDS"
+                    }
                     color={
-                      paymentStatus === "paid"
-                        ? "success"
-                        : paymentStatus === "failed"
-                        ? "error"
-                        : "warning"
+                      selectedItem.payments?.[selectedItem.payments.length - 1]?.status
+                        ? getStatusColor(selectedItem.payments[0].status)
+                        : "default"
                     }
                     sx={{ mb: 2 }}
                   />
-
                   {/* Transaction History */}
                   <Typography variant="subtitle2" gutterBottom>
                     Transaction History:
                   </Typography>
-                  {transactions.length > 0 ? (
-                    transactions.map((tx) => (
-                      <Typography key={tx.id} variant="body2" color="text.secondary">
-                        {tx.date instanceof Date ? tx.date.toLocaleString() : String(tx.date)} — ₱
-                        {tx.amount} — {tx.status}
+                  {selectedItem.payments.length > 0 ? (
+                    [...selectedItem.payments].reverse().map((pm: any) => (
+                      <Typography key={pm.id} variant="body2" color="text.secondary">
+                        {pm.createdAt instanceof Date
+                          ? pm.createdAt.toLocaleString()
+                          : String(pm.date)}{" "}
+                        — ₱{pm.amount} — {pm.status}
                       </Typography>
                     ))
                   ) : (
@@ -1010,6 +1345,125 @@ export const OrderList = () => {
           })()}
         </Dialog>
       )}
+
+      {/* <Dialog 
+        open={openReturnRepairReplacement} 
+        onClose={handleCloseReturnRepairReplacement} 
+        fullWidth 
+        maxWidth="sm"
+      > */}
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+        {/* <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm"> */}
+        <DialogTitle>Return Item</DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            select
+            label="Return Condition"
+            fullWidth
+            margin="normal"
+            defaultValue={conditions[0]}
+          >
+            {conditions.map((cond) => (
+              <MenuItem key={cond} value={cond}>
+                {cond}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            label="Owner Notes"
+            fullWidth
+            margin="normal"
+            multiline
+            rows={3}
+            placeholder="e.g. Missing parts, scratches..."
+          />
+
+          {/* Status */}
+          <Typography variant="subtitle2" gutterBottom>
+            Status:
+          </Typography>
+          <Chip
+            label={paymentStatus === "pending" ? "Pending Inspection" : "Completed"}
+            color={paymentStatus === "pending" ? "warning" : "success"}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseComplete}>Close</Button>
+          <Button variant="contained" color="primary">
+            Confirm Return
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+      // open={openReturnRepairReplacement}
+      // onClose={handleCloseReturnRepairReplacement}
+      // fullWidth
+      // maxWidth="sm"
+      >
+        <DialogTitle>Return Items</DialogTitle>
+        <DialogContent>
+          {/* Quantity */}
+          <TextField
+            fullWidth
+            type="number"
+            label="Quantity to Return"
+            value={returnQty}
+            onChange={(e) => setReturnQty(Number(e.target.value))}
+            margin="dense"
+          />
+
+          {/* Manual Repair Fee */}
+          <TextField
+            fullWidth
+            type="number"
+            label="Manual Repair Fee (₱)"
+            value={manualFee}
+            onChange={(e) => setManualFee(Number(e.target.value))}
+            margin="dense"
+          />
+
+          {/* Replacement Fee */}
+          <TextField
+            fullWidth
+            type="number"
+            label="Replacement Fee (₱)"
+            value={replacementFee}
+            onChange={(e) => setReplacementFee(Number(e.target.value))}
+            margin="dense"
+          />
+
+          {/* Repair Percentage Fee */}
+          <FormLabel component="legend" sx={{ mt: 2 }}>
+            Repair Fee Percentage
+          </FormLabel>
+          <RadioGroup value={repairLevel} onChange={(e) => setRepairLevel(e.target.value)}>
+            <FormControlLabel value="minor" control={<Radio />} label="Minor Repair (10%)" />
+            <FormControlLabel value="moderate" control={<Radio />} label="Moderate Repair (30%)" />
+            <FormControlLabel value="major" control={<Radio />} label="Major Repair (60%)" />
+          </RadioGroup>
+
+          {/* Total Fee */}
+          <Box sx={{ mt: 2, p: 2, bgcolor: "grey.100", borderRadius: 2 }}>
+            <Typography variant="subtitle1">Total Fee: ₱{totalFee.toLocaleString()}</Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={handleCloseReturnRepairReplacement} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleReturnConfirm}
+            color="primary"
+            variant="contained"
+            disabled={returnQty <= 0}
+          >
+            Confirm Return
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* <Modal open={openComplete} onClose={handleCloseComplete}>
         <Box sx={style}>
