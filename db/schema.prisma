@@ -152,21 +152,21 @@ model DamagePolicies {
 }
 
 model ProductVariant {
-  id               Int              @id @default(autoincrement())
-  product          Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId        Int // Foreign key to Product
-  size             String // Size (e.g., "S", "M", "L")
-  color            Color            @relation(fields: [colorId], references: [id], onDelete: Cascade) // Relation with Color
-  colorId          Int // Foreign key to Color
-  quantity         Int // Quantity available for this size and color combination
-  price            Float
-  replacementCost  Float?
-  manualRepairCost Float?
-  damagePolicies   DamagePolicies[]
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  cartItems        CartItem[]
-  rentItems        RentItem[] // Relationship with RentItem
+  id              Int              @id @default(autoincrement())
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId       Int // Foreign key to Product
+  size            String // Size (e.g., "S", "M", "L")
+  color           Color            @relation(fields: [colorId], references: [id], onDelete: Cascade) // Relation with Color
+  colorId         Int // Foreign key to Color
+  quantity        Int // Quantity available for this size and color combination
+  price           Float
+  replacementCost Float?
+  repairCost      Float?
+  damagePolicies  DamagePolicies[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  cartItems       CartItem[]
+  rentItems       RentItem[] // Relationship with RentItem
 }
 
 model ProductImage {
