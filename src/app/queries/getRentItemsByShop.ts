@@ -38,6 +38,7 @@ export default async function getRentItemsByShop(input: GetRentItemsByShopInput)
             },
           }, // Include product details
           color: true, // Include color details
+          damagePolicies: true,
         },
       },
       payments: true,

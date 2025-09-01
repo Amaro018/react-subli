@@ -25,6 +25,7 @@ import {
   Radio,
   FormLabel,
   Checkbox,
+  InputAdornment,
 } from "@mui/material"
 
 import CloseIcon from "@mui/icons-material/Close"
@@ -124,33 +125,81 @@ export const OrderList = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null)
 
   const [returnQty, setReturnQty] = useState(1)
-  const [manualFee, setManualFee] = useState(0)
-  const [manualQty, setManualQty] = useState(0)
+
+  const [deductedQty, setDeductedQty] = useState(0)
+  const [repairFee, setRepairFee] = useState(0)
+  const [repairQty, setRepairQty] = useState(0)
   const [replacementFee, setReplacementFee] = useState(0)
   const [replacementQty, setReplacementQty] = useState(0)
+
   const [repairLevel, setRepairLevel] = useState(1)
 
+  const [damageSeverity, setDamageSeverity] = useState("")
+  const [damageSeverityValue, setDamageSeverityValue] = useState(0)
   const [selectedRepairs, setSelectedRepairs] = useState<string[]>([])
-  const [repairQuantities, setRepairQuantities] = useState<{ [key: string]: number }>({})
-  const [repairFees, setRepairFees] = useState<{ [key: string]: number }>({})
+  const [repairQuantities, setRepairQuantities] = useState<{ [key: string]: number }>({
+    minor: 0,
+    moderate: 0,
+    major: 0,
+  })
+  const [repairFees, setRepairFees] = useState<{ [key: string]: number }>({
+    minor: 0,
+    moderate: 0,
+    major: 0,
+  })
   const [totalFee, setTotalFee] = useState(0)
 
-  const manualRepairCost = selectedItem?.productVariant?.manualRepairCost ?? 0
+  const repairCost = selectedItem?.productVariant?.repairCost ?? 0
   const replacementCost = selectedItem?.productVariant?.replacementCost ?? 0
 
   useEffect(() => {
-    setManualFee(manualRepairCost * manualQty)
-  }, [manualRepairCost, manualQty])
+    // const allRepairQuantities = Object.values(repairQuantities).reduce(
+    //   (sum, qty) => sum + Number(qty),
+    //   0
+    // )
+    const allRepairQuantities = Object.entries(repairQuantities).reduce(
+      (acc, [name, qty]) => {
+        acc.total += Number(qty)
+        acc.details.push({ name, qty })
+        return acc
+      },
+      { total: 0, details: [] as { name: string; qty: number }[] }
+    )
 
-  useEffect(() => {
-    setReplacementFee(replacementCost * replacementQty)
-  }, [replacementCost, replacementQty])
+    const totalQty = repairQty + replacementQty + allRepairQuantities.total
+    if (totalQty > selectedItem?.quantity) return
+
+    const repairFeeTotal = repairCost * repairQty
+    const replacementFeeTotal = replacementCost * replacementQty
+    let allRepairFeeTotal = 0
+    allRepairQuantities.details.forEach((detail) => {
+      const severityPercent = selectedItem?.productVariant?.damagePolicies?.find(
+        (policy: any) => policy.damageSeverity === detail.name
+      )?.damageSeverityPercent
+
+      const repairFeeSeverity = replacementCost * (severityPercent / 100) * detail.qty
+
+      allRepairFeeTotal += repairFeeSeverity
+
+      setRepairFees((prev) => ({
+        ...prev,
+        [detail.name]: repairFeeSeverity,
+      }))
+    })
+
+    setDeductedQty(totalQty)
+    setRepairFee(repairFeeTotal)
+    setReplacementFee(replacementFeeTotal)
+    setTotalFee(repairFeeTotal + replacementFeeTotal + allRepairFeeTotal)
+  }, [repairQty, replacementQty, repairQuantities])
 
   const handleRepairCheck = (key: string, checked: boolean) => {
     setSelectedRepairs((prev) => (checked ? [...prev, key] : prev.filter((r) => r !== key)))
   }
 
   const handleRepairQuantityChange = (key: string, value: number) => {
+    setDamageSeverity(key)
+    setDamageSeverityValue(value)
     setRepairQuantities((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -437,11 +486,32 @@ export const OrderList = () => {
   const [openReturnRepairReplacement, setOpenReturnRepairReplacement] = useState(false)
 
   const handleOpenReturnRepairReplacement = (rentItem: any) => {
+    console.log(rentItem)
     setOpenReturnRepairReplacement(true)
     setSelectedItem(rentItem)
   }
 
   const handleCloseReturnRepairReplacement = () => {
+    setRepairFees((prev) =>
+      Object.keys(prev).reduce((acc: any, key: string) => {
+        acc[key] = 0
+        return acc
+      }, {})
+    )
+
+    setRepairQuantities((prev) =>
+      Object.keys(prev).reduce((acc: any, key: string) => {
+        acc[key] = 0
+        return acc
+      }, {})
+    )
+
+    setDeductedQty(0)
+    setRepairFee(0)
+    setRepairQty(0)
+    setReplacementFee(0)
+    setReplacementQty(0)
+    setTotalFee(0)
     setOpenReturnRepairReplacement(false)
   }
 
@@ -1021,65 +1091,35 @@ export const OrderList = () => {
           {(() => {
             return (
               <>
-                <DialogTitle>Return Items</DialogTitle>
-                <DialogContent>
-                  {/* Quantity to Return */}
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Quantity to Return"
-                    // value={returnQty}
-                    value={selectedItem.quantity}
-                    onChange={(e) => setReturnQty(Number(e.target.value))}
-                    margin="dense"
-                  />
-
-                  {/* Manual Repair Fee with Qty + Fee */}
-                  <div className="mt-4">
-                    <h4 className="mb-2 font-semibold">Manual Repair Fee</h4>
-                    <div className="flex items-center gap-4 mb-2">
-                      <TextField
-                        type="number"
-                        label="UnitFee"
-                        value={manualRepairCost}
-                        slotProps={{
-                          input: {
-                            readOnly: true,
-                          },
-                        }}
-                        // value={manualUnitFee}
-                        // onChange={(e) => setManualUnitFee(Number(e.target.value))}
-                        className="flex-1"
-                      />
-                      x
-                      <TextField
-                        type="number"
-                        label="Qty"
-                        value={manualQty}
-                        onChange={(e) => setManualQty(Number(e.target.value))}
-                        className="flex-1"
-                      />
-                      =
-                      <TextField
-                        type="number"
-                        label="Fee"
-                        value={manualFee}
-                        // onChange={(e) => handleSetManualFee(manualRepairCost, manualQty)}
-                        // onChange={(e) => setManualFee((manualRepairCost * manualQty))}
-                        className="flex-1"
-                      />
-                    </div>
+                <DialogTitle>
+                  Return Items
+                  <div className="flex gap-6 mt-2">
+                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "primary.main" }}>
+                      Quantity to Return: {selectedItem.quantity}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "error.main" }}>
+                      Remaining Quantity: {selectedItem.quantity - deductedQty}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "warning.main" }}>
+                      Total Fee: ₱{totalFee}
+                    </Typography>
                   </div>
-
+                </DialogTitle>
+                <DialogContent>
                   {/* Replacement Fee with Qty + Fee */}
                   <div className="mt-4">
-                    <h4 className="mb-2 font-semibold">Replacement Fee</h4>
+                    <h4 className="mb-2 font-semibold">Default Replacement Fee</h4>
                     <div className="flex items-center gap-4 mb-2">
                       <TextField
                         type="number"
                         label="UnitFee"
                         value={replacementCost}
-                        // onChange={(e) => setReplacementUnitFee(Number(e.target.value))}
+                        slotProps={{
+                          input: {
+                            readOnly: true,
+                            startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                          },
+                        }}
                         className="flex-1"
                       />
                       x
@@ -1087,15 +1127,91 @@ export const OrderList = () => {
                         type="number"
                         label="Qty"
                         value={replacementQty}
-                        onChange={(e) => setReplacementQty(Number(e.target.value))}
+                        onChange={(e) => {
+                          const val = Number(e.target.value)
+                          const max = selectedItem.quantity - deductedQty + replacementQty
+
+                          if (val > max) {
+                            setReplacementQty(max)
+                            return
+                          }
+
+                          setReplacementQty(Number(e.target.value))
+                        }}
                         className="flex-1"
+                        slotProps={{
+                          htmlInput: {
+                            min: 0,
+                            max: selectedItem.quantity - deductedQty + replacementQty,
+                          },
+                        }}
                       />
                       =
                       <TextField
                         type="number"
                         label="Fee"
                         value={replacementFee}
-                        // onChange={(e) => setReplacementFee(Number(e.target.value))}
+                        slotProps={{
+                          input: {
+                            readOnly: true,
+                            startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                          },
+                        }}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Manual Repair Fee with Qty + Fee */}
+                  <div className="mt-4">
+                    <h4 className="mb-2 font-semibold">Default Repair Fee</h4>
+                    <div className="flex items-center gap-4 mb-2">
+                      <TextField
+                        type="number"
+                        label="UnitFee"
+                        value={repairCost}
+                        slotProps={{
+                          input: {
+                            readOnly: true,
+                            startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                          },
+                        }}
+                        className="flex-1"
+                      />
+                      x
+                      <TextField
+                        type="number"
+                        label="Qty"
+                        value={repairQty}
+                        onChange={(e) => {
+                          const val = Number(e.target.value)
+                          const max = selectedItem.quantity - deductedQty + repairQty
+
+                          if (val > max) {
+                            setRepairQty(max)
+                            return
+                          }
+                          setRepairQty(Number(e.target.value))
+                        }}
+                        slotProps={{
+                          htmlInput: {
+                            min: 0,
+                            max: selectedItem.quantity - deductedQty + repairQty,
+                          },
+                        }}
+                        className="flex-1"
+                      />
+                      =
+                      <TextField
+                        type="number"
+                        label="Fee"
+                        value={repairFee}
+                        slotProps={{
+                          input: {
+                            readOnly: true,
+                            startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                          },
+                        }}
                         className="flex-1"
                       />
                     </div>
@@ -1109,7 +1225,76 @@ export const OrderList = () => {
                         (percentage based on replacement fee)
                       </small>
                     </h4>
-                    {[
+                    {selectedItem.productVariant.damagePolicies?.map((repair: any) => {
+                      const label = `${repair.damageSeverity} Repair (${repair.damageSeverityPercent}%)`
+
+                      return (
+                        <div key={repair.id} className="flex items-center gap-4 mb-2">
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: "bold", color: "primary.main" }}
+                            className="flex-1 capitalize"
+                          >
+                            {label}
+                          </Typography>
+                          x
+                          <TextField
+                            type="number"
+                            label="Qty"
+                            value={repairQuantities[repair.damageSeverity]}
+                            onChange={(e) => {
+                              const val = Number(e.target.value)
+                              const max =
+                                selectedItem.quantity -
+                                deductedQty +
+                                repairQuantities[repair.damageSeverity]
+
+                              if (val > max) {
+                                setRepairQuantities((prev) => ({
+                                  ...prev,
+                                  [repair.damageSeverity]: max,
+                                }))
+                                return
+                              }
+
+                              setRepairQuantities((prev) => ({
+                                ...prev,
+                                [repair.damageSeverity]: e.target.value,
+                              }))
+                            }}
+                            // disabled={!selectedRepairs.includes(repair.key)}
+                            slotProps={{
+                              htmlInput: {
+                                min: 0,
+                                max:
+                                  selectedItem.quantity -
+                                  deductedQty +
+                                  repairQuantities[repair.damageSeverity],
+                              },
+                            }}
+                            className="flex-1"
+                          />
+                          =
+                          <TextField
+                            type="number"
+                            label="Fee"
+                            value={repairFees[repair.damageSeverity] ?? 0}
+                            // value={repairFees[repair.key] || ""}
+                            // onChange={(e) =>
+                            //   handleRepairFeeChange(repair.key, Number(e.target.value))
+                            // }
+                            // disabled={!selectedRepairs.includes(repair.key)}
+                            className="flex-1"
+                            slotProps={{
+                              input: {
+                                startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                              },
+                            }}
+                          />
+                        </div>
+                      )
+                    })}
+                    {/* {[
                       { key: "minor", label: "Minor Repair (10%)" },
                       { key: "moderate", label: "Moderate Repair (30%)" },
                       { key: "major", label: "Major Repair (60%)" },
@@ -1125,6 +1310,13 @@ export const OrderList = () => {
                           label={repair.label}
                           className="flex-1"
                         />
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: "bold", color: "primary.main" }}
+                          className="flex-1"
+                        >
+                          {repair.label}
+                        </Typography>
                         x
                         <TextField
                           type="number"
@@ -1146,9 +1338,14 @@ export const OrderList = () => {
                           }
                           disabled={!selectedRepairs.includes(repair.key)}
                           className="flex-1"
+                          slotProps={{
+                            input: {
+                              startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                            }
+                          }}
                         />
                       </div>
-                    ))}
+                    ))} */}
                   </div>
 
                   {/* Total Fee */}
@@ -1157,7 +1354,11 @@ export const OrderList = () => {
                     type="number"
                     label="Total Fee"
                     value={totalFee}
-                    InputProps={{ readOnly: true }}
+                    slotProps={{
+                      input: {
+                        readOnly: true,
+                      },
+                    }}
                     margin="dense"
                   />
                 </DialogContent>
@@ -1419,8 +1620,8 @@ export const OrderList = () => {
             fullWidth
             type="number"
             label="Manual Repair Fee (₱)"
-            value={manualFee}
-            onChange={(e) => setManualFee(Number(e.target.value))}
+            value={repairFee}
+            onChange={(e) => setRepairFee(Number(e.target.value))}
             margin="dense"
           />
 
