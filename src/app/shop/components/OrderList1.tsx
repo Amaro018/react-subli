@@ -27,6 +27,11 @@ import {
   Checkbox,
   InputAdornment,
   IconButton,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
 } from "@mui/material"
 import MaximizeIcon from "@mui/icons-material/Fullscreen"
 
@@ -48,6 +53,7 @@ import Image from "next/image"
 // import addPayment from "../../mutations/addPayment"
 import addPayment from "../../mutations/addPaymentNew"
 import updateRentStatus from "../../mutations/updateRentStatus"
+import updateReturnStatus from "../../mutations/updateReturnStatus"
 
 import getPaymentByRentId from "../../queries/getPaymentByRentId"
 import getCurrentUser from "./../../users/queries/getCurrentUser"
@@ -82,6 +88,15 @@ const style = {
 
 type RentItemType = {
   id: number
+}
+
+type Charge = {
+  id: number
+  type: "damaged" | "late"
+  subType: "repair" | "replacement"
+  repairType: "minor" | "moderate" | "major"
+  amount: number
+  quantity: number
 }
 
 export const OrderList: any = () => {
@@ -213,7 +228,40 @@ export const OrderList: any = () => {
     setRepairFees((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleReturnConfirm = () => {
+  const handleReturnConfirm = async () => {
+    if ((manualCost === 0) !== (manualQty === 0)) {
+      alert("Please input both manual cost and manual quantity.")
+      return
+    }
+
+    const status = goodQty === selectedItem.quantity ? "returned" : "returned_damaged"
+
+    console.log(selectedItem.quantity - goodQty)
+
+    try {
+      const returnStatus = await updateReturnStatusMutation({
+        rentItemId: selectedItem.id,
+        status: status,
+        noteMessage: "Payment canceled",
+        amount: totalFee,
+
+        manualFee: manualFee,
+        replacementFee: replacementFee,
+        repairFee: repairFee,
+        repairFees: repairFees,
+
+        selectedQty: selectedItem.quantity,
+        goodQty: goodQty,
+        manualQty: manualQty,
+        replacementQty: replacementQty,
+        repairQty: repairQty,
+        repairQuantities: repairQuantities,
+      })
+      console.log(returnStatus)
+    } catch (error) {
+      console.error(error)
+    }
+
     console.log("test")
   }
 
@@ -269,9 +317,9 @@ export const OrderList: any = () => {
     }
   }
 
-  const onChangePaymentType = (minimum: number, value: string) => {
+  const onChangePaymentType = (balance: number, value: string) => {
     setSelectedPaymentType(value)
-    setPayNow(minimum)
+    value === "full" ? setPayNow(balance) : setPayNow(balance / 2)
     setAmountError(false)
     console.log(payNow)
   }
@@ -291,7 +339,7 @@ export const OrderList: any = () => {
   const activeStep = statuse === "pending" ? 0 : statuse === "paid" ? 1 : 2
 
   // const [paymentStatus, setPaymentStatus] = useState("full")
-  const [returnStatus, setReturnStatus] = useState("")
+  // const [updateReturnStatus, updateRetReturnStatus] = useState("")
   const [repairCostType, setRepairCostType] = useState("")
 
   const handleSave = () => {
@@ -371,6 +419,7 @@ export const OrderList: any = () => {
   const [sumOfPFee, setSumOfPFee] = useState(0)
   const [addPaymentMutation] = useMutation(addPayment)
   const [updateRentStatusMutation] = useMutation(updateRentStatus)
+  const [updateReturnStatusMutation] = useMutation(updateReturnStatus)
   const [open, setOpen] = useState(false)
   const [openComplete, setOpenComplete] = useState(false)
   const [NumberOfDamageProduct, setNumberOfDamageProduct] = useState(0)
@@ -490,11 +539,18 @@ export const OrderList: any = () => {
   }
 
   const [openReturnRepairReplacement, setOpenReturnRepairReplacement] = useState(false)
+  const [openViewReturnedItems, setOpenViewReturnedItems] = useState(false)
 
-  const handleOpenReturnRepairReplacement = (rentItem: any) => {
+  const handleOpenReturnRepairReplacement = (rentItem: any, isReturned: boolean) => {
     console.log(rentItem)
-    setOpenReturnRepairReplacement(true)
+
+    !isReturned ? setOpenReturnRepairReplacement(true) : setOpenViewReturnedItems(true)
+
     setSelectedItem(rentItem)
+  }
+
+  const handleCloseViewReturnedItems = () => {
+    setOpenViewReturnedItems(false)
   }
 
   const handleCloseReturnRepairReplacement = () => {
@@ -871,203 +927,216 @@ export const OrderList: any = () => {
             <div className="text-center text-gray-500">No orders found.</div>
           ) : (
             <div className="overflow-x-auto">
-              {filteredRentItems.map((rentItem) => (
-                <div
-                  key={rentItem.id}
-                  className="grid grid-cols-1 md:grid-cols-5 gap-6 border-b py-6"
-                >
-                  {/* Product Image */}
-                  <div className="flex justify-center items-center">
-                    <Image
-                      src={
-                        `/uploads/products/${rentItem.productVariant.product.images[0]?.url}` ||
-                        "/placeholder.png"
-                      }
-                      alt={rentItem.productVariant.product.name}
-                      width={100}
-                      height={100}
-                      className="w-24 h-24 object-cover rounded-md shadow"
-                    />
-                  </div>
+              {filteredRentItems.map((rentItem: any) => {
+                const isReturned =
+                  rentItem.status === "returned" || rentItem.status === "returned_damaged"
 
-                  {/* Product Details */}
-                  <div className="space-y-2 text-sm">
-                    <p className="font-semibold text-lg">{rentItem.productVariant.product.name}</p>
-                    <p className="text-gray-600">
-                      {rentItem.startDate.toLocaleDateString()} –{" "}
-                      {rentItem.endDate.toLocaleDateString()} (
-                      {Math.ceil(
-                        (new Date(rentItem.endDate).getTime() -
-                          new Date(rentItem.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )}{" "}
-                      days)
-                    </p>
-                    <p className="text-gray-600">
-                      Variant: {rentItem.productVariant.size} - {rentItem.productVariant.color.name}
-                    </p>
-                    <p className="text-gray-600">Qty: {rentItem.quantity}</p>
-                    <p className="text-gray-600">₱{rentItem.price.toFixed(2)}</p>
-                    <p className="font-semibold">
-                      Total: ₱{(rentItem.price * rentItem.quantity).toFixed(2)}
-                    </p>
-                  </div>
+                const canShowActions = [
+                  "accepted",
+                  "rendering",
+                  "on_hand",
+                  "returned",
+                  "returned_damaged",
+                  "completed",
+                ].includes(rentItem.status)
 
-                  {/* Renter Details */}
-                  <div className="space-y-1 text-sm">
-                    <p className="font-semibold">
-                      {rentItem.rent.user.personalInfo?.firstName}{" "}
-                      {rentItem.rent.user.personalInfo?.middleName}{" "}
-                      {rentItem.rent.user.personalInfo?.lastName}
-                    </p>
-                    <p>{rentItem.rent.user.email}</p>
-                    <p>{rentItem.rent.user.personalInfo?.phoneNumber}</p>
-                    <p>{rentItem.rent.deliveryAddress}</p>
-                    <p className="italic text-gray-600">Delivery: {rentItem.deliveryMethod}</p>
-                  </div>
+                return (
+                  <div
+                    key={rentItem.id}
+                    className="grid grid-cols-1 md:grid-cols-5 gap-6 border-b py-6"
+                  >
+                    {/* Product Image */}
+                    <div className="flex justify-center items-center">
+                      <Image
+                        src={
+                          `/uploads/products/${rentItem.productVariant.product.images[0]?.url}` ||
+                          "/placeholder.png"
+                        }
+                        alt={rentItem.productVariant.product.name}
+                        width={100}
+                        height={100}
+                        className="w-24 h-24 object-cover rounded-md shadow"
+                      />
+                    </div>
 
-                  {/* Status + Stepper (occupies 2 columns) */}
-                  <div className="flex flex-col items-start space-y-3 md:col-span-2">
-                    <Stepper
-                      activeStep={
-                        rentItem.status === "pending" ||
-                        rentItem.status === "accepted" ||
-                        rentItem.status === "canceled"
-                          ? 0
-                          : rentItem.status === "rendering" ||
-                            rentItem.status === "on_hand" ||
-                            rentItem.status === "returned"
-                          ? 1
-                          : rentItem.status === "completed"
-                          ? 2
-                          : 0
-                      }
-                    >
-                      <Step
-                        completed={
-                          rentItem.status !== "pending" &&
-                          rentItem.status !== "accepted" &&
-                          rentItem.status !== "canceled"
+                    {/* Product Details */}
+                    <div className="space-y-2 text-sm">
+                      <p className="font-semibold text-lg">
+                        {rentItem.productVariant.product.name}
+                      </p>
+                      <p className="text-gray-600">
+                        {rentItem.startDate.toLocaleDateString()} –{" "}
+                        {rentItem.endDate.toLocaleDateString()} (
+                        {Math.ceil(
+                          (new Date(rentItem.endDate).getTime() -
+                            new Date(rentItem.startDate).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                        )}{" "}
+                        days)
+                      </p>
+                      <p className="text-gray-600">
+                        Variant: {rentItem.productVariant.size} -{" "}
+                        {rentItem.productVariant.color.name}
+                      </p>
+                      <p className="text-gray-600">Qty: {rentItem.quantity}</p>
+                      <p className="text-gray-600">₱{rentItem.price.toFixed(2)}</p>
+                      <p className="font-semibold">
+                        Total: ₱{(rentItem.price * rentItem.quantity).toFixed(2)}
+                      </p>
+                    </div>
+
+                    {/* Renter Details */}
+                    <div className="space-y-1 text-sm">
+                      <p className="font-semibold">
+                        {rentItem.rent.user.personalInfo?.firstName}{" "}
+                        {rentItem.rent.user.personalInfo?.middleName}{" "}
+                        {rentItem.rent.user.personalInfo?.lastName}
+                      </p>
+                      <p>{rentItem.rent.user.email}</p>
+                      <p>{rentItem.rent.user.personalInfo?.phoneNumber}</p>
+                      <p>{rentItem.rent.deliveryAddress}</p>
+                      <p className="italic text-gray-600">Delivery: {rentItem.deliveryMethod}</p>
+                    </div>
+
+                    {/* Status + Stepper (occupies 2 columns) */}
+                    <div className="flex flex-col items-start space-y-3 md:col-span-2">
+                      <Stepper
+                        activeStep={
+                          rentItem.status === "pending" ||
+                          rentItem.status === "accepted" ||
+                          rentItem.status === "canceled"
+                            ? 0
+                            : rentItem.status === "rendering" ||
+                              rentItem.status === "on_hand" ||
+                              rentItem.status === "returned"
+                            ? 1
+                            : rentItem.status === "completed"
+                            ? 2
+                            : 0
                         }
                       >
-                        <StepLabel
-                          StepIconComponent={(props) =>
-                            rentItem.status === "canceled" ? (
-                              <CloseIcon sx={{ color: "red" }} />
-                            ) : (
-                              <StepIcon {...props} />
-                            )
+                        <Step
+                          completed={
+                            rentItem.status !== "pending" &&
+                            rentItem.status !== "accepted" &&
+                            rentItem.status !== "canceled"
                           }
-                          sx={{
-                            "& .MuiStepLabel-label": {
-                              color: rentItem.status === "canceled" ? "red" : "",
-                            },
-                            // "& .MuiStepIcon-root": {
-                            //   color:
-                            //     rentItem.status === "canceled"
-                            //       ? "red"
-                            //       : "",
-                            // },
-                          }}
                         >
-                          {rentItem.status === "pending"
-                            ? "Pending"
+                          <StepLabel
+                            StepIconComponent={(props) =>
+                              rentItem.status === "canceled" ? (
+                                <CloseIcon sx={{ color: "red" }} />
+                              ) : (
+                                <StepIcon {...props} />
+                              )
+                            }
+                            sx={{
+                              "& .MuiStepLabel-label": {
+                                color: rentItem.status === "canceled" ? "red" : "",
+                              },
+                              // "& .MuiStepIcon-root": {
+                              //   color:
+                              //     rentItem.status === "canceled"
+                              //       ? "red"
+                              //       : "",
+                              // },
+                            }}
+                          >
+                            {rentItem.status === "pending"
+                              ? "Pending"
+                              : rentItem.status === "canceled"
+                              ? "Canceled"
+                              : "Accepted"}
+                          </StepLabel>
+                        </Step>
+                        <Step
+                          completed={
+                            rentItem.status === "returned" ||
+                            rentItem.status === "returned_damaged" ||
+                            rentItem.status === "completed"
+                          }
+                        >
+                          <StepLabel>
+                            {rentItem.status === "returned_damaged" ||
+                            rentItem.status === "returned" ||
+                            rentItem.status === "completed"
+                              ? "Returned"
+                              : "On Hand"}
+                          </StepLabel>
+                        </Step>
+                        <Step completed={rentItem.status === "completed"}>
+                          <StepLabel>Completed</StepLabel>
+                        </Step>
+                      </Stepper>
+
+                      {/* Current Status */}
+                      <p
+                        className={`uppercase px-3 py-1 text-xs rounded font-semibold ${
+                          rentItem.status === "completed"
+                            ? "bg-green-100 text-green-700"
+                            : rentItem.status === "pending"
+                            ? "bg-yellow-100 text-yellow-700"
                             : rentItem.status === "canceled"
-                            ? "Canceled"
-                            : "Accepted"}
-                        </StepLabel>
-                      </Step>
-                      <Step
-                        completed={
-                          rentItem.status === "returned" ||
-                          rentItem.status === "returned_damaged" ||
-                          rentItem.status === "completed"
-                        }
+                            ? "bg-red-100 text-red-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
                       >
-                        <StepLabel>
-                          {rentItem.status === "returned_damaged" ||
-                          rentItem.status === "returned" ||
-                          rentItem.status === "completed"
-                            ? "Returned"
-                            : "On Hand"}
-                        </StepLabel>
-                      </Step>
-                      <Step completed={rentItem.status === "completed"}>
-                        <StepLabel>Completed</StepLabel>
-                      </Step>
-                    </Stepper>
+                        {rentItem.status}
+                      </p>
 
-                    {/* Current Status */}
-                    <p
-                      className={`uppercase px-3 py-1 text-xs rounded font-semibold ${
-                        rentItem.status === "completed"
-                          ? "bg-green-100 text-green-700"
-                          : rentItem.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : rentItem.status === "canceled"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {rentItem.status}
-                    </p>
+                      {/* Buttons */}
+                      {rentItem.status === "pending" && (
+                        <div className="flex gap-2">
+                          <button
+                            disabled={loadingAction === "accept"}
+                            onClick={() => handleAction(rentItem, "accept")}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                          >
+                            {loadingAction === "accept" ? (
+                              <CircularProgress size={20} sx={{ color: "white" }} />
+                            ) : (
+                              "Accept"
+                            )}
+                          </button>
+                          <button
+                            disabled={loadingAction === "cancel"}
+                            onClick={() => handleAction(rentItem, "cancel")}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                          >
+                            {loadingAction === "cancel" ? (
+                              <CircularProgress size={20} sx={{ color: "white" }} />
+                            ) : (
+                              "Cancel"
+                            )}
+                          </button>
+                        </div>
+                      )}
 
-                    {/* Buttons */}
-                    {rentItem.status === "pending" && (
-                      <div className="flex gap-2">
-                        <button
-                          disabled={loadingAction === "accept"}
-                          onClick={() => handleAction(rentItem, "accept")}
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                        >
-                          {loadingAction === "accept" ? (
-                            <CircularProgress size={20} sx={{ color: "white" }} />
-                          ) : (
-                            "Accept"
-                          )}
-                        </button>
-                        <button
-                          disabled={loadingAction === "cancel"}
-                          onClick={() => handleAction(rentItem, "cancel")}
-                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-                        >
-                          {loadingAction === "cancel" ? (
-                            <CircularProgress size={20} sx={{ color: "white" }} />
-                          ) : (
-                            "Cancel"
-                          )}
-                        </button>
-                      </div>
-                    )}
+                      {canShowActions && (
+                        <div className="space-y-2 space-x-2">
+                          <button
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                            onClick={() => handleOpenComplete(rentItem)}
+                          >
+                            Payments
+                          </button>
 
-                    {(rentItem.status === "accepted" ||
-                      rentItem.status === "rendering" ||
-                      rentItem.status === "on_hand" ||
-                      rentItem.status === "returned" ||
-                      rentItem.status === "returned_damaged" ||
-                      rentItem.status === "completed") && (
-                      <div className="space-y-2 space-x-2">
-                        <button
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                          onClick={() => handleOpenComplete(rentItem)}
-                        >
-                          Payments
-                        </button>
-                        <button
-                          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
-                          onClick={() => handleOpenReturnRepairReplacement(rentItem)}
-                        >
-                          Return Status
-                        </button>
-                      </div>
-                    )}
+                          <button
+                            className="px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700"
+                            onClick={() => handleOpenReturnRepairReplacement(rentItem, isReturned)}
+                          >
+                            {isReturned ? "View Returned Items" : "Return Items"}
+                          </button>
+                        </div>
+                      )}
 
-                    {rentItem.status === "canceled" && (
-                      <p className="text-red-500 font-medium">This order was canceled</p>
-                    )}
+                      {rentItem.status === "canceled" && (
+                        <p className="text-red-500 font-medium">This order was canceled</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -1109,6 +1178,78 @@ export const OrderList: any = () => {
         </DialogActions>
       </Dialog>
 
+      <Dialog
+        open={openViewReturnedItems}
+        onClose={handleCloseViewReturnedItems}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Returned Items</DialogTitle>
+        <DialogContent dividers>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell
+                  sx={{ textTransform: "uppercase", fontWeight: "bold", color: "primary.main" }}
+                >
+                  Type
+                </TableCell>
+                <TableCell
+                  sx={{ textTransform: "uppercase", fontWeight: "bold", color: "primary.main" }}
+                >
+                  SubType
+                </TableCell>
+                <TableCell
+                  sx={{ textTransform: "uppercase", fontWeight: "bold", color: "primary.main" }}
+                >
+                  Repair Type
+                </TableCell>
+                <TableCell
+                  align="right"
+                  sx={{ textTransform: "uppercase", fontWeight: "bold", color: "primary.main" }}
+                >
+                  Amount
+                </TableCell>
+                <TableCell
+                  align="right"
+                  sx={{ textTransform: "uppercase", fontWeight: "bold", color: "primary.main" }}
+                >
+                  Quantity
+                </TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {selectedItem?.charges?.length > 0 ? (
+                selectedItem.charges.map((charge: Charge) => (
+                  <TableRow key={charge.id}>
+                    <TableCell sx={{ textTransform: "capitalize" }}>{charge.type}</TableCell>
+                    <TableCell sx={{ textTransform: "capitalize" }}>{charge.subType}</TableCell>
+                    <TableCell sx={{ textTransform: "capitalize" }}>
+                      {charge.repairType ?? "N/A"}
+                    </TableCell>
+                    <TableCell align="right">{charge.amount}</TableCell>
+                    <TableCell align="right">{charge.quantity}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    No returned items
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseViewReturnedItems} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* return items */}
       {selectedItem && (
         <Dialog
           open={openReturnRepairReplacement}
@@ -1461,6 +1602,7 @@ export const OrderList: any = () => {
                         }}
                         margin="dense"
                         className="flex-1"
+                        disabled={selectedItem.quantity - deductedQty === 0 && manualQty === 0}
                       />
                       x
                       <TextField
@@ -1522,6 +1664,7 @@ export const OrderList: any = () => {
         </Dialog>
       )}
 
+      {/* payments */}
       {selectedItem && (
         <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm">
           {(() => {
@@ -1571,7 +1714,7 @@ export const OrderList: any = () => {
                     <RadioGroup
                       row
                       value={selectedPaymentType}
-                      onChange={(e) => onChangePaymentType(minimum, e.target.value)}
+                      onChange={(e) => onChangePaymentType(balance, e.target.value)}
                       // onChange={(e) => setSelectedPaymentType(e.target.value)}
                     >
                       <FormControlLabel

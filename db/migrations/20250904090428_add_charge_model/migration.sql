@@ -1,0 +1,10 @@
+-- CreateTable
+CREATE TABLE "Charge" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "rentItemId" INTEGER NOT NULL,
+    "type" TEXT NOT NULL,
+    "amount" REAL NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Charge_rentItemId_fkey" FOREIGN KEY ("rentItemId") REFERENCES "RentItem" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);

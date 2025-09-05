@@ -238,10 +238,24 @@ model RentItem {
   isReviewed         Boolean        @default(false)
   reviews            Review[]
   payments           Payment[]
+  charges            Charge[]
   returnedDamagedQty Int            @default(0)
   isRepaired         Boolean?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
+}
+
+model Charge {
+  id         Int      @id @default(autoincrement())
+  rentItemId Int
+  rentItem   RentItem @relation(fields: [rentItemId], references: [id])
+  type       String // "DAMAGED" or "LATE"
+  subType    String? // only if type = DAMAGED: "REPAIR" | "REPLACEMENT" | "MANUAL"
+  repairType String? // "MINOR" | "MODERATE" | "MAJOR" (only used if subType = REPAIR)
+  amount     Float
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Payment {
