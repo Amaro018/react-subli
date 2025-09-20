@@ -75,7 +75,7 @@ export default resolver.pipe(
           ? remainingBalance === 0
             ? "completed"
             : "rendering"
-          : "rendering"
+          : "accepted"
       } else if (remainingBalance === 0) {
         updateStatus = "completed"
       }

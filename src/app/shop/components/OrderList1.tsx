@@ -541,10 +541,22 @@ export const OrderList: any = () => {
   const [openReturnRepairReplacement, setOpenReturnRepairReplacement] = useState(false)
   const [openViewReturnedItems, setOpenViewReturnedItems] = useState(false)
 
-  const handleOpenReturnRepairReplacement = (rentItem: any, isReturned: boolean) => {
+  const handleHandItems = async () => {
+    console.log("test")
+  }
+
+  const handleOpenReturnRepairReplacement = (
+    rentItem: any,
+    isReturned: boolean,
+    handItems: boolean
+  ) => {
     console.log(rentItem)
 
-    !isReturned ? setOpenReturnRepairReplacement(true) : setOpenViewReturnedItems(true)
+    !isReturned
+      ? handItems
+        ? handleHandItems
+        : setOpenReturnRepairReplacement(true)
+      : setOpenViewReturnedItems(true)
 
     setSelectedItem(rentItem)
   }
@@ -930,6 +942,9 @@ export const OrderList: any = () => {
               {filteredRentItems.map((rentItem: any) => {
                 const isReturned =
                   rentItem.status === "returned" || rentItem.status === "returned_damaged"
+                const handItems = payments.some(
+                  (payment) => payment.status === "partial" || payment.status === "full"
+                )
 
                 const canShowActions = [
                   "accepted",
@@ -1123,9 +1138,15 @@ export const OrderList: any = () => {
 
                           <button
                             className="px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700"
-                            onClick={() => handleOpenReturnRepairReplacement(rentItem, isReturned)}
+                            onClick={() =>
+                              handleOpenReturnRepairReplacement(rentItem, isReturned, handItems)
+                            }
                           >
-                            {isReturned ? "View Returned Items" : "Return Items"}
+                            {isReturned
+                              ? "View Returned Items"
+                              : handItems
+                              ? "Return Items"
+                              : "Hand Items"}
                           </button>
                         </div>
                       )}
