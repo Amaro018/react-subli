@@ -9,39 +9,69 @@ import {
   StepLabel,
   Typography,
   CircularProgress,
-  CardContent,
   Card,
-  Avatar,
+  Grid,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
 } from "@mui/material"
 import { useState } from "react"
-// import ImageUploadWithPreview from "./ImageUpload"
 import createShop from "../../mutations/createShop"
 import uploadShopBg from "../../mutations/uploadShopBg"
-import { useMutation } from "@blitzjs/rpc"
+import { useMutation, useQuery } from "@blitzjs/rpc"
 import { useRouter } from "next/navigation"
+import getBarangay from "../../queries/getBarangays"
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"
 import ErrorMessage from "./ErrorMessage"
+import StorefrontIcon from "@mui/icons-material/Storefront"
 
 const FormShopRegister = (props: { currentUser: any }) => {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
   const [createShopMutation] = useMutation(createShop)
+  const [barangays] = useQuery(getBarangay, null)
   const currentUser = props.currentUser
-  const [imageProfile, setImageProfile] = useState(null)
+  const [imageProfile, setImageProfile] = useState<string | null>(null)
   const [previewProfile, setPreviewProfile] = useState<string | null>(null)
   const [imageShopBg, setImageShopBg] = useState<string | null>(null)
-  // const [documentDTI, setDocumentDTI] = useState<string | null>(null)
-  // const [documentPermit, setDocumentPermit] = useState<string | null>(null)
   const [dtiFile, setDtiFile] = useState<File | null>(null)
   const [taxFile, setTaxFile] = useState<File | null>(null)
   const [permitFile, setPermitFile] = useState<File | null>(null)
-  const [previewShopBg, setPreviewShopBg] = useState(null)
+  const [previewShopBg, setPreviewShopBg] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
 
-  const handleImageChangeShopBg = (event) => {
+  const steps = ["SHOP DETAILS", "SHOP DOCUMENTS", "SHOP PROFILE"]
+  const [activeStep, setActiveStep] = useState(0)
+  const [formData, setFormData] = useState({
+    userId: currentUser.id,
+    shopName: "",
+    email: "",
+    street: "",
+    barangay: "",
+    city: "Legazpi City",
+    province: "Albay",
+    country: "Philippines",
+    zipCode: "4500",
+    contact: "",
+    description: "",
+    imageProfile: "",
+    linkFacebook: "",
+    imageBg: "",
+    documentDTI: "",
+    documentPermit: "",
+    documentTax: "",
+  })
+
+  const handleImageChangeShopBg = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Invalid file type. Please upload an image.")
+        event.target.value = ""
+        return
+      }
       const uniqueFileName = `${Date.now()}-${file.name}`
       setImageShopBg(uniqueFileName)
       setFormData((prevFormData) => ({ ...prevFormData, imageBg: uniqueFileName }))
@@ -69,15 +99,18 @@ const FormShopRegister = (props: { currentUser: any }) => {
   }
 
   const handleRemoveImageShopBg = () => {
-    {
-      setImageShopBg(null)
-      setPreviewShopBg(null)
-    }
+    setImageShopBg(null)
+    setPreviewShopBg(null)
   }
 
-  const handleImageChange = (event) => {
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Invalid file type. Please upload an image.")
+        event.target.value = ""
+        return
+      }
       const uniqueFileName = `${Date.now()}-${file.name}`
       setImageProfile(uniqueFileName)
       setFormData((prevFormData) => ({ ...prevFormData, imageProfile: uniqueFileName }))
@@ -109,9 +142,14 @@ const FormShopRegister = (props: { currentUser: any }) => {
     setPreviewProfile(null)
   }
 
-  const handleFileDti = (event) => {
+  const handleFileDti = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
+        alert("Invalid file type. Please upload a PDF or an Image.")
+        event.target.value = ""
+        return
+      }
       setDtiFile(file)
 
       const uniqueFileName = `${Date.now()}-${file.name}`
@@ -122,7 +160,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         const base64String = reader.result as string
 
         try {
-          const fileUrl = await uploadShopBgMutation({
+          await uploadShopBgMutation({
             fileName: uniqueFileName,
             data: base64String,
             targetDirectory: "dti",
@@ -137,9 +175,14 @@ const FormShopRegister = (props: { currentUser: any }) => {
     }
   }
 
-  const handleFilePermit = (event) => {
+  const handleFilePermit = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
+        alert("Invalid file type. Please upload a PDF or an Image.")
+        event.target.value = ""
+        return
+      }
       setPermitFile(file)
 
       const uniqueFileName = `${Date.now()}-${file.name}`
@@ -150,7 +193,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         const base64String = reader.result as string
 
         try {
-          const fileUrl = await uploadShopBgMutation({
+          await uploadShopBgMutation({
             fileName: uniqueFileName,
             data: base64String,
             targetDirectory: "permit",
@@ -165,9 +208,14 @@ const FormShopRegister = (props: { currentUser: any }) => {
     }
   }
 
-  const handleFileTax = (event) => {
+  const handleFileTax = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
+        alert("Invalid file type. Please upload a PDF or an Image.")
+        event.target.value = ""
+        return
+      }
       setTaxFile(file)
 
       const uniqueFileName = `${Date.now()}-${file.name}`
@@ -178,7 +226,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         const base64String = reader.result as string
 
         try {
-          const fileUrl = await uploadShopBgMutation({
+          await uploadShopBgMutation({
             fileName: uniqueFileName,
             data: base64String,
             targetDirectory: "tax",
@@ -193,34 +241,14 @@ const FormShopRegister = (props: { currentUser: any }) => {
     }
   }
 
-  const steps = ["SHOP DETAILS", "SHOP DOCUMENTS", "SHOP PROFILE"]
-  const [activeStep, setActiveStep] = useState(0)
-  const [formData, setFormData] = useState({
-    userId: currentUser.id,
-    shopName: "",
-    email: "",
-    street: "",
-    city: "",
-    region: "",
-    country: "",
-    zipCode: "",
-    contact: "",
-    description: "",
-    imageProfile: "",
-    linkFacebook: "",
-    imageBg: "",
-    documentDTI: "",
-    documentPermit: "",
-    documentTax: "",
-  })
-
   const handleNext = () => {
     if (
       formData.shopName == "" ||
       formData.email == "" ||
       formData.street == "" ||
+      formData.barangay == "" ||
       formData.city == "" ||
-      formData.region == "" ||
+      formData.province == "" ||
       formData.country == "" ||
       formData.zipCode == "" ||
       formData.contact == ""
@@ -234,11 +262,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
   }
 
   const handleNextNext = () => {
-    if (
-      formData.documentDTI == null ||
-      formData.documentPermit == null ||
-      formData.documentTax == null
-    ) {
+    if (!formData.documentDTI || !formData.documentPermit || !formData.documentTax) {
       alert("Please fill all the fields")
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
@@ -258,18 +282,18 @@ const FormShopRegister = (props: { currentUser: any }) => {
     e.preventDefault()
 
     setLoading(true)
-    console.log(formData)
 
     try {
-      const newShop = await createShopMutation(formData)
-      console.log("Shop created successfully:", newShop)
+      await createShopMutation({
+        ...formData,
+      })
       router.push("/renter/shop-register/pending")
       alert("Shop registered successfully!")
-      router.push("/renter/shop-register/pending")
       setLoading(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating shop:", error)
-      alert("Failed to register shop. Please try again.")
+      alert(error.message || "Failed to register shop. Please try again.")
+      setLoading(false)
     }
   }
 
@@ -277,7 +301,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     if (!file) return null
 
     return (
-      <Typography variant="body2" color="text.secondary" mt={1}>
+      <Typography variant="body2" color="primary" mt={1} fontWeight="medium">
         📄 {file.name}
       </Typography>
     )
@@ -294,344 +318,452 @@ const FormShopRegister = (props: { currentUser: any }) => {
   }
 
   return (
-    <div className="p-16 w-full flex flex-col items-center gap-4">
-      <h1 className="text-3xl font-semibold uppercase mt-16">Shop Register</h1>
-      <div className="w-full mb-8">
-        <Box sx={{ width: "100%" }}>
-          <Stepper activeStep={activeStep} alternativeLabel>
+    <div className="w-full">
+      <Card elevation={0} className="rounded-xl border border-gray-200">
+        <div className="p-6">
+          <Stepper activeStep={activeStep} alternativeLabel className="mb-12">
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
               </Step>
             ))}
           </Stepper>
-        </Box>
-      </div>
 
-      <form className="flex flex-col gap-4 w-full">
-        {activeStep === 0 && (
-          <div>
-            <p className="text-center my-4 uppercase">SHOP DETAILS</p>
-            <div className="flex flex-row gap-2">
-              <TextField
-                required
-                label="Shop Name"
-                name="shopName"
-                value={formData.shopName}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                required
-                label="Shop Email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                fullWidth
-              />
-            </div>
-            <div className="my-4">
-              <TextField
-                required
-                label="Description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                multiline
-                rows={4}
-                fullWidth
-              />
-            </div>
-            <p className="text-center my-4 uppercase">full Address</p>
-            <div className="flex flex-row gap-2">
-              <TextField
-                required
-                label="Street"
-                name="street"
-                value={formData.street}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                required
-                label="City"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                fullWidth
-              />
-
-              <TextField
-                required
-                label="Region"
-                name="region"
-                value={formData.region}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                required
-                label="Country"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                fullWidth
-              />
-
-              <TextField
-                required
-                label="Zip"
-                type="number"
-                name="zipCode"
-                value={formData.zipCode}
-                onChange={handleChange}
-                fullWidth
-              />
-            </div>
-
-            <p className="text-center my-4 uppercase">CONTACT DETAILS</p>
-            <div className="flex flex-col gap-2">
-              <TextField
-                required
-                label="Phone Number"
-                name="contact" // This will map to `contact` in handleSubmit
-                value={formData.contact}
-                onChange={handleChange}
-              />
-              <TextField
-                label="Facebook"
-                name="linkFacebook"
-                value={formData.linkFacebook}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="flex flex-row justify-end gap-2 mt-2">
-              <Button variant="contained" color="primary" onClick={handleNext}>
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {activeStep === 1 && (
-          <Card sx={{ maxWidth: 600, mx: "auto", mt: 4, boxShadow: 3, borderRadius: 3 }}>
-            <CardContent>
-              <Typography variant="h5" textAlign="center" fontWeight="bold" gutterBottom>
-                📄 SHOP DOCUMENTS
-              </Typography>
-
-              {/* DTI Document */}
-              <Box mb={3}>
-                <Typography fontWeight="bold" color="text.secondary">
-                  DTI Certificate
+          <form className="flex flex-col gap-6">
+            {activeStep === 0 && (
+              <div className="flex flex-col gap-6">
+                <Typography variant="h6" className="font-bold text-gray-700 border-b pb-2">
+                  Shop Information
                 </Typography>
-                <label htmlFor="documentDTI">
-                  <Box
-                    sx={{
-                      border: "2px dashed #ccc",
-                      borderRadius: 2,
-                      padding: 2,
-                      textAlign: "center",
-                      cursor: "pointer",
-                      "&:hover": { borderColor: "#1976D2" },
-                    }}
-                  >
-                    <CloudUploadIcon color="action" sx={{ fontSize: 40 }} />
-                    <Typography variant="body2">
-                      {dtiFile ? "File uploaded" : "Click to upload or drag file here"}
-                    </Typography>
-                    <input
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
                       required
-                      name="documentDTI"
-                      type="file"
-                      accept="application/pdf, image/*"
-                      onChange={handleFileDti}
-                      hidden
-                      id="documentDTI"
+                      label="Shop Name"
+                      name="shopName"
+                      value={formData.shopName}
+                      onChange={handleChange}
+                      fullWidth
+                      variant="outlined"
                     />
-                  </Box>
-                </label>
-                {renderFilePreview(dtiFile)}
-              </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      required
+                      label="Shop Email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      fullWidth
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      required
+                      label="Description"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      multiline
+                      rows={4}
+                      fullWidth
+                      variant="outlined"
+                    />
+                  </Grid>
+                </Grid>
 
-              {/* Tax Clearance */}
-              <Box mb={3}>
-                <Typography fontWeight="bold" color="text.secondary">
-                  Tax Clearance
+                <Typography variant="h6" className="font-bold text-gray-700 border-b pb-2 mt-4">
+                  Address Details
                 </Typography>
-                <label htmlFor="documentTax">
-                  <Box
-                    sx={{
-                      border: "2px dashed #ccc",
-                      borderRadius: 2,
-                      padding: 2,
-                      textAlign: "center",
-                      cursor: "pointer",
-                      "&:hover": { borderColor: "#1976D2" },
-                    }}
-                  >
-                    <CloudUploadIcon color="action" sx={{ fontSize: 40 }} />
-                    <Typography variant="body2">
-                      {taxFile ? "File uploaded" : "Click to upload or drag file here"}
-                    </Typography>
-                    <input
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
                       required
-                      name="documentTax"
-                      type="file"
-                      accept="application/pdf, image/*"
-                      onChange={handleFileTax}
-                      hidden
-                      id="documentTax"
+                      label="Street Address"
+                      name="street"
+                      value={formData.street}
+                      onChange={handleChange}
+                      fullWidth
                     />
-                  </Box>
-                </label>
-                {renderFilePreview(taxFile)}
-              </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth required>
+                      <InputLabel id="barangay-label">Barangay</InputLabel>
+                      <Select
+                        labelId="barangay-label"
+                        id="barangay"
+                        name="barangay"
+                        value={formData.barangay}
+                        label="Barangay"
+                        onChange={handleChange as any}
+                      >
+                        {barangays.map((bg: any) => (
+                          <MenuItem key={bg.id} value={bg.name}>
+                            {bg.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      required
+                      label="City"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      required
+                      label="Province"
+                      name="province"
+                      value={formData.province}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      required
+                      label="Country"
+                      name="country"
+                      value={formData.country}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      required
+                      label="Zip Code"
+                      type="number"
+                      name="zipCode"
+                      value={formData.zipCode}
+                      onChange={handleChange}
+                      fullWidth
+                      disabled
+                    />
+                  </Grid>
+                </Grid>
 
-              {/* Mayor's Permit */}
-              <Box mb={3}>
-                <Typography fontWeight="bold" color="text.secondary">
-                  Mayor&apos;s Permit
+                <Typography variant="h6" className="font-bold text-gray-700 border-b pb-2 mt-4">
+                  Contact Details
                 </Typography>
-                <label htmlFor="documentPermit">
-                  <Box
-                    sx={{
-                      border: "2px dashed #ccc",
-                      borderRadius: 2,
-                      padding: 2,
-                      textAlign: "center",
-                      cursor: "pointer",
-                      "&:hover": { borderColor: "#1976D2" },
-                    }}
-                  >
-                    <CloudUploadIcon color="action" sx={{ fontSize: 40 }} />
-                    <Typography variant="body2">
-                      {permitFile ? "File uploaded" : "Click to upload or drag file here"}
-                    </Typography>
-                    <input
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
                       required
-                      name="documentPermit"
-                      type="file"
-                      accept="application/pdf, image/*"
-                      onChange={handleFilePermit}
-                      hidden
-                      id="documentPermit"
+                      label="Phone Number"
+                      name="contact"
+                      value={formData.contact}
+                      onChange={handleChange}
+                      fullWidth
                     />
-                  </Box>
-                </label>
-                {renderFilePreview(permitFile)}
-              </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Facebook Link (Optional)"
+                      name="linkFacebook"
+                      value={formData.linkFacebook}
+                      onChange={handleChange}
+                      fullWidth
+                    />
+                  </Grid>
+                </Grid>
 
-              {/* Action Buttons */}
-              <Box display="flex" justifyContent="flex-end" gap={2}>
-                <Button variant="outlined" onClick={handleBack}>
-                  Back
-                </Button>
-                <Button variant="contained" color="primary" onClick={handleNextNext}>
-                  Next
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        )}
+                <div className="flex justify-end mt-6">
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleNext}
+                    size="large"
+                    sx={{ px: 5, py: 1.5, borderRadius: 2 }}
+                  >
+                    Next Step
+                  </Button>
+                </div>
+              </div>
+            )}
 
-        {activeStep === 2 && (
-          <div className="flex flex-col gap-4 justify-between h-96 w-full">
-            <div className="flex flex-col gap-16 justify-between">
-              <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-                <Typography variant="body2">Shop Profile</Typography>
+            {activeStep === 1 && (
+              <div className="max-w-3xl mx-auto w-full">
+                <Typography
+                  variant="h6"
+                  textAlign="center"
+                  fontWeight="bold"
+                  gutterBottom
+                  className="mb-8 text-gray-700"
+                >
+                  Upload Required Documents
+                </Typography>
 
-                <Button variant="contained" component="label">
-                  Choose Image
-                  <input
-                    type="file"
-                    name="imageProfile"
-                    accept="image/*"
-                    hidden
-                    onChange={handleImageChange}
-                  />
-                </Button>
-                {isUploading && <CircularProgress />}
-                {previewProfile && (
-                  <Box mt={2} display="flex" flexDirection="column" alignItems="center" gap={1}>
-                    <Typography variant="body1">Preview:</Typography>
+                {/* DTI Document */}
+                <Box mb={4}>
+                  <Typography fontWeight="bold" color="text.secondary" mb={1}>
+                    DTI Certificate
+                  </Typography>
+                  <label htmlFor="documentDTI">
                     <Box
-                      component="img"
-                      src={previewProfile}
-                      alt="Selected Image"
                       sx={{
-                        width: "200px",
-                        height: "200px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
+                        border: "2px dashed #ccc",
+                        borderRadius: 2,
+                        padding: 4,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        backgroundColor: "#f9fafb",
+                        transition: "all 0.2s",
+                        "&:hover": { borderColor: "#1b2a80", backgroundColor: "#f0f4ff" },
                       }}
-                    />
+                    >
+                      <CloudUploadIcon sx={{ fontSize: 48, color: "#1b2a80", mb: 1 }} />
+                      <Typography variant="body1" fontWeight="medium">
+                        {dtiFile ? "Change File" : "Click to upload or drag DTI file here"}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Supported formats: PDF, JPG, PNG
+                      </Typography>
+                      <input
+                        required
+                        name="documentDTI"
+                        type="file"
+                        accept="application/pdf, image/*"
+                        onChange={handleFileDti}
+                        hidden
+                        id="documentDTI"
+                      />
+                    </Box>
+                  </label>
+                  {renderFilePreview(dtiFile)}
+                </Box>
 
-                    <Button variant="outlined" color="error" onClick={handleRemoveImage}>
-                      Remove Image
-                    </Button>
-                  </Box>
-                )}
-              </Box>
-
-              <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-                <Typography variant="body2">Shop Background</Typography>
-
-                <Button variant="contained" component="label">
-                  Choose Image
-                  <input
-                    type="file"
-                    name="imageProfile"
-                    accept="image/*"
-                    hidden
-                    onChange={handleImageChangeShopBg}
-                  />
-                </Button>
-                {isUploading && <CircularProgress />}
-                {previewShopBg && (
-                  <Box mt={2} display="flex" flexDirection="column" alignItems="center" gap={1}>
-                    <Typography variant="body1">Preview:</Typography>
+                {/* Tax Clearance */}
+                <Box mb={4}>
+                  <Typography fontWeight="bold" color="text.secondary" mb={1}>
+                    Tax Clearance
+                  </Typography>
+                  <label htmlFor="documentTax">
                     <Box
-                      component="img"
-                      src={previewShopBg}
-                      alt="Selected Image"
                       sx={{
-                        width: "200px",
-                        height: "200px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
+                        border: "2px dashed #ccc",
+                        borderRadius: 2,
+                        padding: 4,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        backgroundColor: "#f9fafb",
+                        transition: "all 0.2s",
+                        "&:hover": { borderColor: "#1b2a80", backgroundColor: "#f0f4ff" },
                       }}
-                    />
+                    >
+                      <CloudUploadIcon sx={{ fontSize: 48, color: "#1b2a80", mb: 1 }} />
+                      <Typography variant="body1" fontWeight="medium">
+                        {taxFile ? "Change File" : "Click to upload or drag Tax Clearance here"}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Supported formats: PDF, JPG, PNG
+                      </Typography>
+                      <input
+                        required
+                        name="documentTax"
+                        type="file"
+                        accept="application/pdf, image/*"
+                        onChange={handleFileTax}
+                        hidden
+                        id="documentTax"
+                      />
+                    </Box>
+                  </label>
+                  {renderFilePreview(taxFile)}
+                </Box>
 
-                    <Button variant="outlined" color="error" onClick={handleRemoveImageShopBg}>
-                      Remove Image
+                {/* Mayor's Permit */}
+                <Box mb={4}>
+                  <Typography fontWeight="bold" color="text.secondary" mb={1}>
+                    Mayor&apos;s Permit
+                  </Typography>
+                  <label htmlFor="documentPermit">
+                    <Box
+                      sx={{
+                        border: "2px dashed #ccc",
+                        borderRadius: 2,
+                        padding: 4,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        backgroundColor: "#f9fafb",
+                        transition: "all 0.2s",
+                        "&:hover": { borderColor: "#1b2a80", backgroundColor: "#f0f4ff" },
+                      }}
+                    >
+                      <CloudUploadIcon sx={{ fontSize: 48, color: "#1b2a80", mb: 1 }} />
+                      <Typography variant="body1" fontWeight="medium">
+                        {permitFile ? "Change File" : "Click to upload or drag Mayor's Permit here"}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Supported formats: PDF, JPG, PNG
+                      </Typography>
+                      <input
+                        required
+                        name="documentPermit"
+                        type="file"
+                        accept="application/pdf, image/*"
+                        onChange={handleFilePermit}
+                        hidden
+                        id="documentPermit"
+                      />
+                    </Box>
+                  </label>
+                  {renderFilePreview(permitFile)}
+                </Box>
+
+                {/* Action Buttons */}
+                <Box display="flex" justifyContent="space-between" mt={6}>
+                  <Button variant="outlined" onClick={handleBack} size="large" sx={{ px: 4 }}>
+                    Back
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleNextNext}
+                    size="large"
+                    sx={{ px: 4 }}
+                  >
+                    Next Step
+                  </Button>
+                </Box>
+              </div>
+            )}
+
+            {activeStep === 2 && (
+              <div className="max-w-3xl mx-auto w-full">
+                <Typography
+                  variant="h6"
+                  textAlign="center"
+                  fontWeight="bold"
+                  gutterBottom
+                  className="mb-8 text-gray-700"
+                >
+                  Customize Your Shop Appearance
+                </Typography>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                  {/* Shop Profile Image */}
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    gap={2}
+                    className="p-6 border rounded-xl bg-gray-50"
+                  >
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Shop Logo / Profile
+                    </Typography>
+
+                    <div className="relative w-40 h-40 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center border-4 border-white shadow-md">
+                      {previewProfile ? (
+                        <img
+                          src={previewProfile}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <StorefrontIcon sx={{ fontSize: 60, color: "gray" }} />
+                      )}
+                    </div>
+
+                    <Button variant="contained" component="label" size="small">
+                      Upload Logo
+                      <input
+                        type="file"
+                        name="imageProfile"
+                        accept="image/*"
+                        hidden
+                        onChange={handleImageChange}
+                      />
                     </Button>
+                    {isUploading && <CircularProgress size={24} />}
+                    {previewProfile && (
+                      <Button variant="text" color="error" size="small" onClick={handleRemoveImage}>
+                        Remove
+                      </Button>
+                    )}
                   </Box>
-                )}
-              </Box>
-            </div>
 
-            <div className="flex flex-row justify-center gap-2">
-              <Button variant="contained" onClick={handleBack}>
-                Back
-              </Button>
-              <Button variant="contained" color="primary" onClick={handleSubmit} disabled={loading}>
-                {loading ? "Registering..." : "Submit"}
-              </Button>
-            </div>
-          </div>
-        )}
+                  {/* Shop Background Image */}
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    gap={2}
+                    className="p-6 border rounded-xl bg-gray-50"
+                  >
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Shop Cover Photo
+                    </Typography>
 
-        {/* Add conditional rendering for other steps here
-        <div className="flex flex-row justify-end gap-2">
-          <Button disabled={activeStep === 0} variant="contained" onClick={handleBack}>
-            Back
-          </Button>
-          <Button variant="contained" color="primary" onClick={handleNext}>
-            {activeStep === steps.length - 1 ? "Submit" : "Next"}
-          </Button>
-        </div> */}
-      </form>
+                    <div className="relative w-full h-40 bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center border border-gray-300">
+                      {previewShopBg ? (
+                        <img
+                          src={previewShopBg}
+                          alt="Cover"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Typography variant="caption" color="textSecondary">
+                          No Cover Photo
+                        </Typography>
+                      )}
+                    </div>
+
+                    <Button variant="contained" component="label" size="small">
+                      Upload Cover
+                      <input
+                        type="file"
+                        name="imageBg"
+                        accept="image/*"
+                        hidden
+                        onChange={handleImageChangeShopBg}
+                      />
+                    </Button>
+                    {isUploading && <CircularProgress size={24} />}
+                    {previewShopBg && (
+                      <Button
+                        variant="text"
+                        color="error"
+                        size="small"
+                        onClick={handleRemoveImageShopBg}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </Box>
+                </div>
+
+                <div className="flex justify-between mt-8">
+                  <Button variant="outlined" onClick={handleBack} size="large" sx={{ px: 4 }}>
+                    Back
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    size="large"
+                    sx={{ px: 6, py: 1.5, borderRadius: 2 }}
+                  >
+                    {loading ? "Registering..." : "Submit Registration"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+      </Card>
     </div>
   )
 }

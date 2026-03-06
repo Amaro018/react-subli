@@ -1,9 +1,8 @@
 "use client"
 import React from "react"
-import { useMutation, useQuery } from "@blitzjs/rpc"
+import { useMutation } from "@blitzjs/rpc"
 import { Box, Button, Typography } from "@mui/material"
 import Image from "next/image"
-import Link from "next/link"
 import PendingIcon from "@mui/icons-material/Pending"
 import CancelIcon from "@mui/icons-material/Cancel"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
@@ -11,16 +10,14 @@ import updateShopDocument from "../../mutations/updateShopDocument"
 import uploadShopBg from "../../mutations/uploadShopBg"
 import CircularProgress from "@mui/material/CircularProgress"
 
-import { set } from "zod"
 export const ShopPendingRegistration = (props: any) => {
   const currentUser = props.currentUser
-  console.log("current user", currentUser)
 
   const [loading, setLoading] = React.useState(false)
   const [updateShopDocumentMutation] = useMutation(updateShopDocument)
   const [uploadDocument] = useMutation(uploadShopBg)
 
-  const refeshPage = () => {
+  const refreshPage = () => {
     window.location.reload()
   }
 
@@ -33,7 +30,7 @@ export const ShopPendingRegistration = (props: any) => {
       reader.onloadend = async () => {
         const base64String = reader.result as string
         try {
-          const fileUrl = await uploadDocument({
+          await uploadDocument({
             fileName: uniqueFileName,
             data: base64String,
             targetDirectory: "dti",
@@ -50,7 +47,7 @@ export const ShopPendingRegistration = (props: any) => {
           console.error("File upload or update failed:", error)
         }
 
-        refeshPage()
+        refreshPage()
         setLoading(false)
       }
 
@@ -67,7 +64,7 @@ export const ShopPendingRegistration = (props: any) => {
       reader.onloadend = async () => {
         const base64String = reader.result as string
         try {
-          const fileUrl = await uploadDocument({
+          await uploadDocument({
             fileName: uniqueFileName,
             data: base64String,
             targetDirectory: "permit",
@@ -84,7 +81,7 @@ export const ShopPendingRegistration = (props: any) => {
           console.error("File upload or update failed:", error)
         }
 
-        refeshPage()
+        refreshPage()
         setLoading(false)
       }
 
@@ -101,7 +98,7 @@ export const ShopPendingRegistration = (props: any) => {
       reader.onloadend = async () => {
         const base64String = reader.result as string
         try {
-          const fileUrl = await uploadDocument({
+          await uploadDocument({
             fileName: uniqueFileName,
             data: base64String,
             targetDirectory: "tax",
@@ -118,7 +115,7 @@ export const ShopPendingRegistration = (props: any) => {
           console.error("File upload or update failed:", error)
         }
 
-        refeshPage()
+        refreshPage()
         setLoading(false)
       }
 
@@ -133,7 +130,7 @@ export const ShopPendingRegistration = (props: any) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: "100vh",
+          minHeight: "50vh",
         }}
       >
         <CircularProgress size={100} />
@@ -142,59 +139,69 @@ export const ShopPendingRegistration = (props: any) => {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-between border-b border-slate-500 py-2">
-        <div className="flex flex-row gap-2">
-          <Image
-            src={`/uploads/shop-profile/${currentUser.shop.imageProfile}`}
-            alt="Shop Image"
-            width={100}
-            height={100}
-            className="rounded-lg"
-          />
-          <div className="flex flex-col capitalize justify-between">
-            <p className="font-bold text-2xl">{currentUser.shop.shopName}</p>
-            <p>{currentUser.shop.contact}</p>
-            <p>
-              {currentUser.shop.street}, {currentUser.shop.city}, {currentUser.shop.region},{" "}
-              {currentUser.shop.country}, {currentUser.shop.zipCode}
-            </p>
-            <p>{currentUser.shop.description}</p>
+    <div className="flex flex-col gap-6">
+      {/* Shop Header Info */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-200 pb-6 gap-4 bg-white rounded-lg p-6 shadow-sm">
+        <div className="flex flex-row gap-6 items-center">
+          <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
+            <Image
+              src={`/uploads/shop-profile/${currentUser.shop.imageProfile}`}
+              alt="Shop Image"
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div className="flex flex-col justify-center">
+            <h2 className="font-bold text-2xl text-gray-900 capitalize">
+              {currentUser.shop.shopName}
+            </h2>
+            <div className="text-sm text-gray-600 mt-1 space-y-1">
+              <p className="flex items-center gap-2">
+                <span className="font-medium">Contact:</span> {currentUser.shop.contact}
+              </p>
+              <p className="capitalize text-gray-500">
+                {currentUser.shop.street}, {currentUser.shop.city}, {currentUser.shop.province},{" "}
+                {currentUser.shop.country}, {currentUser.shop.zipCode}
+              </p>
+              {currentUser.shop.description && (
+                <p className="text-gray-500 italic mt-1">
+                  &quot;{currentUser.shop.description}&quot;
+                </p>
+              )}
+            </div>
           </div>
         </div>
-        <div>
-          <p className="p-2 text-white bg-red-500 rounded-lg">{currentUser.shop.status}</p>
+        <div className="self-start md:self-center">
+          <span
+            className={`px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-full shadow-sm ${
+              currentUser.shop.status === "approved"
+                ? "bg-green-100 text-green-800 border border-green-200"
+                : currentUser.shop.status === "rejected"
+                ? "bg-red-100 text-red-800 border border-red-200"
+                : "bg-yellow-100 text-yellow-800 border border-yellow-200"
+            }`}
+          >
+            {currentUser.shop.status}
+          </span>
         </div>
       </div>
 
-      <div>
-        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+      {/* Documents Table */}
+      <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm bg-white">
+        <table className="w-full text-sm text-left text-gray-500">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
             <tr>
-              <th scope="col" className="text-center py-3">
-                Document Name
-              </th>
-              <th scope="col" className="text-center py-3">
-                Document
-              </th>
-              <th scope="col" className="text-center py-3">
-                Status
-              </th>
-              <th scope="col" className="text-center py-3">
-                Note
-              </th>
-              <th scope="col" className="text-center py-3">
-                Action
-              </th>
+              <th className="px-6 py-3 font-semibold">Document Name</th>
+              <th className="px-6 py-3 font-semibold text-center">Document</th>
+              <th className="px-6 py-3 font-semibold text-center">Status</th>
+              <th className="px-6 py-3 font-semibold text-center">Note</th>
+              <th className="px-6 py-3 font-semibold text-center">Action</th>
             </tr>
           </thead>
-          <tbody>
-            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-              <th
-                scope="row"
-                className="text-center py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-              >
-                DTI
+          <tbody className="divide-y divide-gray-200">
+            <tr className="bg-white hover:bg-gray-50 transition-colors">
+              <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                DTI Certificate
               </th>
               <td className="text-center py-4">
                 <a
@@ -251,6 +258,7 @@ export const ShopPendingRegistration = (props: any) => {
                 />
                 <Button
                   variant="contained"
+                  size="small"
                   onClick={() => document.getElementById("documentDTI")?.click()}
                 >
                   update
@@ -258,12 +266,9 @@ export const ShopPendingRegistration = (props: any) => {
               </td>
             </tr>
 
-            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-              <th
-                scope="row"
-                className="text-center py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-              >
-                Mayors Permit
+            <tr className="bg-white hover:bg-gray-50 transition-colors">
+              <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                Mayor&apos;s Permit
               </th>
               <td className="text-center py-4">
                 <a
@@ -319,6 +324,7 @@ export const ShopPendingRegistration = (props: any) => {
                 />
                 <Button
                   variant="contained"
+                  size="small"
                   onClick={() => document.getElementById("documentPermit")?.click()}
                 >
                   update
@@ -326,11 +332,8 @@ export const ShopPendingRegistration = (props: any) => {
               </td>
             </tr>
 
-            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-              <th
-                scope="row"
-                className="text-center py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-              >
+            <tr className="bg-white hover:bg-gray-50 transition-colors">
+              <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                 Tax Clearance
               </th>
               <td className="text-center py-4">
@@ -387,6 +390,7 @@ export const ShopPendingRegistration = (props: any) => {
                 />
                 <Button
                   variant="contained"
+                  size="small"
                   onClick={() => document.getElementById("documentTax")?.click()}
                 >
                   update

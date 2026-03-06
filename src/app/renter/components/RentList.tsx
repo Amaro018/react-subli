@@ -1,67 +1,96 @@
 "use client"
 import React, { useState } from "react"
-import {
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  CircularProgress,
-  Alert,
-  Button,
-  Rating,
-  Modal,
-  Box,
-  TextField,
-  Checkbox,
-  FormControl,
-  MenuItem,
-  InputLabel,
-  Select,
-} from "@mui/material"
-import { useMutation, useQuery } from "@blitzjs/rpc"
+import { Typography, CircularProgress, Button, Box, Tabs, Tab, Badge } from "@mui/material"
+import { useQuery } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
-import { useParams } from "next/navigation"
-import { user } from "@nextui-org/theme"
 import Image from "next/image"
-import { p } from "vitest/dist/index-9f5bc072"
-import { set } from "zod"
-import addProductReview from "../../mutations/addProductReview"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 
-export const RentList: React.FC = (props: any) => {
+export const RentList = (props: any) => {
   const currentUser = props.currentUser
   const userId = currentUser.id
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const currentStatus = searchParams.get("status") || "all"
 
-  const [userRents, { refetch }] = useQuery(getAllRentOfUser, { id: userId })
-  const [addReview] = useMutation(addProductReview)
+  const [userRents] = useQuery(getAllRentOfUser, { id: userId })
 
-  const style = {
-    position: "absolute" as "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: 1000,
-    bgcolor: "background.paper",
-    border: "2px solid #000",
-    boxShadow: 24,
-    p: 4,
-    borderRadius: "10px",
-  }
-
-  const [review, setReview] = React.useState(0)
-  const [openReview, setOpenReview] = React.useState(false)
-
-  const [selectedItem, setSelectedItem] = React.useState<number | null>(null)
-  const [comment, setComment] = useState("")
-  const [anonymous, setAnonymous] = useState(false)
-
-  //this is for filtering and sorting data
-  const [filterStatus, setFilterStatus] = useState("all") // Filter status
   const [currentPage, setCurrentPage] = useState(1) // Current page
   const itemsPerPage = 3
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (newValue === "all") {
+      params.delete("status")
+    } else {
+      params.set("status", newValue)
+    }
+    router.replace(`${pathname}?${params.toString()}` as any)
+    setCurrentPage(1) // Reset to first page on tab change
+  }
+
+  const toPayCount = userRents.filter((rent) => {
+    return rent.items.some((item) => {
+      if (item.status === "completed") return false
+      const totalPayment = item.payments.reduce((total, payment) => total + payment.amount, 0)
+      const startDate = new Date(item.startDate)
+      const endDate = new Date(item.endDate)
+      const today = new Date()
+      const duration =
+        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      const rentalCost = item.productVariant.price * duration * item.quantity
+      const lapseInDays =
+        today > endDate
+          ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+          : 0
+      const penalty = item.price * lapseInDays * item.quantity
+      return totalPayment < rentalCost + penalty
+    })
+  }).length
+
+  const toDeliverCount = userRents.filter((rent) => {
+    return rent.items.some((item) => item.deliveryMethod === "deliver")
+  }).length
+
+  const toPickupCount = userRents.filter((rent) => {
+    return rent.items.some((item) => item.deliveryMethod === "pickup")
+  }).length
+
   // Filter rents by status
   const filteredRents =
-    filterStatus === "all" ? userRents : userRents.filter((rent) => rent.status === filterStatus)
+    currentStatus === "all"
+      ? userRents
+      : userRents.filter((rent) => {
+          // Map URL status to DB status if needed
+          if (currentStatus === "completed") return rent.status === "completed"
+          if (currentStatus === "to-pay") {
+            return rent.items.some((item) => {
+              if (item.status === "completed") return false
+              const totalPayment = item.payments.reduce(
+                (total, payment) => total + payment.amount,
+                0
+              )
+              const startDate = new Date(item.startDate)
+              const endDate = new Date(item.endDate)
+              const today = new Date()
+              const duration =
+                Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+              const rentalCost = item.productVariant.price * duration * item.quantity
+              const lapseInDays =
+                today > endDate
+                  ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+                  : 0
+              const penalty = item.price * lapseInDays * item.quantity
+              return totalPayment < rentalCost + penalty
+            })
+          }
+          if (currentStatus === "to-deliver")
+            return rent.items.some((item) => item.deliveryMethod === "deliver")
+          if (currentStatus === "to-pickup")
+            return rent.items.some((item) => item.deliveryMethod === "pickup")
+          return rent.status === currentStatus
+        })
 
   // Paginate rents
   const totalPages = Math.ceil(filteredRents.length / itemsPerPage)
@@ -70,72 +99,66 @@ export const RentList: React.FC = (props: any) => {
     currentPage * itemsPerPage
   )
 
-  const handleCloseReview = () => {
-    setOpenReview(false)
-    setReview(0)
-  }
-  const handleReviewChange = (event, rating: number, item: any) => {
-    setReview(rating)
-    setOpenReview(true)
-
-    // console.log("Selected Item ID:", item);
-    // console.log("Rating for the item:", rating);
-
-    // Save the itemId in state to track which item is being reviewed
-    setSelectedItem(item)
-  }
-
-  // State to track the currently selected item's ID
-  // console.log("Selected Item:", selectedItem);
-
-  const handleReviewSubmit = async () => {
-    const variantId = selectedItem?.productVariant?.id
-    const productId = selectedItem?.productVariant?.product?.id
-    console.log("variant ID:", variantId)
-    console.log("productId", productId)
-
-    if (selectedItem !== null && review !== 0) {
-      try {
-        const newReview = await addReview({
-          productId: productId,
-          rentItemId: selectedItem?.id,
-          rating: review,
-          userId: currentUser.id,
-          anonymous: anonymous,
-          comment: comment,
-        })
-        console.log("Review submitted successfully:", review)
-        setOpenReview(false)
-        alert("Review submitted successfully!")
-      } catch (error) {
-        console.error("Error submitting review:", error)
-      }
-    }
-  }
-
   if (!userRents) {
     return <CircularProgress />
   }
-  // console.log(userRents)
+
+  const getEmptyMessage = () => {
+    switch (currentStatus) {
+      case "completed":
+        return "No completed rentals found"
+      case "to-pay":
+        return "No unpaid rentals found"
+      case "to-deliver":
+        return "No rentals to be delivered found"
+      case "to-pickup":
+        return "No rentals to pickup found"
+      default:
+        return "No rentals found"
+    }
+  }
 
   return (
     <div className="w-full">
-      {/* Filter Dropdown */}
-      <FormControl fullWidth margin="normal">
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          label="Status"
+      {/* Filter Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+        <Tabs
+          value={currentStatus}
+          onChange={handleTabChange}
+          aria-label="rent status tabs"
+          variant="fullWidth"
         >
-          <MenuItem value="all">All</MenuItem>
-          <MenuItem value="Pending">Pending</MenuItem>
-          <MenuItem value="completed">Completed</MenuItem>
-        </Select>
-      </FormControl>
+          <Tab label="All Rentals" value="all" />
+          <Tab
+            label={
+              <Badge badgeContent={toPayCount} color="error">
+                To Pay
+              </Badge>
+            }
+            value="to-pay"
+          />
+          <Tab
+            label={
+              <Badge badgeContent={toDeliverCount} color="error">
+                To Deliver
+              </Badge>
+            }
+            value="to-deliver"
+          />
+          <Tab
+            label={
+              <Badge badgeContent={toPickupCount} color="error">
+                To Pickup
+              </Badge>
+            }
+            value="to-pickup"
+          />
+          <Tab label="Completed" value="completed" />
+        </Tabs>
+      </Box>
 
       {/* Rent List */}
-      {paginatedRents.length === 0 && <p className="text-center">No rents</p>}
+      {paginatedRents.length === 0 && <p className="text-center">{getEmptyMessage()}</p>}
       {paginatedRents.map((rent) => (
         <div
           className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-2 w-full"
@@ -157,7 +180,7 @@ export const RentList: React.FC = (props: any) => {
               // Check if today is past the end date
               const lapseInDays =
                 item.status !== "completed" && today > endDate
-                  ? Math.ceil((today - endDate) / (1000 * 60 * 60 * 24)) // Days overdue
+                  ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24)) // Days overdue
                   : 0 // No penalty if today is before or on the end date OR status is "completed"
 
               const penalty = item.price * lapseInDays * item.quantity
@@ -263,92 +286,12 @@ export const RentList: React.FC = (props: any) => {
                       </p>
                     )}
                   </div>
-
-                  {item.isReviewed ? (
-                    <div className="flex flex-col justify-between h-full ml-4 border-l border-gray-200">
-                      <div className="ml-2">
-                        <p>Review</p>
-                        <Rating
-                          name="review"
-                          value={item.reviews[0]?.rating}
-                          precision={0.25}
-                          readOnly
-                        />
-                        <p>{item.reviews[0]?.rating}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    item.status === "completed" && (
-                      <div className="flex flex-col justify-between h-full ml-4 border-l border-gray-200">
-                        <div className="ml-2">
-                          <p>Review</p>
-                          <Rating
-                            name="review"
-                            precision={0.25}
-                            onChange={(event, newValue) =>
-                              handleReviewChange(event, newValue, item)
-                            }
-                          />
-                        </div>
-                      </div>
-                    )
-                  )}
                 </div>
               )
             })}
           </div>
         </div>
       ))}
-
-      <Modal open={openReview} onClose={handleCloseReview}>
-        <Box sx={style}>
-          <div className="flex flex-row justify-between items-center">
-            <Typography id="modal-modal-title" variant="h6" component="h2">
-              Review for Item ID: {selectedItem?.id}
-            </Typography>
-
-            <div className="flex flex-row gap-2 items-center">
-              <Typography id="modal-modal-description">
-                <Rating
-                  name="rating"
-                  value={review}
-                  onChange={(event, newNewValue) => setReview(newNewValue)}
-                  precision={0.25}
-                />
-              </Typography>
-              <p className="text-slate-600 font-bold text-lg">{review}</p>
-            </div>
-          </div>
-
-          <Typography id="modal-modal-description" sx={{ mt: 2 }}>
-            <TextField
-              id="outlined-multiline-static"
-              label="Review"
-              name="comment"
-              multiline
-              rows={4}
-              fullWidth
-              value={comment} // Use the state here
-              onChange={(e) => setComment(e.target.value)} // Update the state on change
-            />
-          </Typography>
-
-          <div className="flex flex-row gap-2 items-center">
-            <Checkbox
-              id="anonymous"
-              name="anonymous"
-              checked={anonymous}
-              onChange={(e) => setAnonymous(e.target.checked)}
-            />
-            <label htmlFor="anonymous">Rate as an Anonymous</label>
-          </div>
-
-          <div className="flex flex-row justify-end gap-2">
-            <Button onClick={handleReviewSubmit}>Submit Review</Button>
-            <Button onClick={handleCloseReview}>Close</Button>
-          </div>
-        </Box>
-      </Modal>
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
@@ -367,8 +310,6 @@ export const RentList: React.FC = (props: any) => {
           </Button>
         </div>
       )}
-
-      {/* <button onClick={() => console.log(currentUser)}>click me</button> */}
     </div>
   )
 }

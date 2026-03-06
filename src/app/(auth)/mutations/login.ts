@@ -8,9 +8,20 @@ import { Role } from "types"
 export const authenticateUser = async (rawEmail: string, rawPassword: string) => {
   const { email, password } = Login.parse({ email: rawEmail, password: rawPassword })
   const user = await db.user.findFirst({ where: { email } })
-  if (!user) throw new AuthenticationError()
+  if (!user) throw new AuthenticationError("EMAIL_NOT_FOUND")
 
-  const result = await SecurePassword.verify(user.hashedPassword, password)
+  let result
+  try {
+    result = await SecurePassword.verify(user.hashedPassword, password)
+  } catch (err) {
+    // If verify throws (corrupt hash or other internal issue), treat as invalid credentials
+    throw new AuthenticationError("INVALID_PASSWORD")
+  }
+
+  // Explicitly check INVALID constant first
+  if (result === SecurePassword.INVALID) {
+    throw new AuthenticationError("INVALID_PASSWORD")
+  }
 
   if (result === SecurePassword.VALID_NEEDS_REHASH) {
     // Upgrade hashed password with a more secure hash

@@ -15,6 +15,7 @@ export default async function signup(
     birthDate: Date
     phoneNumber?: string
     street: string
+    barangay: string
     city: string
     region: string
     country: string
@@ -42,6 +43,7 @@ export default async function signup(
             birthDate: input.birthDate,
             phoneNumber: input.phoneNumber,
             street: input.street,
+            barangay: input.barangay,
             city: input.city,
             region: input.region,
             country: input.country,

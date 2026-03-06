@@ -21,11 +21,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main className="h-[100vh]">{children}</main>
           </>
         </BlitzProvider>
-        {/* <div className="w-full relative">
-          <div className="absolute bottom-0 w-full">
-            <Footer />
-          </div>
-        </div> */}
       </body>
     </html>
   )

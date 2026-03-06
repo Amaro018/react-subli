@@ -1166,7 +1166,7 @@ export const OrderList: any = () => {
       {/* reason */}
       <Dialog open={cancelOpen} onClose={cancelClose} fullWidth>
         <DialogTitle>Cancel Rental</DialogTitle>
-        <DialogContent>
+        <DialogContent className="scrollbar-seamless">
           <RadioGroup value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)}>
             {reasons.map((reason, index) => (
               <FormControlLabel key={index} value={reason} control={<Radio />} label={reason} />
@@ -1206,7 +1206,7 @@ export const OrderList: any = () => {
         maxWidth="md"
       >
         <DialogTitle>Returned Items</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers className="scrollbar-seamless">
           <Table>
             <TableHead>
               <TableRow>
@@ -1368,7 +1368,7 @@ export const OrderList: any = () => {
                     </Button>
                   </div>
                 </DialogTitle>
-                <DialogContent>
+                <DialogContent className="scrollbar-seamless">
                   <div className="mt-4">
                     <h4 className="mb-2 font-semibold">Returned in Good Condition</h4>
                     <div className="flex items-center gap-4 mb-2">
@@ -1710,7 +1710,7 @@ export const OrderList: any = () => {
             return (
               <>
                 <DialogTitle>Rental Payment</DialogTitle>
-                <DialogContent dividers>
+                <DialogContent dividers className="scrollbar-seamless">
                   {/* Payment Summary */}
                   <Typography variant="h6" gutterBottom>
                     Payment Summary
@@ -1865,7 +1865,7 @@ export const OrderList: any = () => {
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
         {/* <Dialog open={openComplete} onClose={handleCloseComplete} fullWidth maxWidth="sm"> */}
         <DialogTitle>Return Item</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers className="scrollbar-seamless">
           <TextField
             select
             label="Return Condition"
@@ -1913,7 +1913,7 @@ export const OrderList: any = () => {
       // maxWidth="sm"
       >
         <DialogTitle>Return Items</DialogTitle>
-        <DialogContent>
+        <DialogContent className="scrollbar-seamless">
           {/* Quantity */}
           <TextField
             fullWidth

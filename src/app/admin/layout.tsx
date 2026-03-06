@@ -1,15 +1,14 @@
-import React from "react"
-import { useAuthenticatedBlitzContext } from "../blitz-server"
-
-export const metadata = {
-  title: "Admin",
-}
+import { invoke } from "../blitz-server"
+import getCurrentUser from "../users/queries/getCurrentUser"
+import AdminLayoutClient from "./components/AdminLayoutClient"
+import { redirect } from "next/navigation"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await useAuthenticatedBlitzContext({
-    redirectTo: "/login",
-    role: ["ADMIN"],
-    redirectAuthenticatedTo: "/",
-  })
-  return <>{children}</>
+  const currentUser = await invoke(getCurrentUser, null)
+
+  if (!currentUser || currentUser.role !== "ADMIN") {
+    redirect("/")
+  }
+
+  return <AdminLayoutClient currentUser={currentUser}>{children}</AdminLayoutClient>
 }

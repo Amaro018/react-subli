@@ -1,3 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* src/app/styles/globals.css */
+
+@layer utilities {
+  /* Custom thin scrollbar */
+  .scrollbar-seamless::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .scrollbar-seamless::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-seamless::-webkit-scrollbar-thumb {
+    background: #e5e7eb; /* gray-200 */
+    border-radius: 10px;
+  }
+
+  .scrollbar-seamless::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db; /* gray-300 */
+  }
+  .scrollbar-seamless::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db; /* gray-300 */
+  }
+  .scrollbar-sidebar::-webkit-scrollbar {
+    width: 5px;
+  }
+  .scrollbar-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+  }
+  .scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+  .\[--picker-height\:224px\] {
+    --picker-height: 224px;
+  }
+}

@@ -1,6 +1,8 @@
-import { forwardRef, PropsWithoutRef } from "react"
-import { useField, useFormikContext, ErrorMessage } from "formik"
-import { TextField } from "@mui/material"
+import { forwardRef, PropsWithoutRef, useState } from "react"
+import { useField, useFormikContext } from "formik"
+import { TextField, InputAdornment, IconButton } from "@mui/material"
+import Visibility from "@mui/icons-material/Visibility"
+import VisibilityOff from "@mui/icons-material/VisibilityOff"
 
 export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElements["input"]> {
   /** Field name. */
@@ -14,22 +16,42 @@ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElem
 
 export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldProps>(
   ({ name, label, outerProps, type = "text", ...props }, ref) => {
-    const [field, meta] = useField(name) // `useField` returns field and meta info
+    const [field, meta] = useField(name)
     const { isSubmitting } = useFormikContext()
+    const [showPassword, setShowPassword] = useState(false)
+
+    const isPassword = type === "password"
+    const inputType = isPassword ? (showPassword ? "text" : "password") : type
+
+    const passwordAdornment = isPassword ? (
+      <InputAdornment position="end">
+        <IconButton
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          onClick={() => setShowPassword((s) => !s)}
+          edge="end"
+          size="large"
+        >
+          {showPassword ? <VisibilityOff /> : <Visibility />}
+        </IconButton>
+      </InputAdornment>
+    ) : null
 
     return (
       <div {...outerProps}>
         <TextField
-          {...field} // Handles `name`, `value`, `onChange`, and `onBlur`
+          {...field}
           label={label}
-          type={type}
+          type={inputType}
           disabled={isSubmitting}
-          error={Boolean(meta.touched && meta.error)} // Highlight field in red if there's an error
-          helperText={meta.touched && meta.error ? meta.error : " "} // Display error message below
+          error={Boolean(meta.touched && meta.error)}
+          helperText={meta.touched && meta.error ? meta.error : " "}
           fullWidth
           variant="outlined"
           inputRef={ref}
-          {...props} // Spread additional props (like `placeholder`)
+          InputProps={{
+            endAdornment: passwordAdornment,
+          }}
+          {...(props as any)}
         />
       </div>
     )

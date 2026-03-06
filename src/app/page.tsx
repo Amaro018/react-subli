@@ -1,8 +1,10 @@
-import { invoke } from "./blitz-server"
+﻿import { invoke } from "./blitz-server"
 
 import getCurrentUser from "./users/queries/getCurrentUser"
 import Navbar from "./components/Navbar"
 import getUser from "@/src/app/utils/getUser"
+import HeroSection from "./components/pages/HeroSection"
+import CategorySection from "./components/pages/CategorySection"
 
 import ProductList from "./components/ProductList"
 import { Drawer } from "@mui/material"
@@ -16,12 +18,9 @@ export default async function Home() {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col">
+      <div className="flex min-h-screen flex-col">
         <Navbar currentUser={currentUser} />
-        {/* <div className="h-full"> */}
-        <main className="flex-grow">
-          <ProductList />
-        </main>
+        <CategorySection />
         <Footer />
       </div>
     </>

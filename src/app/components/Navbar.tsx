@@ -1,116 +1,379 @@
-"use client"
-import React, { useState } from "react"
+﻿"use client"
+import React, { useEffect, useRef, useState } from "react"
 import { LogoutButton } from "../(auth)/components/LogoutButton"
+import AccountCircle from "@mui/icons-material/AccountCircle"
+import ExpandMore from "@mui/icons-material/ExpandMore"
+import Link from "next/link"
+import PersonIcon from "@mui/icons-material/Person"
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag"
-import getAllCartItem from "../queries/getAllCartItem"
+import StarIcon from "@mui/icons-material/Star"
+import StoreIcon from "@mui/icons-material/Store"
+import Drawer from "@mui/material/Drawer"
+import Badge from "@mui/material/Badge"
 import { useQuery } from "@blitzjs/rpc"
+import getAllCartItem from "../queries/getAllCartItem"
+import ExitToAppIcon from "@mui/icons-material/ExitToApp"
 import DrawerCart from "./DrawerCart"
-import { Drawer } from "@mui/material"
-const Navbar = ({ currentUser }: any) => {
-  //  const currentUser = props.currentUser
-  //  const {toggleDrawer} = props
-  const [isOpen, setIsOpen] = useState(false)
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [cartItems] = useQuery(getAllCartItem, null)
 
-  const toggleMenu = () => {
-    setIsOpen(!isOpen)
-  }
+type NavbarProps = {
+  currentUser?: any
+}
 
-  const toggleDrawer = () => {
-    setIsDrawerOpen(!isDrawerOpen)
+export default function Navbar({ currentUser }: NavbarProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [userOpen, setUserOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [cartOpen, setCartOpen] = useState(false)
+  const accountRef = useRef<HTMLDivElement | null>(null)
+  const [cartItems] = useQuery(getAllCartItem, null, { enabled: !!currentUser, suspense: false })
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false)
+      }
+    }
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAccountOpen(false)
+    }
+    document.addEventListener("click", onDocClick)
+    document.addEventListener("keydown", onEsc)
+    return () => {
+      document.removeEventListener("click", onDocClick)
+      document.removeEventListener("keydown", onEsc)
+    }
+  }, [])
+
+  const navLinks = [
+    { name: "Home", href: "/" },
+    { name: "Products", href: "/product" },
+    { name: "Shops", href: "/shop" },
+    { name: "About", href: "/about" },
+    { name: "Contact", href: "/contact" },
+  ]
+
+  // Shop state detection: adjust to your actual user shape if different
+  const firstName =
+    currentUser?.personalInfo?.firstName ||
+    (typeof currentUser?.name === "string" ? currentUser.name.split(" ")[0] : "User")
+
+  let shopHref = "/renter/shop-register"
+  let shopLabel = "Create a Shop"
+
+  if (currentUser?.isShopRegistered) {
+    if (currentUser.shop?.status === "pending") {
+      shopHref = "/renter/shop-register/pending"
+      shopLabel = "Shop Pending"
+    } else {
+      shopHref = currentUser?.shop?.slug ? `/shop/${currentUser.shop.slug}` : "/shop"
+      shopLabel = "Switch to Shop"
+    }
   }
 
   return (
-    <>
-      <nav className="bg-gray-800 text-white fixed top-0 z-10 w-full shadow px-24">
-        <div className="flex justify-between items-center px-16 py-4">
-          <h1 className="text-2xl font-bold">Subli .</h1>
-          {/* Hamburger Menu Button */}
+    <header className="w-full bg-[#1b2a80] text-white shadow-md">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+        {/* Left: Logo + (mobile) menu icon */}
+        <div className="flex items-center gap-2 lg:gap-4">
           <button
-            className="sm:hidden md:hidden block text-2xl focus:outline-none"
-            onClick={toggleMenu}
+            aria-label="Open menu"
+            onClick={() => setMenuOpen(true)}
+            className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
           >
-            {isOpen ? "✖" : "☰"}
+            {/* Hamburger */}
+            <svg
+              className="h-6 w-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
           </button>
-          {/* Navbar Links */}
-          <ul
-            className={`sm:flex flex-col sm:flex-row sm:static absolute top-full right-0 w-full sm:w-auto bg-gray-800 sm:bg-transparent transition-transform transform duration-300 ease-in-out ${
-              isOpen ? "translate-y-0" : "hidden"
-            }`}
-          >
-            <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-              <a href="/">Home</a>
-            </li>
-            {/* <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-              <a href="#about">About</a>
-            </li>
-            <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-              <a href="#services">Products</a>
-            </li>
-            <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-           
-            <a href="#contact">Contact</a>
-            </li>*/}
 
-            {currentUser ? (
+          <Link href="/" className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 font-bold text-white">
+              S
+            </span>
+            <span className="text-lg font-semibold">Subli</span>
+          </Link>
+        </div>
+
+        {/* Center: desktop nav links */}
+        <nav className="hidden gap-8 font-semibold lg:flex">
+          {navLinks.map((l) => (
+            <Link key={l.name} href={l.href as any} className="hover:opacity-90">
+              {l.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Right: auth actions (desktop) and user icon (mobile) */}
+        <div className="flex items-center gap-2 lg:gap-4">
+          <div className="hidden items-center gap-4 font-semibold lg:flex">
+            {!currentUser ? (
               <>
-                {currentUser.role === "ADMIN" ? (
-                  <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                    <a href="/admin">Admin Dashboard</a>{" "}
-                  </li>
-                ) : currentUser.role === "USER" ? (
-                  <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                    <a href="/renter">Orders</a>
-                  </li>
-                ) : currentUser.role === "SHOP" ? (
-                  <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                    <a href="/shop">Shop</a>
-                  </li>
-                ) : (
-                  <a href="/">Home</a>
-                )}
-
-                <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                  <LogoutButton />
-                </li>
+                <Link href="/login" className="text-yellow-300 hover:text-yellow-400">
+                  Login
+                </Link>
+                <Link href="/signup" className="text-yellow-300 hover:text-yellow-400">
+                  Register
+                </Link>
               </>
             ) : (
               <>
-                <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                  <a href="/login">Login</a>
-                </li>
-                <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                  <a href="/signup">Register</a>
-                </li>
-              </>
-            )}
-            {currentUser?.emailVerified ? (
-              <li className="px-4 py-2 hover:bg-gray-700 sm:hover:bg-transparent">
-                <div>
-                  {!currentUser ? null : (
-                    <div className="relative">
-                      <button onClick={toggleDrawer}>
-                        <ShoppingBagIcon />
-                      </button>
-                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                        {cartItems?.length || 0}
-                      </span>
+                {/* Desktop account dropdown (no logout inside) */}
+                <div ref={accountRef} className="relative">
+                  <button
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={accountOpen}
+                    onClick={() => setAccountOpen((s) => !s)}
+                    className="inline-flex items-center gap-2 hover:opacity-90 focus:outline-none"
+                  >
+                    <span className="hidden sm:inline">Hi {firstName}</span>
+                    <ExpandMore fontSize="small" />
+                  </button>
+
+                  {accountOpen && (
+                    <div className="absolute right-0 z-50 mt-2 w-48 rounded-md bg-white text-gray-800 shadow-lg">
+                      <div className="flex flex-col">
+                        <Link
+                          href="/renter/renter-profile"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <PersonIcon className="mr-3 text-gray-500" fontSize="small" />
+                          My Profile
+                        </Link>
+
+                        <Link
+                          href="/renter/orders"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <ShoppingBagIcon className="mr-3 text-gray-500" fontSize="small" />
+                          My Rental Orders
+                        </Link>
+
+                        <Link
+                          href="/renter/reviews"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <StarIcon className="mr-3 text-gray-500" fontSize="small" />
+                          My Reviews
+                        </Link>
+
+                        <Link
+                          href={shopHref as any}
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <StoreIcon className="mr-3 text-gray-500" fontSize="small" />
+                          {shopLabel}
+                        </Link>
+
+                        <div className="flex items-center px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer">
+                          <ExitToAppIcon className="mr-3 text-gray-500" fontSize="small" />
+                          <LogoutButton className="w-full text-left" />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
-              </li>
-            ) : (
-              ""
+
+                {/* Desktop Cart Icon */}
+                <button onClick={() => setCartOpen(true)} className="hover:opacity-90">
+                  <Badge badgeContent={cartItems?.length || 0} color="error">
+                    <ShoppingBagIcon />
+                  </Badge>
+                </button>
+              </>
             )}
-          </ul>
+          </div>
+
+          <button
+            aria-label="Open account menu"
+            onClick={() => setUserOpen(true)}
+            className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
+          >
+            {/* Mobile account icon */}
+            <AccountCircle style={{ fontSize: 24 }} className="text-white" />
+          </button>
+
+          {/* Mobile Cart Icon */}
+          {currentUser && (
+            <button
+              onClick={() => setCartOpen(true)}
+              className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
+            >
+              <Badge badgeContent={cartItems?.length || 0} color="error">
+                <ShoppingBagIcon />
+              </Badge>
+            </button>
+          )}
         </div>
-      </nav>
-      <Drawer anchor="right" open={isDrawerOpen} onClose={toggleDrawer}>
+      </div>
+
+      {/* Mobile: Menu Drawer (left) */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 flex">
+          <div
+            className="fixed inset-0 bg-black/40"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <aside className="relative w-64 bg-white p-6 text-gray-800 shadow-lg flex flex-col h-full">
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-xl font-bold text-[#1b2a80]">Menu</span>
+              <button
+                aria-label="Close menu"
+                onClick={() => setMenuOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg
+                  className="h-6 w-6 text-gray-500"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex flex-col gap-2">
+              {navLinks.map((l) => (
+                <Link
+                  key={l.name}
+                  href={l.href as any}
+                  className="rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {l.name}
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
+
+      {/* Mobile: User Drawer (right) - copied dropdown items here */}
+      {userOpen && (
+        <div className="fixed inset-0 z-40 flex justify-end">
+          <div
+            className="fixed inset-0 bg-black/40"
+            onClick={() => setUserOpen(false)}
+            aria-hidden="true"
+          />
+          <aside className="relative w-64 bg-white p-6 text-gray-800 shadow-lg flex flex-col h-full">
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-xl font-bold text-[#1b2a80]">Account</span>
+              <button
+                aria-label="Close account"
+                onClick={() => setUserOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg
+                  className="h-6 w-6 text-gray-500"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {!currentUser ? (
+                <>
+                  <Link
+                    href="/login"
+                    className="rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    onClick={() => setUserOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    onClick={() => setUserOpen(false)}
+                  >
+                    Register
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/renter/renter-profile"
+                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    onClick={() => setUserOpen(false)}
+                  >
+                    <PersonIcon className="mr-3 text-gray-500" fontSize="small" />
+                    My Profile
+                  </Link>
+
+                  <Link
+                    href="/renter/orders"
+                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    onClick={() => setUserOpen(false)}
+                  >
+                    <ShoppingBagIcon className="mr-3 text-gray-500" fontSize="small" />
+                    My Rental Orders
+                  </Link>
+
+                  <Link
+                    href="/renter/reviews"
+                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    onClick={() => setUserOpen(false)}
+                  >
+                    <StarIcon className="mr-3 text-gray-500" fontSize="small" />
+                    My Reviews
+                  </Link>
+
+                  <Link
+                    href={shopHref as any}
+                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    onClick={() => setUserOpen(false)}
+                  >
+                    <StoreIcon className="mr-3 text-gray-500" fontSize="small" />
+                    {shopLabel}
+                  </Link>
+
+                  <div
+                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors cursor-pointer"
+                    onClick={() => setUserOpen(false)}
+                  >
+                    <ExitToAppIcon className="mr-3 text-gray-500" fontSize="small" />
+                    <LogoutButton className="w-full text-left" />
+                  </div>
+                </>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <Drawer anchor="right" open={cartOpen} onClose={() => setCartOpen(false)}>
         <DrawerCart />
       </Drawer>
-    </>
+    </header>
   )
 }
-
-export default Navbar

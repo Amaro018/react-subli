@@ -2,7 +2,7 @@ import { z } from "zod"
 
 export const email = z
   .string()
-  .email()
+  .email("Invalid email address")
   .transform((str) => str.toLowerCase().trim())
 
 export const password = z
@@ -19,27 +19,29 @@ export const password = z
 export const Signup = z.object({
   email,
   password,
-  firstName: z.string(),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   middleName: z.string().optional(),
-  lastName: z.string(),
-  birthDate: z.string(),
-  phoneNumber: z.string().optional(),
-  street: z.string(),
-  city: z.string(),
-  region: z.string(),
-  country: z.string(),
-  zipCode: z.string(),
+  phoneNumber: z.string().min(11, "Phone number must be at least 11 digits"),
+  birthDate: z.string().min(1, "Birth date is required"),
+  street: z.string().min(1, "Street is required"),
+  barangay: z.string().min(1, "Barangay is required"),
+  city: z.string().min(1, "City is required"),
+  zipCode: z.string().min(4, "Zipcode must be at least 4 digits"),
+  province: z.string().default("Albay"),
+  country: z.string().default("Philippines"),
 })
 
 export const UserInfo = z.object({
   firstName: z.string(),
   middleName: z.string().optional(),
   lastName: z.string(),
-  birthDate: z.string(),
+  birthDate: z.string().or(z.date()),
   phoneNumber: z.string().optional(),
   street: z.string(),
+  barangay: z.string(),
   city: z.string(),
-  region: z.string(),
+  province: z.string(),
   country: z.string(),
   zipCode: z.string(),
 })

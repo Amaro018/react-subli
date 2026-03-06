@@ -20,7 +20,7 @@ export default function CheckOutDrawer() {
           },
         }}
         role="presentation"
-        className="bg-slate-600"
+        className="bg-slate-600 overflow-y-auto scrollbar-seamless"
       >
         <div className="p-12 text-white">
           {cartItems && cartItems.length > 0 ? (
@@ -45,18 +45,20 @@ export default function CheckOutDrawer() {
                   <p>{item.product.name}</p>
                   <p>{item.quantity}</p>
                   <p>
-                    {new Intl.DateTimeFormat("en-US", {
-                      month: "long",
-                      day: "2-digit",
-                      year: "numeric",
-                    }).format(new Date(item.startDate))}
+                    {item.startDate &&
+                      new Intl.DateTimeFormat("en-US", {
+                        month: "long",
+                        day: "2-digit",
+                        year: "numeric",
+                      }).format(new Date(item.startDate))}
                   </p>
                   <p>
-                    {new Intl.DateTimeFormat("en-US", {
-                      month: "long",
-                      day: "2-digit",
-                      year: "numeric",
-                    }).format(new Date(item.endDate))}
+                    {item.endDate &&
+                      new Intl.DateTimeFormat("en-US", {
+                        month: "long",
+                        day: "2-digit",
+                        year: "numeric",
+                      }).format(new Date(item.endDate))}
                   </p>
                   <p>{item.variant.size}</p>
                   <p>{item.variant.color.name}</p>

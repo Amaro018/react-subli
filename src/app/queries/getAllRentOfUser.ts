@@ -1,8 +1,11 @@
-import { Ctx, resolver } from "@blitzjs/rpc"
+import { resolver } from "@blitzjs/rpc"
+import { Ctx } from "blitz"
 import db from "db"
 
 export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
   const userId = ctx.session.userId
+
+  if (!userId) throw new Error("Not authenticated")
 
   const userRents = await db.rent.findMany({
     where: {

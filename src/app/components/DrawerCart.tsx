@@ -1,13 +1,12 @@
 "use client"
 import Image from "next/image"
 import React, { useEffect, useState } from "react"
-import { Box, Button, Drawer, Modal, TextField } from "@mui/material"
+import { Box, Button, TextField } from "@mui/material"
 import getAllCartItem from "../queries/getAllCartItem"
-import { invoke, useMutation, useQuery } from "@blitzjs/rpc"
+import { useMutation, useQuery } from "@blitzjs/rpc"
 import updateCartByVariantId from "../mutations/updateCartByVariantId"
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
 import deleteCartItemById from "../mutations/deleteCartItemById"
-import CheckoutForm from "./CheckOutForm"
 
 //for radio buttons
 import Radio from "@mui/material/Radio"
@@ -19,49 +18,34 @@ import getCurrentUser from "../users/queries/getCurrentUser"
 
 //the mutation for creating rent
 import createRent from "../mutations/createRent"
-import { select } from "@nextui-org/theme"
 import { toast } from "sonner"
-
-const style = {
-  position: "absolute" as "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 1000,
-  bgcolor: "background.paper",
-  border: "2px solid #000",
-  boxShadow: 24,
-  p: 4,
-  borderRadius: "10px",
-}
 
 export default function DrawerCart(props: any) {
   const [loading, setLoading] = useState(false)
 
   const [createRentMutation] = useMutation(createRent)
-  const [currentUser] = useQuery(getCurrentUser, {})
+  const [currentUser] = useQuery(getCurrentUser, null)
   const [deleteItem] = useMutation(deleteCartItemById)
-  const [cartItems, { refetch }] = useQuery(getAllCartItem, {})
+  const [cartItems, { refetch }] = useQuery(getAllCartItem, null)
   const [updateCartItem] = useMutation(updateCartByVariantId)
-  const [open, setOpen] = useState(false)
-  const [checkOutItems, setCheckOutItems] = useState([])
+  const [checkOutItems, setCheckOutItems] = useState<number[]>([])
 
   const [selectedDelivery, setSelectedDelivery] = React.useState("")
-  const [deliveryMethods, setDeliveryMethods] = useState({})
+  const [deliveryMethods, setDeliveryMethods] = useState<Record<number, string>>({})
 
   useEffect(() => {
-    if (cartItems?.length > 0) {
-      const initialMethods = cartItems.reduce((acc, item) => {
+    if (cartItems && cartItems.length > 0) {
+      const initialMethods = cartItems.reduce((acc: Record<number, string>, item) => {
         acc[item.variantId] = item.deliveryMethod
         return acc
-      }, {})
+      }, {} as Record<number, string>)
       setDeliveryMethods(initialMethods)
     }
   }, [cartItems])
 
   const [addressOption, setAddressOption] = useState("Home")
   const [selectedAddress, setSelectedAddress] = useState(
-    `${currentUser?.personalInfo?.street}, ${currentUser?.personalInfo?.city}, ${currentUser?.personalInfo?.region}, ${currentUser?.personalInfo?.country}, ${currentUser?.personalInfo?.zipCode}`
+    `${currentUser?.personalInfo?.street}, ${currentUser?.personalInfo?.city}, ${currentUser?.personalInfo?.province}, ${currentUser?.personalInfo?.country}, ${currentUser?.personalInfo?.zipCode}`
   )
 
   const [totalPrice, setTotalPrice] = useState(0)
@@ -74,7 +58,7 @@ export default function DrawerCart(props: any) {
     zipCode: "",
   })
 
-  const handleNewAddressChange = (e) => {
+  const handleNewAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setNewAddress((prev) => ({
       ...prev,
@@ -87,13 +71,15 @@ export default function DrawerCart(props: any) {
     const checked = e.target.checked
 
     // Calculate item price based on quantity, price, and duration
-    const itemPrice =
-      item.quantity *
-      item.variant.price *
-      Math.ceil(
-        (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
+    const duration =
+      item.startDate && item.endDate
+        ? Math.ceil(
+            (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
+              (1000 * 60 * 60 * 24)
+          )
+        : 0
+
+    const itemPrice = item.quantity * item.variant.price * duration
 
     if (checked) {
       // Add to checkout items and update the total price
@@ -107,6 +93,11 @@ export default function DrawerCart(props: any) {
   }
 
   const handleCheckOut = async () => {
+    if (!currentUser) {
+      toast.error("Please log in to checkout.")
+      return
+    }
+
     if (checkOutItems.length === 0) {
       toast.error("Please select at least one item to checkout.")
       return
@@ -146,10 +137,14 @@ export default function DrawerCart(props: any) {
 
     // Map items for the mutation payload
     const items = checkOutItems.map((id) => {
-      const item = cartItems.find((item) => item.id === id)
+      const item = cartItems?.find((item) => item.id === id)
       if (!item) {
         throw new Error("Cart item not found.")
       }
+      if (!item.startDate || !item.endDate) {
+        throw new Error("Start date or end date is missing for item.")
+      }
+
       return {
         productVariantId: item.variantId,
         price: item.variant.price,
@@ -185,7 +180,6 @@ export default function DrawerCart(props: any) {
       refetch() // Refresh cart items
       toast.success("Checkout successful!")
       setLoading(false)
-      setOpen(false)
     } catch (error) {
       setLoading(false)
       console.error("Failed to checkout:", error)
@@ -193,11 +187,7 @@ export default function DrawerCart(props: any) {
     }
   }
 
-  const handleClose = () => {
-    setOpen(false)
-  }
-
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     const confirmDelete = confirm("Are you sure you want to delete this item?")
     if (!confirmDelete) return
 
@@ -210,7 +200,10 @@ export default function DrawerCart(props: any) {
       toast.error("Failed to delete item. Please try again.")
     }
   }
-  const updateCartItemDetails = async (variantId, updates) => {
+  const updateCartItemDetails = async (
+    variantId: number,
+    updates: { newQuantity?: number; deliveryMethod?: string }
+  ) => {
     const cartItem = cartItems?.find((item) => item.variantId === variantId)
     if (!cartItem) {
       toast.error("Cart item not found.")
@@ -245,8 +238,8 @@ export default function DrawerCart(props: any) {
           deliveryMethod !== undefined
             ? deliveryMethod
             : deliveryMethods[variantId] || cartItem.deliveryMethod,
-        startDate: cartItem.startDate,
-        endDate: cartItem.endDate,
+        startDate: cartItem.startDate || undefined,
+        endDate: cartItem.endDate || undefined,
       })
       refetch()
     } catch (error) {
@@ -266,7 +259,7 @@ export default function DrawerCart(props: any) {
           },
         }}
         role="presentation"
-        className="bg-slate-600"
+        className="bg-slate-600 overflow-y-auto scrollbar-seamless"
       >
         <div className="p-8 text-white flex flex-col gap-2 w-full">
           {cartItems && cartItems.length > 0 ? (
@@ -300,11 +293,13 @@ export default function DrawerCart(props: any) {
                         {item.variant.size} - {item.variant.color.name}
                       </p>
                       <p className="text-sm">
-                        {new Intl.DateTimeFormat("en-US", {
-                          month: "long",
-                          day: "2-digit",
-                          year: "numeric",
-                        }).formatRange(new Date(item.startDate), new Date(item.endDate))}
+                        {item.startDate && item.endDate
+                          ? new Intl.DateTimeFormat("en-US", {
+                              month: "long",
+                              day: "2-digit",
+                              year: "numeric",
+                            }).formatRange(new Date(item.startDate), new Date(item.endDate))
+                          : "Dates not set"}
                       </p>
 
                       <div className="flex flex-col gap-2 mt-4">
@@ -374,10 +369,13 @@ export default function DrawerCart(props: any) {
                     <p>&#x20B1;{item.quantity * item.variant.price}</p>
                     <p>x</p>
                     <p>
-                      {Math.ceil(
-                        (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )}{" "}
+                      {item.startDate && item.endDate
+                        ? Math.ceil(
+                            (new Date(item.endDate).getTime() -
+                              new Date(item.startDate).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          )
+                        : 0}{" "}
                       days
                     </p>
                     <p>=</p>
@@ -386,10 +384,13 @@ export default function DrawerCart(props: any) {
                       {(
                         item.quantity *
                         item.variant.price *
-                        Math.ceil(
-                          (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
-                            (1000 * 60 * 60 * 24)
-                        )
+                        (item.startDate && item.endDate
+                          ? Math.ceil(
+                              (new Date(item.endDate).getTime() -
+                                new Date(item.startDate).getTime()) /
+                                (1000 * 60 * 60 * 24)
+                            )
+                          : 0)
                       ).toLocaleString("en-US")}
                     </p>
                   </div>
@@ -440,7 +441,7 @@ export default function DrawerCart(props: any) {
                   <p className="ml-6">
                     {cartItems?.[0]?.user?.personalInfo?.street},{" "}
                     {cartItems?.[0]?.user?.personalInfo?.city},{" "}
-                    {cartItems?.[0]?.user?.personalInfo?.region},{" "}
+                    {cartItems?.[0]?.user?.personalInfo?.province},{" "}
                     {cartItems?.[0]?.user?.personalInfo?.country},{" "}
                     {cartItems?.[0]?.user?.personalInfo?.zipCode}
                   </p>

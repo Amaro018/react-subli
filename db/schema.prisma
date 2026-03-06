@@ -27,43 +27,49 @@ model User {
   tokens           Token[]
   sessions         Session[]
 
-  personalInfo PersonalInfo?
-  shop         Shop?
-  cartItems    CartItem[] // Relation to CartItem
-  rents        Rent[]
-  reviews      Review[] // Relation to reviews
-  reports      Report[] // Relation to reports
+  personalInfo  PersonalInfo?
+  shop          Shop?
+  cartItems     CartItem[] // Relation to CartItem
+  rents         Rent[]
+  reviews       Review[] // Relation to reviews
+  reports       Report[] // Relation to reports
+  shopReports   ReportShop[] // Relation to shop reports
+  addresses     Address[]
+  notifications Notification[]
 }
 
 model Shop {
-  id             Int       @id @default(autoincrement())
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade) // Define `fields` and `references` here
-  userId         Int       @unique
-  shopName       String
-  email          String
-  street         String
-  city           String
-  region         String
-  country        String
-  zipCode        String
-  contact        String
-  status         String    @default("pending")
-  description    String?
-  imageProfile   String?
-  imageBg        String?
-  documentDTI    String?
-  dtiStatus      String    @default("pending")
-  dtiNotes       String    @default("pending")
-  documentPermit String?
-  permitStatus   String    @default("pending")
-  permitNotes    String    @default("pending")
-  documentTax    String?
-  taxStatus      String    @default("pending")
-  taxNotes       String    @default("pending")
-  linkFacebook   String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  products       Product[]
+  id              Int          @id @default(autoincrement())
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade) // Define `fields` and `references` here
+  userId          Int          @unique
+  shopName        String
+  email           String
+  street          String
+  barangay        String
+  city            String
+  province        String
+  country         String
+  zipCode         String
+  contact         String
+  status          String       @default("pending")
+  description     String?
+  imageProfile    String?
+  imageBg         String?
+  documentDTI     String?
+  dtiStatus       String       @default("pending")
+  dtiNotes        String       @default("pending")
+  documentPermit  String?
+  permitStatus    String       @default("pending")
+  permitNotes     String       @default("pending")
+  documentTax     String?
+  taxStatus       String       @default("pending")
+  taxNotes        String       @default("pending")
+  linkFacebook    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  products        Product[]
+  reports         ReportShop[]
+  rejectionReason String?
 }
 
 model PersonalInfo {
@@ -76,8 +82,9 @@ model PersonalInfo {
   birthDate   DateTime
   phoneNumber String?
   street      String
+  barangay    String
   city        String
-  region      String
+  province    String
   country     String
   zipCode     String
   userId      Int      @unique
@@ -178,7 +185,9 @@ model ProductImage {
 
 model Category {
   id        Int       @id @default(autoincrement())
-  name      String    @unique
+  name      String
+  slug      String    @unique
+  iconKey   String    @default("default")
   products  Product[] @relation("ProductCategories")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -297,4 +306,55 @@ model Report {
   status      String   @default("pending") // Status of the report (e.g., 'pending', 'resolved', 'rejected')
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Report Shop Model
+model ReportShop {
+  id          Int      @id @default(autoincrement())
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  reason      String // Reason for the report
+  description String? // Detailed description of the issue
+  status      String   @default("pending") // Status of the report (e.g., 'pending', 'resolved', 'rejected')
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+//Barangay Model
+model Barangay {
+  id      Int    @id @default(autoincrement())
+  name    String @unique
+  city    String @default("Legazpi City")
+  zipCode String @default("4500")
+}
+
+model Address {
+  id        Int     @id @default(autoincrement())
+  street    String
+  barangay  String
+  city      String  @default("Legazpi City")
+  province  String  @default("Albay")
+  country   String  @default("Philippines")
+  zipCode   String  @default("4500")
+  isDefault Boolean @default(false)
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional: Map to specific table name if required
+  // @@map("add_address")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

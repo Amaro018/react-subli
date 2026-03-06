@@ -1,29 +1,18 @@
-import Navbar from "../../../components/Navbar"
 import { invoke } from "./../../../blitz-server"
 import getCurrentUser from "../../../users/queries/getCurrentUser"
-
-import { Sidebar } from "../../components/sidebar"
 import { ShopPendingRegistration } from "../../components/ShopPendingRegistration"
-import ErrorMessage from "../../components/ErrorMessage"
 
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
 
-  console.log(currentUser)
-
   return (
-    <div>
-      <div className="mb-4">
-        <Navbar currentUser={currentUser} />
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-xl font-medium text-gray-800">Shop Registration Status</h1>
+        <span className="text-sm text-gray-500">Check the status of your shop registration</span>
       </div>
-      <main className="flex flex-row gap-2">
-        <div className="w-64 z-0">
-          <Sidebar currentUser={currentUser} />
-        </div>
-        <div className="p-16 mt-8 w-full">
-          <ShopPendingRegistration currentUser={currentUser} />
-        </div>
-      </main>
+
+      <ShopPendingRegistration currentUser={currentUser} />
     </div>
   )
 }

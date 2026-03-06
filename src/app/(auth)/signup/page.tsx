@@ -1,18 +1,15 @@
-import Navbar from "../../components/Navbar"
+﻿import Navbar from "../../components/Navbar"
 import { SignupForm } from "../components/SignupForm"
 import Footer from "../../components/Footer"
+
 export default function SignUpPage() {
   return (
-    <>
-      <div className="flex flex-col h-screen">
-        <div className="relative mb-16">
-          <Navbar currentUser={null} />
-        </div>
-        <div className="flex flex-col items-center justify-center h-full my-16 w-full">
-          <SignupForm />
-        </div>
-        <Footer />
+    <main className="flex h-screen flex-col overflow-y-auto scrollbar-seamless">
+      <Navbar currentUser={null} />
+      <div className="flex flex-grow items-center justify-center p-4">
+        <SignupForm />
       </div>
-    </>
+      <Footer />
+    </main>
   )
 }

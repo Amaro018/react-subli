@@ -301,6 +301,7 @@ const ProductList = (props: ProductListProps) => {
             overflow: "auto",
             maxHeight: "calc(100vh - 200px)",
           }}
+          className="scrollbar-seamless"
         >
           <CreateProductForm currentUser={currentUser} handleClose={handleClose} />
         </Box>
@@ -313,6 +314,7 @@ const ProductList = (props: ProductListProps) => {
             overflow: "auto",
             maxHeight: "calc(100vh - 200px)",
           }}
+          className="scrollbar-seamless"
         >
           <EditProductForm
             currentUser={selectedProduct}

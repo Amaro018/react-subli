@@ -1,34 +1,18 @@
-import Navbar from "../../components/Navbar"
 import { invoke } from "./../../blitz-server"
 import getCurrentUser from "./../../users/queries/getCurrentUser"
-import { Sidebar } from "./../components/sidebar"
-
 import FormShopRegister from "./../components/FormShopRegister"
-import { TextField } from "@mui/material"
 
-import Box from "@mui/material/Box"
-import Stepper from "@mui/material/Stepper"
-import Step from "@mui/material/Step"
-import StepLabel from "@mui/material/StepLabel"
-import { set } from "zod"
-import { useState } from "react"
-import { Form } from "formik"
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
 
   return (
-    <div>
-      <div className="mb-4">
-        <Navbar currentUser={currentUser} />
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-xl font-medium text-gray-800">Shop Registration</h1>
+        <span className="text-sm text-gray-500">Register your shop to start selling</span>
       </div>
-      <main className="flex flex-row gap-2">
-        <div className="w-64 z-0">
-          <Sidebar currentUser={currentUser} />
-        </div>
-        <div className="w-full px-16">
-          <FormShopRegister currentUser={currentUser} />
-        </div>
-      </main>
+
+      <FormShopRegister currentUser={currentUser} />
     </div>
   )
 }

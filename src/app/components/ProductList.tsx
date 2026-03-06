@@ -4,7 +4,7 @@ import getAllProducts from "../queries/getAllProducts"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
-import { Button, Typography, TextField, Select, MenuItem, Slider } from "@mui/material"
+import { Button, Typography, TextField, Select, MenuItem } from "@mui/material"
 
 export default function ProductList() {
   const [products, { isLoading, isError, error }] = useQuery(getAllProducts, null)
@@ -23,17 +23,23 @@ export default function ProductList() {
   }
 
   if (isError) {
-    return <div>Error: {error?.message}</div>
+    return <div>Error: {(error as any)?.message}</div>
   }
 
   // Get all unique categories and colors
-  const categories = ["Categories", ...new Set(products.map((product) => product.category.name))]
+  const categories = [
+    "Categories",
+    ...Array.from(new Set(products.map((product) => product.category.name))),
+  ]
   const colors = Array.from(
     new Set(
       products.flatMap((product) => product.variants.flatMap((variant) => variant.color.name))
     )
   )
-  const locations = ["Set Location", ...new Set(products.map((product) => product.shop.street))]
+  const locations = [
+    "Set Location",
+    ...Array.from(new Set(products.map((product) => product.shop.street))),
+  ]
 
   const filteredProducts = products
     .filter((product) => {
@@ -136,13 +142,6 @@ export default function ProductList() {
 
             <div className="flex flex-col items-center gap-4">
               <Typography>Price Range:</Typography>
-              {/* <Slider
-                value={priceRange}
-                onChange={(e, newValue) => setPriceRange(newValue)}
-                valueLabelDisplay="auto"
-                min={0}
-                max={10000}
-              /> */}
               <TextField
                 label="Min Range"
                 variant="outlined"
