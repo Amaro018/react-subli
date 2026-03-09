@@ -1,0 +1,9 @@
+(node:16392) ExperimentalWarning: CommonJS module C:\Users\llana\CONFIG~1\herd\bin\nvm\v23.3.0\node_modules\npm\node_modules\debug\src\node.js is loading ES Module C:\Users\llana\CONFIG~1\herd\bin\nvm\v23.3.0\node_modules\npm\node_modules\supports-color\index.js using require().
+Support for loading ES Module in require() is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Environment variables loaded from .env
+Prisma schema loaded from db\schema.prisma
+Error: 
+EPERM: operation not permitted, unlink 'D:\Users\Jayzel\react repos\react-subli\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+
