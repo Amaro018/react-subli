@@ -9,13 +9,16 @@ const UpdateShopStatus = z.object({
   status: z.enum(["pending", "approved", "rejected"]),
   shopUserId: z.number(),
   note: z.string().optional(), // <-- Add note here
+  documentUpdates: z
+    .record(z.object({ status: z.string(), note: z.string().optional() }))
+    .optional(),
 })
 
 // Mutation to update shop status
 export default resolver.pipe(
   resolver.zod(UpdateShopStatus),
   resolver.authorize(), // Ensure user is authorized
-  async ({ shopId, documentType, status, shopUserId, note }) => {
+  async ({ shopId, documentType, status, shopUserId, note, documentUpdates }) => {
     if (documentType) {
       // Map document types to corresponding fields
       const fieldMapping = {
@@ -45,12 +48,55 @@ export default resolver.pipe(
       return updatedShop // Return the updated shop
     } else {
       // Update the shop status directly
+      const currentShop = await db.shop.findUnique({ where: { id: shopId } })
+      const docUpdates: any = {}
+
+      // Apply manual document updates if provided
+      if (documentUpdates) {
+        if (documentUpdates.DTI) {
+          docUpdates.dtiStatus = documentUpdates.DTI.status
+          if (documentUpdates.DTI.note) docUpdates.dtiNotes = documentUpdates.DTI.note
+        }
+        if (documentUpdates.PERMIT) {
+          docUpdates.permitStatus = documentUpdates.PERMIT.status
+          if (documentUpdates.PERMIT.note) docUpdates.permitNotes = documentUpdates.PERMIT.note
+        }
+        if (documentUpdates.TAX_CLEARANCE) {
+          docUpdates.taxStatus = documentUpdates.TAX_CLEARANCE.status
+          if (documentUpdates.TAX_CLEARANCE.note)
+            docUpdates.taxNotes = documentUpdates.TAX_CLEARANCE.note
+        }
+      } else {
+        // Fallback to auto-update logic if no specific updates provided
+        if (status === "approved") {
+          if (currentShop?.dtiStatus === "pending" || currentShop?.dtiStatus === "resubmit")
+            docUpdates.dtiStatus = "approved"
+          if (currentShop?.permitStatus === "pending" || currentShop?.permitStatus === "resubmit")
+            docUpdates.permitStatus = "approved"
+          if (currentShop?.taxStatus === "pending" || currentShop?.taxStatus === "resubmit")
+            docUpdates.taxStatus = "approved"
+        } else if (status === "rejected") {
+          if (currentShop?.dtiStatus === "pending" || currentShop?.dtiStatus === "resubmit") {
+            docUpdates.dtiStatus = "rejected"
+            docUpdates.dtiNotes = note || "Shop rejected"
+          }
+          if (currentShop?.permitStatus === "pending" || currentShop?.permitStatus === "resubmit") {
+            docUpdates.permitStatus = "rejected"
+            docUpdates.permitNotes = note || "Shop rejected"
+          }
+          if (currentShop?.taxStatus === "pending" || currentShop?.taxStatus === "resubmit") {
+            docUpdates.taxStatus = "rejected"
+            docUpdates.taxNotes = note || "Shop rejected"
+          }
+        }
+      }
+
       const updatedShop = await db.shop.update({
         where: { id: shopId },
         data: {
           status: status,
-          isShopMode: false,
           rejectionReason: status === "rejected" ? note : null,
+          ...docUpdates,
         },
         include: {
           user: {
@@ -59,11 +105,26 @@ export default resolver.pipe(
         },
       })
 
-      if (status === "approved") {
-        await db.user.update({
-          where: { id: shopUserId },
+      await db.user.update({
+        where: { id: shopUserId },
+        data: {
+          isShopMode: status === "approved",
+        },
+      })
+
+      // Notify the user about the shop status change
+      if (status === "approved" || status === "rejected") {
+        await (db as any).notification.create({
           data: {
-            isShopMode: true,
+            userId: shopUserId,
+            title: `Shop Registration ${status === "approved" ? "Approved" : "Rejected"}`,
+            message:
+              status === "approved"
+                ? `Congratulations! Your shop "${updatedShop.shopName}" has been approved.`
+                : `Your shop registration for "${
+                    updatedShop.shopName
+                  }" has been rejected. Reason: ${note || "No reason provided."}`,
+            isRead: false,
           },
         })
       }

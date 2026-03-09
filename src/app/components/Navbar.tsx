@@ -9,9 +9,12 @@ import ShoppingBagIcon from "@mui/icons-material/ShoppingBag"
 import StarIcon from "@mui/icons-material/Star"
 import StoreIcon from "@mui/icons-material/Store"
 import Drawer from "@mui/material/Drawer"
-import Badge from "@mui/material/Badge"
+import { Badge, Popover } from "@mui/material"
 import { useQuery } from "@blitzjs/rpc"
 import getAllCartItem from "../queries/getAllCartItem"
+import getNotifications from "../queries/getNotifications"
+import NotificationsIcon from "@mui/icons-material/Notifications"
+import NotificationList from "./NotificationList"
 import ExitToAppIcon from "@mui/icons-material/ExitToApp"
 import DrawerCart from "./DrawerCart"
 
@@ -24,8 +27,24 @@ export default function Navbar({ currentUser }: NavbarProps) {
   const [userOpen, setUserOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const accountRef = useRef<HTMLDivElement | null>(null)
   const [cartItems] = useQuery(getAllCartItem, null, { enabled: !!currentUser, suspense: false })
+  const [notifications] = useQuery(getNotifications, null, {
+    enabled: !!currentUser,
+    refetchInterval: 5000,
+    suspense: false,
+  })
+
+  const unreadNotifications = notifications?.filter((n: any) => !n.isRead) || []
+
+  const handleNotificationClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleNotificationClose = () => {
+    setAnchorEl(null)
+  }
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -70,6 +89,9 @@ export default function Navbar({ currentUser }: NavbarProps) {
     }
   }
 
+  const openNotification = Boolean(anchorEl)
+  const notificationId = openNotification ? "simple-popover" : undefined
+
   return (
     <header className="w-full bg-[#1b2a80] text-white shadow-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
@@ -107,7 +129,11 @@ export default function Navbar({ currentUser }: NavbarProps) {
         {/* Center: desktop nav links */}
         <nav className="hidden gap-8 font-semibold lg:flex">
           {navLinks.map((l) => (
-            <Link key={l.name} href={l.href as any} className="hover:opacity-90">
+            <Link
+              key={l.name}
+              href={l.href as any}
+              className="hover:text-yellow-300 transition-colors"
+            >
               {l.name}
             </Link>
           ))}
@@ -118,10 +144,10 @@ export default function Navbar({ currentUser }: NavbarProps) {
           <div className="hidden items-center gap-4 font-semibold lg:flex">
             {!currentUser ? (
               <>
-                <Link href="/login" className="text-yellow-300 hover:text-yellow-400">
+                <Link href="/login" className="hover:text-yellow-300 transition-colors">
                   Login
                 </Link>
-                <Link href="/signup" className="text-yellow-300 hover:text-yellow-400">
+                <Link href="/signup" className="hover:text-yellow-300 transition-colors">
                   Register
                 </Link>
               </>
@@ -134,7 +160,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
                     aria-haspopup="menu"
                     aria-expanded={accountOpen}
                     onClick={() => setAccountOpen((s) => !s)}
-                    className="inline-flex items-center gap-2 hover:opacity-90 focus:outline-none"
+                    className="inline-flex items-center gap-2 hover:text-yellow-300 transition-colors focus:outline-none"
                   >
                     <span className="hidden sm:inline">Hi {firstName}</span>
                     <ExpandMore fontSize="small" />
@@ -189,9 +215,21 @@ export default function Navbar({ currentUser }: NavbarProps) {
                 </div>
 
                 {/* Desktop Cart Icon */}
-                <button onClick={() => setCartOpen(true)} className="hover:opacity-90">
+                <button
+                  onClick={() => setCartOpen(true)}
+                  className="hover:text-yellow-300 transition-colors"
+                >
                   <Badge badgeContent={cartItems?.length || 0} color="error">
                     <ShoppingBagIcon />
+                  </Badge>
+                </button>
+                {/* Desktop Notification Icon */}
+                <button
+                  onClick={handleNotificationClick}
+                  className="hover:text-yellow-300 transition-colors"
+                >
+                  <Badge badgeContent={unreadNotifications.length} color="error">
+                    <NotificationsIcon />
                   </Badge>
                 </button>
               </>
@@ -209,14 +247,24 @@ export default function Navbar({ currentUser }: NavbarProps) {
 
           {/* Mobile Cart Icon */}
           {currentUser && (
-            <button
-              onClick={() => setCartOpen(true)}
-              className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
-            >
-              <Badge badgeContent={cartItems?.length || 0} color="error">
-                <ShoppingBagIcon />
-              </Badge>
-            </button>
+            <>
+              <button
+                onClick={() => setCartOpen(true)}
+                className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
+              >
+                <Badge badgeContent={cartItems?.length || 0} color="error">
+                  <ShoppingBagIcon />
+                </Badge>
+              </button>
+              <button
+                onClick={handleNotificationClick}
+                className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
+              >
+                <Badge badgeContent={unreadNotifications.length} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -374,6 +422,23 @@ export default function Navbar({ currentUser }: NavbarProps) {
       <Drawer anchor="right" open={cartOpen} onClose={() => setCartOpen(false)}>
         <DrawerCart />
       </Drawer>
+
+      <Popover
+        id={notificationId}
+        open={openNotification}
+        anchorEl={anchorEl}
+        onClose={handleNotificationClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+      >
+        <NotificationList onClose={handleNotificationClose} />
+      </Popover>
     </header>
   )
 }

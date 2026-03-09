@@ -1,7 +1,6 @@
-"use client"
-import { useState } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import DashboardIcon from "@mui/icons-material/Dashboard"
 import StoreIcon from "@mui/icons-material/Store"
@@ -14,6 +13,14 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"
 import SettingsIcon from "@mui/icons-material/Settings"
 import InventoryIcon from "@mui/icons-material/Inventory"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Button,
+} from "@mui/material"
 
 interface SidebarProps {
   currentUser: any
@@ -24,6 +31,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: SidebarProps) => {
   const pathname = usePathname()
+  const router = useRouter()
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>({
     shops: pathname?.startsWith("/admin/manage-shops") || false,
     products: pathname?.startsWith("/admin/products") || false,
@@ -31,6 +39,32 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
 
   const toggleSubmenu = (key: string) => {
     setOpenSubmenus((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null)
+
+  const handleNavigation = (e: React.MouseEvent, href: string) => {
+    if (typeof window !== "undefined" && (window as any).hasUnsavedChanges) {
+      e.preventDefault()
+      setPendingUrl(href)
+      setConfirmOpen(true)
+    } else {
+      setIsOpen(false)
+    }
+  }
+
+  const handleConfirmLeave = () => {
+    if (typeof window !== "undefined") {
+      ;(window as any).hasUnsavedChanges = false
+    }
+    setConfirmOpen(false)
+    if (pendingUrl) router.push(pendingUrl as any)
+    setIsOpen(false)
+  }
+
+  const handleCancelLeave = () => {
+    setConfirmOpen(false)
   }
 
   return (
@@ -99,7 +133,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
           <nav className="flex-1 mt-5 px-2 overflow-y-auto scrollbar-sidebar">
             <Link
               href="/admin"
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => handleNavigation(e, "/admin")}
               className={`flex items-center px-4 py-2 mt-2 text-gray-100 rounded-md hover:bg-white/10 ${
                 isCollapsed ? "lg:justify-center" : ""
               } ${pathname === "/admin" ? "bg-white/20" : ""}`}
@@ -113,6 +147,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
               {isCollapsed ? (
                 <Link
                   href="/admin/manage-shops"
+                  onClick={(e) => handleNavigation(e, "/admin/manage-shops")}
                   className={`flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 lg:justify-center ${
                     pathname?.startsWith("/admin/manage-shops") ? "bg-white/20" : ""
                   }`}
@@ -140,7 +175,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                   <div className={`${openSubmenus["shops"] ? "block" : "hidden"} bg-black/20`}>
                     <Link
                       href="/admin/manage-shops"
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/manage-shops")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/manage-shops"
                           ? "text-white bg-white/10"
@@ -151,7 +186,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                     </Link>
                     <Link
                       href="/admin/manage-shops/pending"
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/pending")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/manage-shops/pending"
                           ? "text-white bg-white/10"
@@ -162,7 +197,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                     </Link>
                     <Link
                       href={"/admin/manage-shops/rejected" as any}
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/rejected")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/manage-shops/rejected"
                           ? "text-white bg-white/10"
@@ -173,7 +208,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                     </Link>
                     <Link
                       href={"/admin/manage-shops/reported" as any}
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/reported")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/manage-shops/reported"
                           ? "text-white bg-white/10"
@@ -184,7 +219,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                     </Link>
                     <Link
                       href={"/admin/manage-shops/banned" as any}
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/banned")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/manage-shops/banned"
                           ? "text-white bg-white/10"
@@ -203,6 +238,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
               {isCollapsed ? (
                 <Link
                   href={"/admin/products" as any}
+                  onClick={(e) => handleNavigation(e, "/admin/products")}
                   className={`flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 lg:justify-center ${
                     pathname?.startsWith("/admin/products") ? "bg-white/20" : ""
                   }`}
@@ -230,7 +266,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                   <div className={`${openSubmenus["products"] ? "block" : "hidden"} bg-black/20`}>
                     <Link
                       href={"/admin/products" as any}
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/products")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/products" ? "text-white bg-white/10" : "text-gray-300"
                       }`}
@@ -239,7 +275,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                     </Link>
                     <Link
                       href={"/admin/products/reported" as any}
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/products/reported")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/products/reported"
                           ? "text-white bg-white/10"
@@ -250,7 +286,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                     </Link>
                     <Link
                       href={"/admin/products/banned" as any}
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => handleNavigation(e, "/admin/products/banned")}
                       className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
                         pathname === "/admin/products/banned"
                           ? "text-white bg-white/10"
@@ -266,7 +302,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
 
             <Link
               href={"/admin/orders" as any}
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => handleNavigation(e, "/admin/orders")}
               className={`flex items-center px-4 py-2 mt-2 text-gray-100 rounded-md hover:bg-white/10 ${
                 isCollapsed ? "lg:justify-center" : ""
               } ${pathname?.startsWith("/admin/orders") ? "bg-white/20" : ""}`}
@@ -277,7 +313,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
 
             <Link
               href={"/admin/users" as any}
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => handleNavigation(e, "/admin/users")}
               className={`flex items-center px-4 py-2 mt-2 text-gray-100 rounded-md hover:bg-white/10 ${
                 isCollapsed ? "lg:justify-center" : ""
               } ${pathname?.startsWith("/admin/users") ? "bg-white/20" : ""}`}
@@ -288,7 +324,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
 
             <Link
               href={"/admin/settings" as any}
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => handleNavigation(e, "/admin/settings")}
               className={`flex items-center px-4 py-2 mt-2 text-gray-100 rounded-md hover:bg-white/10 ${
                 isCollapsed ? "lg:justify-center" : ""
               } ${pathname === "/admin/settings" ? "bg-white/20" : ""}`}
@@ -299,7 +335,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
 
             <Link
               href={"/renter" as any}
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => handleNavigation(e, "/renter")}
               className={`flex items-center px-4 py-2 mt-2 text-gray-100 rounded-md hover:bg-white/10 ${
                 isCollapsed ? "lg:justify-center" : ""
               } ${pathname === "/renter" ? "bg-white/20" : ""}`}
@@ -315,7 +351,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
             className={`relative flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 cursor-pointer ${
               isCollapsed ? "lg:justify-center" : ""
             }`}
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => handleNavigation(e, "/logout")}
           >
             <LogoutIcon className="w-6 h-6" />
             <div className={`mx-3 w-full ${isCollapsed ? "lg:hidden" : ""}`}>
@@ -329,6 +365,25 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
           </div>
         </div>
       </div>
+
+      <Dialog open={confirmOpen} onClose={handleCancelLeave}>
+        <DialogTitle>Unsaved Changes</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            You have unsaved changes. Are you sure you want to leave?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelLeave} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmLeave} color="error" autoFocus>
+            Leave
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
+
+export default Sidebar

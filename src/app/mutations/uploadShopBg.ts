@@ -18,14 +18,16 @@ interface UploadProductImageInput {
 
 export default resolver.pipe(
   async ({ fileName, data, targetDirectory }: UploadProductImageInput) => {
-    const buffer = Buffer.from(data.split(",")[1], "base64") // Convert base64 to buffer
-    const uniqueFileName = `${fileName}`
+    // Handle data URI prefix if present (e.g. "data:image/png;base64,...")
+    const base64Data = data.includes(",") ? data.split(",")[1] : data
+    const buffer = Buffer.from(base64Data || "", "base64")
+    const uniqueFileName = path.basename(fileName)
 
     const filePath = path.join(process.cwd(), "public", "uploads", targetDirectory, uniqueFileName)
     // Save the file to the local filesystem
     await fs.promises.mkdir(path.dirname(filePath), { recursive: true })
 
-    await fs.promises.writeFile(filePath, buffer)
+    await fs.promises.writeFile(filePath, buffer as any)
     // Construct the absolute URL
     const fileUrl = `${
       process.env.BASE_URL || "http://localhost:3000"

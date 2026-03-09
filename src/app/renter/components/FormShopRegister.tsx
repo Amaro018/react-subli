@@ -23,8 +23,9 @@ import { useMutation, useQuery } from "@blitzjs/rpc"
 import { useRouter } from "next/navigation"
 import getBarangay from "../../queries/getBarangays"
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"
-import ErrorMessage from "./ErrorMessage"
 import StorefrontIcon from "@mui/icons-material/Storefront"
+import { toast } from "sonner"
+import Image from "next/image"
 
 const FormShopRegister = (props: { currentUser: any }) => {
   const [loading, setLoading] = useState(false)
@@ -68,7 +69,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     const file = event.target.files?.[0]
     if (file) {
       if (!file.type.startsWith("image/")) {
-        alert("Invalid file type. Please upload an image.")
+        toast.error("Invalid file type. Please upload an image.")
         event.target.value = ""
         return
       }
@@ -107,7 +108,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     const file = event.target.files?.[0]
     if (file) {
       if (!file.type.startsWith("image/")) {
-        alert("Invalid file type. Please upload an image.")
+        toast.error("Invalid file type. Please upload an image.")
         event.target.value = ""
         return
       }
@@ -146,7 +147,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     const file = event.target.files?.[0]
     if (file) {
       if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
-        alert("Invalid file type. Please upload a PDF or an Image.")
+        toast.error("Invalid file type. Please upload a PDF or an Image.")
         event.target.value = ""
         return
       }
@@ -179,7 +180,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     const file = event.target.files?.[0]
     if (file) {
       if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
-        alert("Invalid file type. Please upload a PDF or an Image.")
+        toast.error("Invalid file type. Please upload a PDF or an Image.")
         event.target.value = ""
         return
       }
@@ -212,7 +213,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     const file = event.target.files?.[0]
     if (file) {
       if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
-        alert("Invalid file type. Please upload a PDF or an Image.")
+        toast.error("Invalid file type. Please upload a PDF or an Image.")
         event.target.value = ""
         return
       }
@@ -253,9 +254,9 @@ const FormShopRegister = (props: { currentUser: any }) => {
       formData.zipCode == "" ||
       formData.contact == ""
     ) {
-      alert("Please fill all the fields")
+      toast.error("Please fill all the fields")
     } else if (!formData.email.includes("@") || !formData.email.includes(".")) {
-      alert("Please enter a valid email address")
+      toast.error("Please enter a valid email address")
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
@@ -263,7 +264,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
 
   const handleNextNext = () => {
     if (!formData.documentDTI || !formData.documentPermit || !formData.documentTax) {
-      alert("Please fill all the fields")
+      toast.error("Please fill all the fields")
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
@@ -288,11 +289,11 @@ const FormShopRegister = (props: { currentUser: any }) => {
         ...formData,
       })
       router.push("/renter/shop-register/pending")
-      alert("Shop registered successfully!")
+      toast.success("Shop registered successfully! Please wait for admin approval.")
       setLoading(false)
     } catch (error: any) {
       console.error("Error creating shop:", error)
-      alert(error.message || "Failed to register shop. Please try again.")
+      toast.error(error.message || "Failed to register shop. Please try again.")
       setLoading(false)
     }
   }
@@ -309,11 +310,27 @@ const FormShopRegister = (props: { currentUser: any }) => {
 
   if (currentUser!.isShopRegistered) {
     return (
-      <ErrorMessage
-        message="You already have a shop registered"
-        title="Already registered"
-        currentUser={currentUser}
-      />
+      <div className="w-full">
+        <Card elevation={0} className="rounded-xl border border-gray-200">
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <StorefrontIcon sx={{ fontSize: 64, color: "#1b2a80", mb: 2 }} />
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              Shop Already Registered
+            </Typography>
+            <Typography color="text.secondary" mb={4}>
+              You have already registered a shop with this account.
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={() => router.push("/shop")}
+            >
+              Go to Shop Dashboard
+            </Button>
+          </div>
+        </Card>
+      </div>
     )
   }
 
@@ -666,11 +683,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
 
                     <div className="relative w-40 h-40 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center border-4 border-white shadow-md">
                       {previewProfile ? (
-                        <img
-                          src={previewProfile}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
+                        <Image src={previewProfile} alt="Profile" fill className="object-cover" />
                       ) : (
                         <StorefrontIcon sx={{ fontSize: 60, color: "gray" }} />
                       )}
@@ -708,11 +721,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
 
                     <div className="relative w-full h-40 bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center border border-gray-300">
                       {previewShopBg ? (
-                        <img
-                          src={previewShopBg}
-                          alt="Cover"
-                          className="w-full h-full object-cover"
-                        />
+                        <Image src={previewShopBg} alt="Cover" fill className="object-cover" />
                       ) : (
                         <Typography variant="caption" color="textSecondary">
                           No Cover Photo
