@@ -5,9 +5,10 @@ import { useMutation } from "@blitzjs/rpc"
 
 type LogoutButtonProps = {
   className?: string
+  onLogout?: () => void
 }
 
-export function LogoutButton({ className = "" }: LogoutButtonProps) {
+export function LogoutButton({ className = "", onLogout }: LogoutButtonProps) {
   const router = useRouter()
   const [logoutMutation] = useMutation(logout)
 
@@ -15,6 +16,7 @@ export function LogoutButton({ className = "" }: LogoutButtonProps) {
     <button
       className={className}
       onClick={async () => {
+        if (onLogout) onLogout()
         await logoutMutation()
         router.refresh()
       }}

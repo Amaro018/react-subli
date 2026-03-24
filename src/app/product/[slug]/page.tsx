@@ -32,6 +32,7 @@ import {
   TextField,
 } from "@mui/material"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined"
 import DrawerCart from "../../components/DrawerCart"
 
 import getAllRentItems from "../../queries/getAllRentItems"
@@ -55,7 +56,8 @@ const ProductPage = ({ params }: any) => {
   //   const  id  = params.params.slug;
   const id = slug
 
-  const [product, { refetch }] = useQuery(getProductById, { id: Number(id) })
+  const [productData, { refetch }] = useQuery(getProductById, { id: Number(id) })
+  const product: any = productData
   const [cartItems] = useQuery(getAllCartItem, {})
 
   const [selectedVariant, setSelectedVariant] = React.useState<number | null>(null)
@@ -100,7 +102,7 @@ const ProductPage = ({ params }: any) => {
   const updateSelectedVariant = (colorId: number | null, size: string | null) => {
     if (colorId !== null && size !== null) {
       const variant = product.variants.find(
-        (variant) => variant.color.id === colorId && variant.size === size
+        (variant: any) => variant.color?.id === colorId && variant.size === size
       )
       setSelectedVariant(variant || null) // Update the selected variant
     } else {
@@ -121,7 +123,7 @@ const ProductPage = ({ params }: any) => {
 
     // Find the selected variant based on the color and size
     const selectedVariant = product.variants.find(
-      (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+      (variant: any) => variant.color?.id === selectedColor && variant.size === selectedSize
     )
 
     if (!selectedVariant) {
@@ -183,7 +185,7 @@ const ProductPage = ({ params }: any) => {
 
     // Find the selected variant based on the color and size
     const selectedVariant = product.variants.find(
-      (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+      (variant: any) => variant.color?.id === selectedColor && variant.size === selectedSize
     )
 
     if (!selectedVariant) {
@@ -241,12 +243,12 @@ const ProductPage = ({ params }: any) => {
   // Memoize unique colors to prevent unnecessary recalculation
   const uniqueColors = React.useMemo(() => {
     return Array.from(
-      new Map(product.variants.map((variant) => [variant.color.id, variant.color])).values()
+      new Map(product.variants.map((variant: any) => [variant.color?.id, variant.color])).values()
     )
   }, [product])
 
   const uniqueSizes = React.useMemo(() => {
-    return Array.from(new Set(product.variants.map((variant) => variant.size)))
+    return Array.from(new Set(product.variants.map((variant: any) => variant.size)))
   }, [product])
 
   const handleCountMinus = () => {
@@ -256,7 +258,7 @@ const ProductPage = ({ params }: any) => {
       toast.error("You cannot decrease the count below 0")
     } else {
       const selectedVariant = product.variants.find(
-        (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+        (variant: any) => variant.color?.id === selectedColor && variant.size === selectedSize
       )
       setQuantity((prev) => prev - 1)
       // console.log(selectedVariant.id)
@@ -268,7 +270,7 @@ const ProductPage = ({ params }: any) => {
       toast.error("Please select a color and size first")
     } else {
       const selectedVariant = product.variants.find(
-        (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+        (variant: any) => variant.color?.id === selectedColor && variant.size === selectedSize
       )
       if (quantity === availableQuantity) {
         toast.error("You cannot increase the count above the available quantity")
@@ -278,7 +280,7 @@ const ProductPage = ({ params }: any) => {
 
   const [startDate, setStartDate] = useState<Date | null>()
   const [endDate, setEndDate] = useState<Date | null>()
-  const [allRents] = useQuery(getAllRentItems, {})
+  const [allRents] = useQuery(getAllRentItems, undefined)
 
   const handleStartDateChange = (date: any) => {
     setQuantity(0)
@@ -292,11 +294,13 @@ const ProductPage = ({ params }: any) => {
 
     console.log("the rents", allRents)
 
-    const filteredData = allRents.filter((rent) => rent.productVariantId === selectedVariant?.id)
+    const filteredData = allRents.filter(
+      (rent: any) => rent.productVariantId === (selectedVariant as any)?.id
+    )
 
     console.log(filteredData)
 
-    const totalQuantity = filteredData.reduce((sum, rent) => {
+    const totalQuantity = filteredData.reduce((sum: number, rent: any) => {
       const startDate = new Date(rent.startDate)
       const endDate = new Date(rent.endDate)
 
@@ -313,8 +317,8 @@ const ProductPage = ({ params }: any) => {
     }, 0)
 
     console.log("the total quantity", totalQuantity)
-    setAvailableQuantity(selectedVariant?.quantity - totalQuantity)
-    if (totalQuantity >= selectedVariant?.quantity) {
+    setAvailableQuantity(((selectedVariant as any)?.quantity || 0) - totalQuantity)
+    if (totalQuantity >= ((selectedVariant as any)?.quantity || 0)) {
       toast.error("This item is not available at this date")
       setStartDate(null)
       setEndDate(null)
@@ -339,16 +343,18 @@ const ProductPage = ({ params }: any) => {
     // Convert the string to a Date object
     const selectedDateObject = new Date(date)
 
-    const filteredData = allRents.filter((rent) => rent.productVariantId === selectedVariant?.id)
-    const totalQuantity = filteredData.reduce((sum, rent) => {
+    const filteredData = allRents.filter(
+      (rent: any) => rent.productVariantId === (selectedVariant as any)?.id
+    )
+    const totalQuantity = filteredData.reduce((sum: number, rent: any) => {
       const rentStartDate = new Date(rent.startDate)
       const rentEndDate = new Date(rent.endDate)
 
       // Check for overlap between the selected range and the rent range
       const isOverlapping =
-        (startDate >= rentStartDate && startDate <= rentEndDate) || // User's start is within the rent range
+        (startDate! >= rentStartDate && startDate! <= rentEndDate) || // User's start is within the rent range
         (selectedDateObject >= rentStartDate && selectedDateObject <= rentEndDate) || // User's end is within the rent range
-        (startDate <= rentStartDate && selectedDateObject >= rentEndDate) // User's range completely contains the rent range
+        (startDate! <= rentStartDate && selectedDateObject >= rentEndDate) // User's range completely contains the rent range
 
       if (isOverlapping && rent.status === "rendering") {
         // Add the quantity if there is an overlap
@@ -360,8 +366,8 @@ const ProductPage = ({ params }: any) => {
       return sum
     }, 0) // Initial sum is 0
 
-    setAvailableQuantity(selectedVariant?.quantity - totalQuantity)
-    if (totalQuantity >= selectedVariant?.quantity) {
+    setAvailableQuantity(((selectedVariant as any)?.quantity || 0) - totalQuantity)
+    if (totalQuantity >= ((selectedVariant as any)?.quantity || 0)) {
       toast.error("item is not available at this date")
       setStartDate(null)
       return
@@ -370,7 +376,7 @@ const ProductPage = ({ params }: any) => {
 
     console.log("the filtered data start date", startDate)
 
-    console.log("the selected variant:", selectedVariant?.quantity)
+    console.log("the selected variant:", (selectedVariant as any)?.quantity)
 
     // Check if the selected date is in the future
     if (selectedDateObject < new Date()) {
@@ -381,7 +387,7 @@ const ProductPage = ({ params }: any) => {
     }
   }
 
-  const sum = product.reviews?.reduce((acc, review) => acc + review.rating, 0)
+  const sum = product.reviews?.reduce((acc: any, review: any) => acc + review.rating, 0)
   const average = sum / product.reviews?.length
   // console.log(`The average rating is ${average}`)
 
@@ -419,17 +425,18 @@ const ProductPage = ({ params }: any) => {
                   {selectedColor &&
                   selectedSize &&
                   product.variants.some(
-                    (variant) => variant.color.id === selectedColor && variant.size === selectedSize
+                    (variant: any) =>
+                      variant.color?.id === selectedColor && variant.size === selectedSize
                   )
                     ? `₱${
                         product.variants.find(
-                          (variant) =>
-                            variant.color.id === selectedColor && variant.size === selectedSize
+                          (variant: any) =>
+                            variant.color?.id === selectedColor && variant.size === selectedSize
                         )?.price
                       }`
                     : `₱${Math.min(
-                        ...product.variants.map((variant) => variant.price)
-                      )} - ₱${Math.max(...product.variants.map((variant) => variant.price))}`}
+                        ...product.variants.map((variant: any) => variant.price)
+                      )} - ₱${Math.max(...product.variants.map((variant: any) => variant.price))}`}
                 </p>
               </div>
 
@@ -438,15 +445,15 @@ const ProductPage = ({ params }: any) => {
                   <p>Available Colors : </p>
                   <div className="flex flex-row flex-wrap gap-2 mt-4">
                     {/* Render unique colors */}
-                    {uniqueColors.map((color) => (
-                      <div key={color.id}>
+                    {uniqueColors.map((color: any) => (
+                      <div key={color?.id || Math.random()}>
                         <button
                           type="button"
-                          onClick={() => handleChangeColor(color.id)} // Update selected color
+                          onClick={() => handleChangeColor(color?.id)} // Update selected color
                           className={`w-10 h-10 rounded-full border-4 ${
-                            selectedColor === color.id ? "border-blue-500" : "border-transparent"
+                            selectedColor === color?.id ? "border-blue-500" : "border-transparent"
                           } hover:scale-110`}
-                          style={{ backgroundColor: color.hexCode }}
+                          style={{ backgroundColor: color?.hexCode }}
                         ></button>
                       </div>
                     ))}
@@ -459,27 +466,27 @@ const ProductPage = ({ params }: any) => {
                 {/* Render unique sizes */}
 
                 <div className="flex flex-row flex-wrap gap-2">
-                  {uniqueSizes.map((size) => {
+                  {uniqueSizes.map((size: any) => {
                     // Check if the size is valid for the selected color
                     const isDisabled =
                       selectedColor &&
                       !product.variants.some(
-                        (variant) => variant.colorId === selectedColor && variant.size === size
+                        (variant: any) => variant.colorId === selectedColor && variant.size === size
                       )
 
                     return (
-                      <div key={size}>
+                      <div key={size as string}>
                         <button
                           type="button"
-                          onClick={() => handleChangeSize(size)} // Update selected size
+                          onClick={() => handleChangeSize(size as string)} // Update selected size
                           className={`border-4 ${
                             selectedSize === size ? "border-blue-500" : "border-transparent"
                           } hover:scale-110 w-10 h-10 bg-slate-600 rounded-full text-white ${
                             isDisabled ? "opacity-50 cursor-not-allowed" : ""
                           }`}
-                          disabled={isDisabled} // Disable button if size is not valid for the selected color
+                          disabled={Boolean(isDisabled)} // Disable button if size is not valid for the selected color
                         >
-                          {size}
+                          {size as React.ReactNode}
                         </button>
                       </div>
                     )
@@ -531,6 +538,19 @@ const ProductPage = ({ params }: any) => {
               </div>
 
               {/* schedule */}
+
+              {/* Pricing & Sizing Guide Helper */}
+              <div className="bg-blue-50 p-4 rounded-xl mt-6 border border-blue-100 flex items-start gap-3">
+                <InfoOutlinedIcon className="text-blue-500 mt-0.5" fontSize="small" />
+                <div>
+                  <p className="font-semibold text-sm text-blue-900">Modular Sizing Guide</p>
+                  <p className="text-xs mt-1 text-blue-700 leading-relaxed">
+                    Renting a modular system (e.g., dance floors, staging, or pipe & drape)? Please
+                    refer to the item description to find how many units you need for your desired
+                    setup, then enter that total quantity below.
+                  </p>
+                </div>
+              </div>
               <div className="flex flex-col gap-2 mt-4">
                 <div className="flex flex-col gap-2 mt-4">
                   <p>Select Schedule:</p>
@@ -659,8 +679,8 @@ const ProductPage = ({ params }: any) => {
           <p className="font-bold text-2xl">Product Reviews</p>
         </div>
         <div className="flex flex-col">
-          {product.reviews.length > 0 ? (
-            product.reviews.map((review) => (
+          {product.reviews?.length > 0 ? (
+            product.reviews.map((review: any) => (
               <div key={review.id} className="mb-4 border-b border-gray-300">
                 <div className="flex flex-row items-center gap-2">
                   <Image

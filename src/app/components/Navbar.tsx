@@ -4,6 +4,7 @@ import { LogoutButton } from "../(auth)/components/LogoutButton"
 import AccountCircle from "@mui/icons-material/AccountCircle"
 import ExpandMore from "@mui/icons-material/ExpandMore"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import PersonIcon from "@mui/icons-material/Person"
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag"
 import StarIcon from "@mui/icons-material/Star"
@@ -27,11 +28,16 @@ export default function Navbar({ currentUser }: NavbarProps) {
   const [userOpen, setUserOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const pathname = usePathname()
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const accountRef = useRef<HTMLDivElement | null>(null)
-  const [cartItems] = useQuery(getAllCartItem, null, { enabled: !!currentUser, suspense: false })
+  const [cartItems] = useQuery(getAllCartItem, null, {
+    enabled: !!currentUser && !isLoggingOut,
+    suspense: false,
+  })
   const [notifications] = useQuery(getNotifications, null, {
-    enabled: !!currentUser,
+    enabled: !!currentUser && !isLoggingOut,
     refetchInterval: 5000,
     suspense: false,
   })
@@ -65,8 +71,8 @@ export default function Navbar({ currentUser }: NavbarProps) {
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "Products", href: "/product" },
-    { name: "Shops", href: "/shop" },
+    { name: "Products", href: "/products" },
+    { name: "Shops", href: "/shops" },
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
   ]
@@ -94,7 +100,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
 
   return (
     <header className="w-full bg-[#1b2a80] text-white shadow-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+      <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Left: Logo + (mobile) menu icon */}
         <div className="flex items-center gap-2 lg:gap-4">
           <button
@@ -127,16 +133,24 @@ export default function Navbar({ currentUser }: NavbarProps) {
         </div>
 
         {/* Center: desktop nav links */}
-        <nav className="hidden gap-8 font-semibold lg:flex">
-          {navLinks.map((l) => (
-            <Link
-              key={l.name}
-              href={l.href as any}
-              className="hover:text-yellow-300 transition-colors"
-            >
-              {l.name}
-            </Link>
-          ))}
+        <nav className="hidden gap-8 font-semibold lg:flex items-center">
+          {navLinks.map((l) => {
+            const isActive = pathname === l.href
+            return (
+              <Link
+                key={l.name}
+                href={l.href as any}
+                className={`relative hover:text-yellow-300 transition-colors py-1 ${
+                  isActive ? "text-yellow-300" : "text-white"
+                }`}
+              >
+                {l.name}
+                {isActive && (
+                  <span className="absolute left-0 bottom-0 w-full h-[2px] bg-yellow-300 rounded-full" />
+                )}
+              </Link>
+            )
+          })}
         </nav>
 
         {/* Right: auth actions (desktop) and user icon (mobile) */}
@@ -144,11 +158,27 @@ export default function Navbar({ currentUser }: NavbarProps) {
           <div className="hidden items-center gap-4 font-semibold lg:flex">
             {!currentUser ? (
               <>
-                <Link href="/login" className="hover:text-yellow-300 transition-colors">
+                <Link
+                  href="/login"
+                  className={`relative hover:text-yellow-300 transition-colors py-1 ${
+                    pathname === "/login" ? "text-yellow-300" : "text-white"
+                  }`}
+                >
                   Login
+                  {pathname === "/login" && (
+                    <span className="absolute left-0 bottom-0 w-full h-[2px] bg-yellow-300 rounded-full" />
+                  )}
                 </Link>
-                <Link href="/signup" className="hover:text-yellow-300 transition-colors">
+                <Link
+                  href="/signup"
+                  className={`relative hover:text-yellow-300 transition-colors py-1 ${
+                    pathname === "/signup" ? "text-yellow-300" : "text-white"
+                  }`}
+                >
                   Register
+                  {pathname === "/signup" && (
+                    <span className="absolute left-0 bottom-0 w-full h-[2px] bg-yellow-300 rounded-full" />
+                  )}
                 </Link>
               </>
             ) : (
@@ -207,7 +237,10 @@ export default function Navbar({ currentUser }: NavbarProps) {
 
                         <div className="flex items-center px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer">
                           <ExitToAppIcon className="mr-3 text-gray-500" fontSize="small" />
-                          <LogoutButton className="w-full text-left" />
+                          <LogoutButton
+                            className="w-full text-left"
+                            onLogout={() => setIsLoggingOut(true)}
+                          />
                         </div>
                       </div>
                     </div>
@@ -302,16 +335,23 @@ export default function Navbar({ currentUser }: NavbarProps) {
             </div>
 
             <nav className="flex flex-col gap-2">
-              {navLinks.map((l) => (
-                <Link
-                  key={l.name}
-                  href={l.href as any}
-                  className="rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {l.name}
-                </Link>
-              ))}
+              {navLinks.map((l) => {
+                const isActive = pathname === l.href
+                return (
+                  <Link
+                    key={l.name}
+                    href={l.href as any}
+                    className={`rounded-lg px-4 py-3 text-base font-medium transition-colors ${
+                      isActive
+                        ? "bg-[#1b2a80]/10 text-[#1b2a80]"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80]"
+                    }`}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {l.name}
+                  </Link>
+                )
+              })}
             </nav>
           </aside>
         </div>
@@ -354,14 +394,22 @@ export default function Navbar({ currentUser }: NavbarProps) {
                 <>
                   <Link
                     href="/login"
-                    className="rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    className={`rounded-lg px-4 py-3 text-base font-medium transition-colors ${
+                      pathname === "/login"
+                        ? "bg-[#1b2a80]/10 text-[#1b2a80]"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80]"
+                    }`}
                     onClick={() => setUserOpen(false)}
                   >
                     Login
                   </Link>
                   <Link
                     href="/signup"
-                    className="rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
+                    className={`rounded-lg px-4 py-3 text-base font-medium transition-colors ${
+                      pathname === "/signup"
+                        ? "bg-[#1b2a80]/10 text-[#1b2a80]"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80]"
+                    }`}
                     onClick={() => setUserOpen(false)}
                   >
                     Register
@@ -410,7 +458,10 @@ export default function Navbar({ currentUser }: NavbarProps) {
                     onClick={() => setUserOpen(false)}
                   >
                     <ExitToAppIcon className="mr-3 text-gray-500" fontSize="small" />
-                    <LogoutButton className="w-full text-left" />
+                    <LogoutButton
+                      className="w-full text-left"
+                      onLogout={() => setIsLoggingOut(true)}
+                    />
                   </div>
                 </>
               )}

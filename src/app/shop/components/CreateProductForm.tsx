@@ -1,49 +1,63 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getCategories from "../../queries/getCategories"
-import getColors from "../../queries/getColors"
-import { MenuItem, TextField } from "@mui/material"
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever"
+import {
+  MenuItem,
+  TextField,
+  InputAdornment,
+  Button,
+  Typography,
+  Paper,
+  Box,
+  Tooltip,
+  Stack,
+} from "@mui/material"
+import Grid from "@mui/material/Grid"
 import uploadShopBg from "../../mutations/uploadShopBg"
 import createProduct from "../../mutations/createProduct"
+import createAttribute from "../../mutations/createAttribute"
+import createAttributeValue from "../../mutations/createAttributeValue"
 import { useRouter } from "next/navigation"
-
-import { InputAdornment } from "@mui/material"
-
-type Image = {
-  id: number
-  url: string
-}
-
-type Color = {
-  id: number
-  name: string
-  hexCode: string
-}
+import { InfoOutlined } from "@mui/icons-material"
+import getAttributes from "../../queries/getAttributes"
+import ProductImageUploader, { FileWithPreview } from "./ProductImageUploader"
+import DamagePoliciesSection from "./DamagePoliciesSection"
+import { DAMAGE_TEMPLATES } from "@/db/damageThresholds"
+import ProductVariantsSection from "./ProductVariantsSection"
+import PurchaseHistorySection from "./PurchaseHistorySection"
+import ProductBasicInfoSection from "./ProductBasicInfoSection"
+import { toast } from "sonner"
 
 type DamagePolicies = {
   id: number
   damageSeverity: string
   damageSeverityPercent: number
+  description?: string
 }
 
-type Category = {
+type AttributeValue = {
+  id: number
+  value: string
+  hexCode: string | null
+}
+
+type Attribute = {
   id: number
   name: string
+  values: AttributeValue[]
 }
 
 type Variant = {
   id: any
-  color: Color
-  size: string
-  colorId: number
+  attributeValueIds: { [attributeId: number]: number }
   price: number
   quantity: number
-  replacementCost: number
-  manualRepairCost: number
   damagePolicies: DamagePolicies[]
+  originalMSRP: number
+  originalPurchaseDate: string
+  condition: string
+  active: boolean
 }
 
 type ProductFormData = {
@@ -53,788 +67,497 @@ type ProductFormData = {
   status: "active" | "inactive"
   description: string
   deliveryOption: "DELIVERY" | "PICKUP" | "BOTH"
-  category: Category
   categoryid: number
   variants: Variant[]
-  images: Image[]
+  images: any[]
 }
 
-const notEmptyDamagePolicies: DamagePolicies[] = [
+const getNotEmptyDamagePolicies = (): DamagePolicies[] => [
+  { id: 1, damageSeverity: "minor", damageSeverityPercent: 15 },
+  { id: 2, damageSeverity: "moderate", damageSeverityPercent: 30 },
+  { id: 3, damageSeverity: "major", damageSeverityPercent: 60 },
   {
-    id: Date.now(),
-    damageSeverity: "minor",
-    damageSeverityPercent: 10,
-  },
-  {
-    id: Date.now(),
-    damageSeverity: "moderate",
-    damageSeverityPercent: 30,
-  },
-  {
-    id: Date.now(),
-    damageSeverity: "major",
-    damageSeverityPercent: 50,
+    id: 4,
+    damageSeverity: "total_loss",
+    damageSeverityPercent: 100,
+    description: "Item is lost, stolen, or irreparable.",
   },
 ]
 
-const emptyVariant: Variant = {
-  id: crypto.randomUUID(),
-  color: {
-    id: 1,
-    name: "Red",
-    hexCode: "#FF0000",
-  },
-  size: "XS",
-  colorId: 1,
-  quantity: 1,
-  price: 100,
-  replacementCost: 100,
-  manualRepairCost: 50,
-  damagePolicies: notEmptyDamagePolicies,
+function createEmptyVariant(): Variant {
+  return {
+    id: crypto.randomUUID(),
+    attributeValueIds: {},
+    quantity: 0,
+    price: 0,
+    damagePolicies: getNotEmptyDamagePolicies(),
+    originalMSRP: 0,
+    originalPurchaseDate: new Date().toISOString().split("T")[0] || "",
+    condition: "New",
+    active: true,
+  }
 }
 
-const makeEmptyProduct = (currentUser: any): ProductFormData => ({
-  id: 0,
-  shopId: currentUser.shop.id,
-  name: "",
-  status: "active",
-  description: "",
-  deliveryOption: "DELIVERY",
-  category: {
-    id: 1,
-    name: "Electronics",
-  },
-  categoryid: 1,
-  variants: [emptyVariant],
-  images: [],
-})
+// Cartesian product helper (moved outside component to be stable)
+const cartesian = (args: any[][]) => {
+  const r: any[] = [],
+    max = args.length - 1
+  function helper(arr: any[], i: number) {
+    for (var j = 0, l = args[i]!.length; j < l; j++) {
+      var a = arr.slice(0)
+      a.push(args[i]![j])
+      if (i == max) r.push(a)
+      else helper(a, i + 1)
+    }
+  }
+  helper([], 0)
+  return r
+}
 
-const CreateProductForm = (props: { currentUser: any; handleClose: () => void }) => {
-  const emptyProduct = makeEmptyProduct(props.currentUser)
-
+const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }) => {
   const router = useRouter()
   const { handleClose } = props
   const [loading, setLoading] = useState(false)
-  const currentUser = props.currentUser
-  const [formData, setFormData] = useState<ProductFormData>(emptyProduct)
+  const [useDefaultDamageRates, setUseDefaultDamageRates] = useState(true)
+  const [hasVariants, setHasVariants] = useState(false)
+  const [options, setOptions] = useState<
+    { id: string; attributeId: number | ""; values: number[] }[]
+  >([])
+  const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([])
 
-  const [rowToggle, setRowToggle] = useState<{ [id: number]: boolean }>({})
+  const [categories] = useQuery(getCategories, null)
+  const [attributes, { refetch: refetchAttributes }] = useQuery(getAttributes, null)
 
-  // const [formData, setFormData] = useState({
-  //   shopId: currentUser.shop.id,
-  //   productName: "",
-  //   category: "",
-  //   description: "",
-  //   deliveryOption: "",
-  //   productImages: [],
-  //   variants: [{ size: "", color: "", quantity: 0, price: 0 }],
-  // })
+  const [formData, setFormData] = useState<ProductFormData>({
+    id: 0,
+    shopId: props.currentUser.shop.id,
+    name: "",
+    status: "active",
+    description: "",
+    deliveryOption: "DELIVERY",
+    categoryid: 1,
+    variants: [createEmptyVariant()],
+    images: [],
+  })
 
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
   const [createProductMutation] = useMutation(createProduct)
+  const [createAttributeMutation] = useMutation(createAttribute)
+  const [createAttributeValueMutation] = useMutation(createAttributeValue)
 
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  // --- DERIVED STATE ---
+  const selectedCategory = categories?.find((c) => c.id === formData.categoryid)
+  const minorMax = selectedCategory ? Math.round(selectedCategory.defaultMinorPercent * 100) : 15
+  const modMax = selectedCategory ? Math.round(selectedCategory.defaultModeratePercent * 100) : 30
+  const majMax = selectedCategory ? Math.round(selectedCategory.defaultMajorPercent * 100) : 60
 
-  const [categories] = useQuery(getCategories, null)
-  const [colors] = useQuery(getColors, null)
+  const currentTemplate =
+    DAMAGE_TEMPLATES[selectedCategory?.name || ""] || DAMAGE_TEMPLATES["Default"]
 
-  // Update state for individual fields
+  const minorPercent =
+    formData.variants[0]?.damagePolicies.find((dp) => dp.damageSeverity === "minor")
+      ?.damageSeverityPercent || 0
+  const moderatePercent =
+    formData.variants[0]?.damagePolicies.find((dp) => dp.damageSeverity === "moderate")
+      ?.damageSeverityPercent || 0
+  const majorPercent =
+    formData.variants[0]?.damagePolicies.find((dp) => dp.damageSeverity === "major")
+      ?.damageSeverityPercent || 0
+
+  const firstVariantMSRP = formData.variants[0]?.originalMSRP || 0
+  const firstVariantPurchaseDate = formData.variants[0]?.originalPurchaseDate
+
+  const currentValuePreview = useMemo(() => {
+    const msrp = firstVariantMSRP
+    const date = new Date(firstVariantPurchaseDate || new Date())
+    const years = (new Date().getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+    const depRate = selectedCategory?.annualDepreciationRate || 0.15
+    const value = msrp * Math.pow(1 - depRate, Math.max(0, years))
+    return Math.max(value, msrp * 0.1) // Floor at 10%
+  }, [firstVariantMSRP, firstVariantPurchaseDate, selectedCategory])
+
+  // --- HANDLERS ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
 
+  const handleVariantChange = (index: number, field: keyof Variant, value: any) => {
+    setFormData((prev) => {
+      const updatedVariants = [...prev.variants]
+      updatedVariants[index] = { ...updatedVariants[index]!, [field]: value }
+      return { ...prev, variants: updatedVariants }
+    })
+  }
+
+  const updateDamagePolicy = (severity: string, percent: number) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      variants: prev.variants.map((v) => ({
+        ...v,
+        damagePolicies: v.damagePolicies.map((dp) =>
+          dp.damageSeverity === severity ? { ...dp, damageSeverityPercent: percent } : dp
+        ),
+      })),
     }))
   }
 
-  // Handle variant changes
-  const handleVariantChange = (index: number, field: keyof Variant, value: string | number) => {
-    const updatedVariants = [...formData.variants]
-    updatedVariants[index] = {
-      ...updatedVariants[index],
-      [field]: value,
-    }
-    // updatedVariants[index][field] = value
-    setFormData((prev) => ({ ...prev, variants: updatedVariants }))
-  }
-
-  // Add a new variant
-  const addVariant = () => {
-    const newVariant: Variant = {
-      id: crypto.randomUUID(), // ✅ generate fresh ID each time
-      color: {
-        id: 1,
-        name: "Red",
-        hexCode: "#FF0000",
-      },
-      size: "XS",
-      colorId: 1,
-      quantity: 1,
-      price: 100,
-      replacementCost: 100,
-      manualRepairCost: 50,
-      damagePolicies: notEmptyDamagePolicies,
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      variants: [...prev.variants, { ...newVariant }],
-    }))
-
-    console.log(formData)
-  }
-
-  // Remove a variant
-  const removeVariant = (index: number) => {
-    const updatedVariants = formData.variants.filter((_, i) => i !== index)
-    setFormData((prev) => ({ ...prev, variants: updatedVariants }))
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files)
-      setSelectedFiles(files) // store files for later
-    }
-  }
-
-  // When user clicks "Create Product"
-  // const handleCreateProduct = async () => {
-  //   try {
-  //     // First upload all selected files
-  //     const uploadedFileNames: string[] = []
-
-  //     for (const file of selectedFiles) {
-  //       const uniqueFileName = `${Date.now()}-${file.name}`
-  //       const reader = new FileReader()
-
-  //       // Wrap FileReader in a promise so we can await it
-  //       const base64String: string = await new Promise((resolve, reject) => {
-  //         reader.onloadend = () => resolve(reader.result as string)
-  //         reader.onerror = reject
-  //         reader.readAsDataURL(file)
-  //       })
-
-  //       const fileUrl = await uploadShopBgMutation({
-  //         fileName: uniqueFileName,
-  //         data: base64String,
-  //         targetDirectory: "products",
-  //       })
-
-  //       uploadedFileNames.push(uniqueFileName)
-  //     }
-
-  //     // Now include uploadedFileNames in formData
-  //     const finalData = {
-  //       ...formData,
-  //       productImages: uploadedFileNames,
-  //     }
-
-  //     console.log("Submitting product:", finalData)
-
-  //     // Call your create product mutation here
-  //     await createProductMutation(finalData)
-  //   } catch (error) {
-  //     console.error("Product creation failed:", error)
-  //   }
-  // }
-
-  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   if (e.target.files) {
-  //     const files = Array.from(e.target.files).map((file) => {
-  //       const uniqueFileName = `${Date.now()}-${file.name}`
-  //       const reader = new FileReader()
-  //       reader.onloadend = async () => {
-  //         const base64String = reader.result as string
-  //         try {
-  //           const fileUrl = await uploadShopBgMutation({
-  //             fileName: uniqueFileName,
-  //             data: base64String,
-  //             targetDirectory: "products",
-  //           })
-  //         } catch (error) {
-  //           console.error("file upload failed:", error)
-  //         }
-  //       }
-  //       reader.readAsDataURL(file)
-  //       return uniqueFileName
-  //     })
-
-  //     const uploadedFileName = files.map((uniqeFileName) => uniqeFileName)
-
-  //     console.log(uploadedFileName)
-
-  //     setFormData((prev) => ({ ...prev, productImages: uploadedFileName }))
-  //   }
-  // }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    const seen = new Set<string>()
-    for (const v of formData.variants) {
-      const key = `${v.size}-${v.colorId}`
-      if (seen.has(key)) {
-        alert("Duplicate size and color found in variants!")
-        setLoading(false)
-        return
-      }
-      seen.add(key)
-    }
-
+  // Implement your database creation logic here
+  const handleCreateAttribute = async (name: string) => {
     try {
-      // 1. Upload all selected files first
-      const uploadedFileNames: string[] = []
+      const newAttr = await createAttributeMutation({ name })
+      toast.success(`Option "${name}" created!`)
+      await refetchAttributes()
+      return newAttr.id
+    } catch (e: any) {
+      toast.error(e.message || "Failed to create option")
+    }
+  }
 
-      for (const file of selectedFiles) {
-        const uniqueFileName = `${Date.now()}-${file.name}`
-        const reader = new FileReader()
+  const handleCreateAttributeValue = async (attributeId: number, value: string) => {
+    try {
+      const newVal = await createAttributeValueMutation({ attributeId, value })
+      toast.success(`Value "${value}" created!`)
+      await refetchAttributes()
+      return newVal.id
+    } catch (e: any) {
+      toast.error(e.message || "Failed to create value")
+    }
+  }
 
-        // Wrap FileReader in a promise
-        const base64String: string = await new Promise((resolve, reject) => {
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(file)
+  // Variant Generation Logic
+
+  useEffect(() => {
+    if (!hasVariants) {
+      setFormData((prev) => ({
+        ...prev,
+        variants: [{ ...(prev.variants[0] || createEmptyVariant()), attributeValueIds: {} }],
+      }))
+      return
+    }
+    const validOptions = options.filter((o) => o.attributeId !== "" && o.values.length > 0)
+    if (validOptions.length === 0) {
+      setFormData((prev) => ({ ...prev, variants: [] }))
+      return
+    }
+
+    const combinations = cartesian(validOptions.map((o) => o.values))
+    setFormData((prev) => {
+      const baseVariant = prev.variants[0] || {}
+      const basePrice = baseVariant.price || 0
+      const baseQty = baseVariant.quantity || 0
+      const baseMSRP = baseVariant.originalMSRP || 0
+      const newVariants = combinations.map((combo) => {
+        const attributeValueIds: Record<number, number> = {}
+        validOptions.forEach((option, idx) => {
+          if (option.attributeId) attributeValueIds[option.attributeId as number] = combo[idx]
         })
 
+        const existing = prev.variants.find(
+          (v) =>
+            Object.keys(attributeValueIds).length === Object.keys(v.attributeValueIds).length &&
+            Object.keys(attributeValueIds).every(
+              (k) => v.attributeValueIds[Number(k)] === attributeValueIds[Number(k)]
+            )
+        )
+
+        return (
+          existing || {
+            ...createEmptyVariant(),
+            attributeValueIds,
+            price: basePrice,
+            quantity: baseQty,
+            originalMSRP: baseMSRP,
+          }
+        )
+      })
+      return { ...prev, variants: newVariants }
+    })
+  }, [options, hasVariants])
+
+  // Sync Defaults when Category or Toggle Changes
+  useEffect(() => {
+    if (useDefaultDamageRates) {
+      updateDamagePolicy("minor", minorMax)
+      updateDamagePolicy("moderate", modMax)
+      updateDamagePolicy("major", majMax)
+    }
+  }, [useDefaultDamageRates, minorMax, modMax, majMax])
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    const submitter = (e.nativeEvent as any).submitter as HTMLButtonElement
+    const isDraft = submitter?.name === "draft"
+
+    // Validate Variant Options
+    if (hasVariants) {
+      const hasIncompleteOptions = options.some(
+        (opt) => opt.attributeId === "" || opt.values.length === 0
+      )
+      if (options.length > 0 && hasIncompleteOptions) {
+        toast.error(
+          "Please complete all variant options (select an option name and at least one value) or remove incomplete ones before submitting."
+        )
+        return
+      }
+
+      const hasActiveVariants = formData.variants.some((v) => v.active)
+      if (!hasActiveVariants) {
+        toast.error("Please include at least one active variant before submitting.")
+        return
+      }
+    }
+
+    setLoading(true)
+
+    try {
+      const template = DAMAGE_TEMPLATES[selectedCategory?.name || ""] || DAMAGE_TEMPLATES["Default"]
+      const uploadedImages: any[] = []
+
+      for (const fileObj of selectedFiles) {
+        const uniqueFileName = `${Date.now()}-${fileObj.file.name}`
+        const base64String: string = await new Promise((res) => {
+          const reader = new FileReader()
+          reader.onloadend = () => res(reader.result as string)
+          reader.readAsDataURL(fileObj.file)
+        })
         await uploadShopBgMutation({
           fileName: uniqueFileName,
           data: base64String,
           targetDirectory: "products",
         })
-
-        uploadedFileNames.push(uniqueFileName)
+        uploadedImages.push({ url: uniqueFileName, attributeValueId: fileObj.attributeValueId })
       }
 
-      // 2. Create product with uploaded image filenames
       const finalData = {
         ...formData,
-        images: uploadedFileNames,
+        status: isDraft ? "inactive" : "active",
+        images: uploadedImages,
+        variants: formData.variants
+          .filter((v) => v.active)
+          .map((v) => ({
+            ...v,
+            // MAP DESCRIPTIONS FROM TEMPLATE BEFORE SAVING
+            damagePolicies: v.damagePolicies.map((dp) => ({
+              ...dp,
+              description:
+                dp.damageSeverity === "total_loss"
+                  ? dp.description
+                  : template[dp.damageSeverity.toUpperCase() as keyof typeof template],
+            })),
+            attributes: Object.entries(v.attributeValueIds).map(([aId, vId]) => ({
+              attributeValueId: vId,
+            })),
+          })),
       }
 
-      console.log("Submitting product:", finalData)
-
-      const product = await createProductMutation(finalData)
-
-      console.log("✅ Product created:", product)
-
-      alert("Product created successfully!")
-      handleClose()
-    } catch (error) {
-      console.error("❌ Error creating product:", error)
-      alert("Failed to create product!")
+      await createProductMutation(finalData as any)
+      toast.success(isDraft ? "Product saved to drafts!" : "Product created successfully!")
+      handleClose ? handleClose() : router.push("/shop/products")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create product")
     } finally {
       setLoading(false)
     }
   }
 
-  // Handle form submission
-  // const handleSubmit1 = async (e: React.FormEvent) => {
-  //   e.preventDefault()
-
-  //   console.log(formData)
-
-  //   setLoading(true)
-
-  //   try {
-  //     // ✅ Step 1: Create product first
-  //     const product = await createProductMutation({
-  //       ...formData,
-  //       images: [],
-  //     })
-
-  //     // ✅ Step 2: Upload images only if product creation succeeded
-  //     const uploadedImages = await Promise.all(
-  //       formData.images.map(async (file) => {
-  //         return await uploadFile(file); // your upload function
-  //       })
-  //     );
-
-  //     // ✅ Step 3: Update product with uploaded images
-  //     if (uploadedImages.length > 0) {
-  //       await updateProductMutation({
-  //         where: { id: product.id },
-  //         data: { images: uploadedImages },
-  //       })
-  //     }
-
-  //     console.log(product)
-
-  //     // const product = await createProduct(formData)
-  //     // console.log("Product created:", product)
-  //     // alert("Product created successfully!")
-  //     // handleClose()
-  //     // setLoading(false)
-  //   } catch (error) {
-  //     console.error("Error creating product:", error)
-  //     alert("Failed to create product!")
-  //   }
-  // }
-
-  const handleRepairCost = (
-    variantIndex: number,
-    key: keyof DamagePolicies,
-    severity: "minor" | "moderate" | "major",
-    value: number
-  ) => {
-    setFormData((prev) => {
-      const updatedVariants = [...prev.variants]
-
-      const variant = updatedVariants[variantIndex]
-
-      // clone policies
-      const updatedPolicies = variant.damagePolicies.map((p) =>
-        p.damageSeverity === severity ? { ...p, [key]: value } : p
-      )
-
-      updatedVariants[variantIndex] = {
-        ...variant,
-        damagePolicies: updatedPolicies,
-      }
-
-      return { ...prev, variants: updatedVariants }
-    })
-  }
-
-  const toggleRow = (id: number) => {
-    setRowToggle((prev) => ({
-      ...prev,
-      [id]: !prev[id],
+  const selectableAttributeValues = options.flatMap((opt) => {
+    const attr = attributes?.find((a) => a.id === opt.attributeId)
+    return opt.values.map((vId) => ({
+      id: vId,
+      label: `${attr?.name}: ${attr?.values.find((v) => v.id === vId)?.value}`,
     }))
-  }
+  })
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Product Name, Category, and Delivery Option */}
-      <div>
-        <p className="text-2xl font-bold">ADDING NEW PRODUCT</p>
-      </div>
-      <div className="flex flex-row gap-2">
-        <TextField
-          required
-          id="name"
-          name="name"
-          label="Product Name"
-          fullWidth
-          value={formData.name}
-          onChange={handleInputChange}
-        />
+    <div className="w-full mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+      <header className="mb-8">
+        <Typography variant="h5" className="font-bold text-slate-800">
+          Add New Product
+        </Typography>
+        <p className="text-slate-500 text-sm">
+          Collect the necessary details for listing and damage protection.
+        </p>
+      </header>
 
-        <TextField
-          id="categoryid"
-          select
-          name="categoryid"
-          label="Select Category"
-          fullWidth
-          value={formData.categoryid}
-          onChange={handleInputChange}
-        >
-          {categories.map((category) => (
-            <MenuItem key={category.id} value={category.id}>
-              {category.name}
-            </MenuItem>
-          ))}
-        </TextField>
+      <form onSubmit={handleSubmit}>
+        <Grid container spacing={4}>
+          <Grid item xs={12} lg={8}>
+            <Stack spacing={4}>
+              <ProductBasicInfoSection
+                name={formData.name}
+                categoryId={formData.categoryid}
+                description={formData.description}
+                deliveryOption={formData.deliveryOption}
+                categories={categories as any}
+                onChange={handleInputChange}
+              />
 
-        <TextField
-          id="deliveryOption"
-          select
-          name="deliveryOption"
-          label="Delivery Option"
-          fullWidth
-          value={formData.deliveryOption}
-          onChange={handleInputChange}
-        >
-          <MenuItem value="DELIVERY">Delivery</MenuItem>
-          <MenuItem value="PICKUP">Pick Up</MenuItem>
-          <MenuItem value="BOTH">Both (Pick Up or Delivery)</MenuItem>
-        </TextField>
-      </div>
+              <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+                <Stack spacing={3}>
+                  <Box>
+                    <Typography variant="h6" fontWeight="bold" color="text.primary">
+                      Media
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      Upload images of your product to help renters evaluate its condition and
+                      features.
+                    </Typography>
+                  </Box>
+                  <ProductImageUploader
+                    selectedFiles={selectedFiles}
+                    onImageChange={(e) => {
+                      if (e.target.files) {
+                        const newFiles = Array.from(e.target.files).map((file) => ({
+                          file,
+                          preview: URL.createObjectURL(file),
+                          attributeValueId: null,
+                        }))
+                        setSelectedFiles((prev) => [...prev, ...newFiles])
+                      }
+                    }}
+                    onRemoveFile={(i) =>
+                      setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))
+                    }
+                    onRemoveAllFiles={() => setSelectedFiles([])}
+                    onFileAttributeChange={(i, id) => {
+                      const next = [...selectedFiles]
+                      next[i]!.attributeValueId = id
+                      setSelectedFiles(next)
+                    }}
+                    selectableAttributeValues={selectableAttributeValues}
+                  />
+                </Stack>
+              </Paper>
 
-      {/* Product Description */}
-      <TextField
-        required
-        multiline
-        rows={4}
-        id="productDescription"
-        name="description"
-        label="Product Description"
-        fullWidth
-        value={formData.description}
-        onChange={handleInputChange}
-      />
+              <ProductVariantsSection
+                hasVariants={hasVariants}
+                setHasVariants={setHasVariants}
+                options={options as any}
+                handleAddOption={() =>
+                  setOptions((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), attributeId: "", values: [] },
+                  ])
+                }
+                handleRemoveOption={(index) =>
+                  setOptions((opts) => opts.filter((_, i) => i !== index))
+                }
+                handleOptionAttributeChange={(index, attributeId) => {
+                  const newOptions = [...options]
+                  newOptions[index]!.attributeId = attributeId
+                  newOptions[index]!.values = []
+                  setOptions(newOptions)
+                }}
+                handleOptionValuesChange={(index, values) => {
+                  const newOptions = [...options]
+                  newOptions[index]!.values = values
+                  setOptions(newOptions)
+                }}
+                attributes={attributes as any}
+                variants={formData.variants}
+                handleVariantChange={handleVariantChange}
+                onCreateAttribute={handleCreateAttribute}
+                onCreateAttributeValue={handleCreateAttributeValue}
+              />
+            </Stack>
+          </Grid>
 
-      {/* Product Variants */}
-      <div>
-        <label className="block text-xl font-medium my-2 uppercase text-black">
-          Product Variants
-        </label>
-        {formData.variants.map((variant, index) => {
-          const minorPolicyIndex = variant.damagePolicies?.findIndex(
-            (p) => p.damageSeverity === "minor"
-          )
-          const minorPolicy = variant.damagePolicies?.[minorPolicyIndex]
-
-          const moderatePolicyIndex = variant.damagePolicies?.findIndex(
-            (p) => p.damageSeverity === "moderate"
-          )
-          const moderatePolicy = variant.damagePolicies?.[moderatePolicyIndex]
-
-          const majorPolicyIndex = variant.damagePolicies?.findIndex(
-            (p) => p.damageSeverity === "major"
-          )
-          const majorPolicy = variant.damagePolicies?.[majorPolicyIndex]
-
-          const replacementCost = variant.replacementCost
-
-          const isOpen = rowToggle[variant.id] || false
-
-          return (
-            <div
-              // key={variant.id ?? `variant-${index}`}
-              key={`variant-${index}`}
-              className="border p-4 rounded-md my-4"
-            >
-              <div
-                className="flex justify-between items-center cursor-pointer"
-                onClick={() => toggleRow(variant.id)}
+          <Grid item xs={12} lg={4}>
+            <Stack spacing={4} sx={{ position: { lg: "sticky" }, top: { lg: 24 }, pb: 2 }}>
+              <PurchaseHistorySection
+                sx={{ bgcolor: "#f8fafc" }}
+                originalPurchaseDate={formData.variants[0]?.originalPurchaseDate || ""}
+                condition={formData.variants[0]?.condition || "New"}
+                onChange={(field, value) => handleVariantChange(0, field as any, value)}
               >
-                <label className="block text-md font-medium uppercase">
-                  Variants
-                  <span className="ml-2 text-xs text-blue-500">
-                    ({`Variant ID: ${variant.id}-${index}`})
-                  </span>
-                </label>
-                <span>{isOpen ? "▲" : "▼"}</span>
-              </div>
-
-              {isOpen && (
-                <>
-                  <label className="block text-sm font-medium my-8">General Info</label>
-
-                  <div key={index} className="flex gap-2 items-center my-4">
-                    <TextField
-                      key={`variantSize-${index}`}
-                      id={`variantSize-${index}`}
-                      select
-                      name="size"
-                      label="Size"
-                      fullWidth
-                      value={variant.size}
-                      onChange={(e) => handleVariantChange(index, "size", e.target.value)}
+                <Box
+                  sx={{ p: 3, bgcolor: "#eef2ff", borderRadius: 2, border: "1px solid #c7d2fe" }}
+                >
+                  <div className="flex items-center gap-1 mb-2">
+                    <Typography
+                      variant="overline"
+                      fontWeight="bold"
+                      sx={{ color: "#4338ca", letterSpacing: 0.5, lineHeight: 1 }}
                     >
-                      <MenuItem value="XS">Extra Small</MenuItem>
-                      <MenuItem value="S">Small</MenuItem>
-                      <MenuItem value="M">Medium</MenuItem>
-                      <MenuItem value="L">Large</MenuItem>
-                      <MenuItem value="XL">Extra Large</MenuItem>
-                    </TextField>
-
-                    <TextField
-                      key={`variantColor-${index}`}
-                      id={`variantColor-${index}`}
-                      select
-                      name="colorId"
-                      label="Color"
-                      fullWidth
-                      value={variant.colorId}
-                      onChange={(e) => handleVariantChange(index, "colorId", e.target.value)}
-                    >
-                      {colors.map((color) => (
-                        <MenuItem key={color.id} value={color.id}>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-4 h-4 rounded-full"
-                              style={{ backgroundColor: color.hexCode }}
-                            ></div>
-                            {color.name}
-                          </div>
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                    <TextField
-                      required
-                      key={`variantQuantity-${index}`}
-                      id={`variantQuantity-${index}`}
-                      name="quantity"
-                      label="Quantity"
-                      type="number"
-                      fullWidth
-                      value={variant.quantity}
-                      onChange={(e) =>
-                        handleVariantChange(index, "quantity", Number(e.target.value))
-                      }
-                    />
-
-                    <TextField
-                      required
-                      key={`variantPrice-${index}`}
-                      id={`variantPrice-${index}`}
-                      name="price"
-                      label="Price"
-                      type="number"
-                      fullWidth
-                      value={variant.price}
-                      onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))}
-                    />
-
-                    {index > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(index)}
-                        className="bg-red-500 text-white p-2 rounded"
-                      >
-                        <DeleteForeverIcon />
-                      </button>
-                    )}
+                      CURRENT FAIR VALUE
+                    </Typography>
+                    <Tooltip title="Estimated value based on age and category depreciation.">
+                      <InfoOutlined sx={{ fontSize: 16, color: "#4338ca" }} />
+                    </Tooltip>
                   </div>
+                  <Typography variant="h4" sx={{ color: "#3730a3", fontWeight: 800 }}>
+                    ₱
+                    {currentValuePreview.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </Typography>
+                </Box>
+              </PurchaseHistorySection>
 
-                  <label className="block text-sm font-medium my-8">Costs</label>
+              <DamagePoliciesSection
+                sx={{ bgcolor: "#f8fafc" }}
+                useDefaultDamageRates={useDefaultDamageRates}
+                setUseDefaultDamageRates={setUseDefaultDamageRates}
+                categoryTemplate={currentTemplate}
+                minorPercent={minorPercent}
+                minorMin={1}
+                minorMax={minorMax}
+                onMinorChange={(val) => updateDamagePolicy("minor", val)}
+                moderatePercent={moderatePercent}
+                modMin={minorPercent + 1}
+                modMax={modMax}
+                onModerateChange={(val) => updateDamagePolicy("moderate", val)}
+                majorPercent={majorPercent}
+                majMin={moderatePercent + 1}
+                majMax={majMax}
+                onMajorChange={(val) => updateDamagePolicy("major", val)}
+              />
 
-                  {/* New section for repair & replacement costs */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <TextField
-                      key={`replacementCost-${index}`}
-                      name="replacementCost"
-                      label="Replacement Cost"
-                      type="number"
-                      fullWidth
-                      value={replacementCost || ""}
-                      onChange={(e) =>
-                        handleVariantChange(index, "replacementCost", Number(e.target.value))
-                      }
-                      sx={{
-                        "& .MuiInputLabel-root": { color: "blue" },
-                        "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                      }}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">₱</InputAdornment>,
-                      }}
-                    />
-
-                    <TextField
-                      key={`manualRepairCost-${index}`}
-                      name="manualRepairCost"
-                      label="Manual Repair Cost"
-                      type="number"
-                      fullWidth
-                      value={variant.manualRepairCost || ""}
-                      onChange={(e) =>
-                        handleVariantChange(index, "manualRepairCost", Number(e.target.value))
-                      }
-                      sx={{
-                        "& .MuiInputLabel-root": { color: "blue" },
-                        "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                      }}
-                      slotProps={{
-                        input: {
-                          startAdornment: <InputAdornment position="start">₱</InputAdornment>,
-                        },
-                      }}
-                    />
-                  </div>
-
-                  <label className="block text-sm font-medium my-8">Repair Severity</label>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Minor Repair */}
-                    <TextField
-                      key={`minorRepairCost-${index}`}
-                      name="minorRepairCost"
-                      label="Minor Repair Cost"
-                      type="number"
-                      fullWidth
-                      value={
-                        minorPolicy?.damageSeverityPercent
-                          ? minorPolicy?.damageSeverityPercent * (replacementCost / 100)
-                          : 0
-                      }
-                      slotProps={{
-                        input: {
-                          readOnly: true,
-                          startAdornment: <InputAdornment position="start">₱</InputAdornment>,
-                        },
-                      }}
-                    />
-                    <TextField
-                      key={`minorRepairPercent-${index}`}
-                      name="minorRepairPercent"
-                      label="Minor Repair %"
-                      type="number"
-                      placeholder="10 - 29"
-                      fullWidth
-                      value={minorPolicy?.damageSeverityPercent ?? 0}
-                      error={
-                        minorPolicy?.damageSeverityPercent < 10 ||
-                        minorPolicy?.damageSeverityPercent > 29
-                      }
-                      helperText={
-                        minorPolicy?.damageSeverityPercent < 10 ||
-                        minorPolicy?.damageSeverityPercent > 29
-                          ? "Value must be between 10 and 29"
-                          : ""
-                      }
-                      onChange={(e) => {
-                        // const raw = Number(e.target.value)
-                        // const { min, max } = repairPercentRanges["minor"]
-                        // const clamped = Math.max(min, Math.min(max, raw))
-                        const clamped = Number(e.target.value)
-                        handleRepairCost(index, "damageSeverityPercent", "minor", clamped)
-                      }}
-                      sx={{
-                        "& .MuiInputLabel-root": { color: "blue" },
-                        "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                      }}
-                      slotProps={{
-                        input: {
-                          inputProps: { min: 10, max: 29 },
-                          endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                        },
-                      }}
-                    />
-                    {/* Moderate Repair */}
-                    <TextField
-                      key={`moderateRepairCost-${index}`}
-                      name="moderateRepairCost"
-                      label="Moderate Repair Cost"
-                      type="number"
-                      fullWidth
-                      value={
-                        moderatePolicy?.damageSeverityPercent
-                          ? moderatePolicy?.damageSeverityPercent * (replacementCost / 100)
-                          : 0
-                      }
-                      slotProps={{
-                        input: {
-                          readOnly: true,
-                          startAdornment: <InputAdornment position="start">₱</InputAdornment>,
-                        },
-                      }}
-                    />
-                    <TextField
-                      key={`moderateRepairPercent-${index}`}
-                      name="moderateRepairPercent"
-                      label="Moderate Repair %"
-                      type="number"
-                      placeholder="30 - 59"
-                      fullWidth
-                      value={moderatePolicy?.damageSeverityPercent ?? 0}
-                      error={
-                        moderatePolicy?.damageSeverityPercent < 30 ||
-                        moderatePolicy?.damageSeverityPercent > 49
-                      }
-                      helperText={
-                        moderatePolicy?.damageSeverityPercent < 30 ||
-                        moderatePolicy?.damageSeverityPercent > 49
-                          ? "Value must be between 30 and 49"
-                          : ""
-                      }
-                      onChange={(e) =>
-                        handleRepairCost(
-                          index,
-                          "damageSeverityPercent",
-                          "moderate",
-                          Number(e.target.value)
-                        )
-                      }
-                      sx={{
-                        "& .MuiInputLabel-root": { color: "blue" },
-                        "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                      }}
-                      slotProps={{
-                        input: {
-                          inputProps: { min: 30, max: 49 },
-                          endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                        },
-                      }}
-                    />
-                    {/* Major Repair */}
-                    <TextField
-                      key={`majorRepairCost-${index}`}
-                      name="majorRepairCost"
-                      label="Major Repair Cost"
-                      type="number"
-                      fullWidth
-                      value={
-                        majorPolicy?.damageSeverityPercent
-                          ? majorPolicy?.damageSeverityPercent * (replacementCost / 100)
-                          : 0
-                      }
-                      slotProps={{
-                        input: {
-                          readOnly: true,
-                          startAdornment: <InputAdornment position="start">₱</InputAdornment>,
-                        },
-                      }}
-                    />
-                    <TextField
-                      key={`majorRepairPercent-${index}`}
-                      name="majorRepairPercent"
-                      label="Major Repair %"
-                      type="number"
-                      placeholder="50 - 69"
-                      fullWidth
-                      value={majorPolicy?.damageSeverityPercent ?? 0}
-                      error={
-                        majorPolicy?.damageSeverityPercent < 50 ||
-                        majorPolicy?.damageSeverityPercent > 69
-                      }
-                      helperText={
-                        majorPolicy?.damageSeverityPercent < 50 ||
-                        majorPolicy?.damageSeverityPercent > 69
-                          ? "Value must be between 50 and 69"
-                          : ""
-                      }
-                      onChange={(e) =>
-                        handleRepairCost(
-                          index,
-                          "damageSeverityPercent",
-                          "major",
-                          Number(e.target.value)
-                        )
-                      }
-                      sx={{
-                        "& .MuiInputLabel-root": { color: "blue" },
-                        "& .MuiInputLabel-root.Mui-focused": { color: "blue" }, // stays blue when focused
-                      }}
-                      slotProps={{
-                        input: {
-                          inputProps: { min: 50, max: 69 },
-                          endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                        },
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          )
-        })}
-
-        <button type="button" onClick={addVariant} className="bg-blue-500 text-white p-2 mt-2">
-          Add Variant
-        </button>
-      </div>
-
-      {/* Product Images */}
-      <div>
-        <label className="block text-sm font-medium">Product Images</label>
-        <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleImageChange}
-          className="p-2 border border-gray-300 rounded"
-        />
-      </div>
-
-      {/* Submit Button */}
-      <button type="submit" className="bg-green-500 text-white p-2 rounded" disabled={loading}>
-        {loading ? "Creating..." : "Create Product"}
-      </button>
-    </form>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  name="draft"
+                  type="submit"
+                  disabled={loading}
+                  sx={{
+                    py: 2,
+                    borderRadius: 2,
+                    fontSize: "1.1rem",
+                    fontWeight: "bold",
+                    textTransform: "none",
+                  }}
+                >
+                  Save as Draft
+                </Button>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  name="active"
+                  type="submit"
+                  disabled={loading}
+                  sx={{
+                    py: 2,
+                    borderRadius: 2,
+                    fontSize: "1.1rem",
+                    fontWeight: "bold",
+                    textTransform: "none",
+                    bgcolor: "#008060",
+                    "&:hover": { bgcolor: "#005e46" },
+                  }}
+                >
+                  {loading ? "Creating..." : "Create Product"}
+                </Button>
+              </Stack>
+            </Stack>
+          </Grid>
+        </Grid>
+      </form>
+    </div>
   )
 }
 

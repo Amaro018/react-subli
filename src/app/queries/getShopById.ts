@@ -10,7 +10,14 @@ export default resolver.pipe(resolver.zod(GetShopById), async ({ id }) => {
   const shop = await db.shop.findFirst({
     where: { id: typeof id === "string" ? parseInt(id) : id },
     include: {
-      // Add related models if needed, e.g. products: true
+      products: {
+        include: {
+          category: true,
+          variants: true,
+          reviews: true,
+          images: true,
+        },
+      },
     },
   })
   if (!shop) throw new Error("Shop not found")

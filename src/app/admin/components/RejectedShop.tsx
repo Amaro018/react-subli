@@ -69,6 +69,7 @@ export default function RejectedShop({ status }: RejectedShopProps) {
     Record<number, Record<string, { status: string; note?: string }>>
   >({})
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false)
+  const [showResubmittedOnly, setShowResubmittedOnly] = useState(false)
 
   const itemsPerPage = 10
   const lastProcessedShopId = useRef<number | null>(null)
@@ -93,7 +94,20 @@ export default function RejectedShop({ status }: RejectedShopProps) {
   }, [shops, sortConfig])
 
   const filteredShops = sortedShops.filter((shop: ShopType) => {
-    return status ? shop.status === status : true
+    const matchesStatus = status ? shop.status === status : true
+    if (!matchesStatus) return false
+
+    if (showResubmittedOnly) {
+      return (
+        shop.dtiStatus === "resubmit" ||
+        shop.permitStatus === "resubmit" ||
+        shop.taxStatus === "resubmit" ||
+        shop.dtiStatus === "pending" ||
+        shop.permitStatus === "pending" ||
+        shop.taxStatus === "pending"
+      )
+    }
+    return true
   })
 
   const highlightShopId = Number(searchParams.get("shopId"))
@@ -264,6 +278,17 @@ export default function RejectedShop({ status }: RejectedShopProps) {
 
   return (
     <div className="w-full">
+      <div className="flex justify-end mb-4">
+        <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-600 hover:text-gray-900">
+          <input
+            type="checkbox"
+            checked={showResubmittedOnly}
+            onChange={(e) => setShowResubmittedOnly(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+          />
+          Show Resubmitted Only
+        </label>
+      </div>
       <div className="w-full rounded-lg border border-gray-200 shadow-sm overflow-x-auto scrollbar-hide">
         <table className="w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -277,6 +302,14 @@ export default function RejectedShop({ status }: RejectedShopProps) {
                   className="flex items-center gap-1 group hover:text-gray-700"
                 >
                   Name {getSortIcon("shopName")}
+                </button>
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden md:table-cell">
+                <button
+                  onClick={() => requestSort("createdAt")}
+                  className="flex items-center gap-1 group hover:text-gray-700"
+                >
+                  Date Created {getSortIcon("createdAt")}
                 </button>
               </th>
               <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden md:table-cell">
@@ -343,6 +376,13 @@ export default function RejectedShop({ status }: RejectedShopProps) {
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-sm font-medium text-gray-900">
                       {shop.shopName}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
+                      {new Date(shop.createdAt).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
                       {new Date(shop.updatedAt).toLocaleDateString(undefined, {
@@ -464,7 +504,7 @@ export default function RejectedShop({ status }: RejectedShopProps) {
               })
             ) : (
               <tr>
-                <td colSpan={6} className="px-4 sm:px-6 py-10 text-center text-gray-500 text-sm">
+                <td colSpan={7} className="px-4 sm:px-6 py-10 text-center text-gray-500 text-sm">
                   No rejected shops found.
                 </td>
               </tr>

@@ -17,7 +17,7 @@ export default async function signup(
     street: string
     barangay: string
     city: string
-    region: string
+    province: string
     country: string
     zipCode: string
   },
@@ -45,7 +45,7 @@ export default async function signup(
             street: input.street,
             barangay: input.barangay,
             city: input.city,
-            region: input.region,
+            province: input.province,
             country: input.country,
             zipCode: input.zipCode,
           },

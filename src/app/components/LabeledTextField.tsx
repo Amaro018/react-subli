@@ -4,7 +4,8 @@ import { TextField, InputAdornment, IconButton } from "@mui/material"
 import Visibility from "@mui/icons-material/Visibility"
 import VisibilityOff from "@mui/icons-material/VisibilityOff"
 
-export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElements["input"]> {
+export interface LabeledTextFieldProps
+  extends Omit<PropsWithoutRef<JSX.IntrinsicElements["input"]>, "size"> {
   /** Field name. */
   name: string
   /** Field label. */
@@ -12,6 +13,9 @@ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElem
   /** Field type. Doesn't include radio buttons and checkboxes */
   type?: "text" | "password" | "email" | "number" | "tel" | "url" | "search" | "color" | "date"
   outerProps?: PropsWithoutRef<JSX.IntrinsicElements["div"]>
+  size?: "small" | "medium"
+  InputLabelProps?: any
+  helperText?: React.ReactNode
 }
 
 export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldProps>(
@@ -44,7 +48,7 @@ export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldPro
           type={inputType}
           disabled={isSubmitting}
           error={Boolean(meta.touched && meta.error)}
-          helperText={meta.touched && meta.error ? meta.error : " "}
+          helperText={meta.touched && meta.error ? meta.error : props.helperText || " "}
           fullWidth
           variant="outlined"
           inputRef={ref}

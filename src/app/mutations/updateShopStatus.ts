@@ -8,9 +8,9 @@ const UpdateShopStatus = z.object({
   documentType: z.enum(["DTI", "PERMIT", "TAX_CLEARANCE"]).optional(),
   status: z.enum(["pending", "approved", "rejected"]),
   shopUserId: z.number(),
-  note: z.string().optional(), // <-- Add note here
+  note: z.string().nullable().optional(), // <-- Add note here
   documentUpdates: z
-    .record(z.object({ status: z.string(), note: z.string().optional() }))
+    .record(z.object({ status: z.string(), note: z.string().nullable().optional() }))
     .optional(),
 })
 
@@ -55,15 +55,16 @@ export default resolver.pipe(
       if (documentUpdates) {
         if (documentUpdates.DTI) {
           docUpdates.dtiStatus = documentUpdates.DTI.status
-          if (documentUpdates.DTI.note) docUpdates.dtiNotes = documentUpdates.DTI.note
+          if (documentUpdates.DTI.note !== undefined) docUpdates.dtiNotes = documentUpdates.DTI.note
         }
         if (documentUpdates.PERMIT) {
           docUpdates.permitStatus = documentUpdates.PERMIT.status
-          if (documentUpdates.PERMIT.note) docUpdates.permitNotes = documentUpdates.PERMIT.note
+          if (documentUpdates.PERMIT.note !== undefined)
+            docUpdates.permitNotes = documentUpdates.PERMIT.note
         }
         if (documentUpdates.TAX_CLEARANCE) {
           docUpdates.taxStatus = documentUpdates.TAX_CLEARANCE.status
-          if (documentUpdates.TAX_CLEARANCE.note)
+          if (documentUpdates.TAX_CLEARANCE.note !== undefined)
             docUpdates.taxNotes = documentUpdates.TAX_CLEARANCE.note
         }
       } else {

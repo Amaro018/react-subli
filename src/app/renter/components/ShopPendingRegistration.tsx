@@ -116,6 +116,9 @@ export const ShopPendingRegistration = (props: any) => {
               <p className="flex items-center gap-2">
                 <span className="font-medium">Contact:</span> {currentUser.shop.contact}
               </p>
+              <p className="flex items-center gap-2">
+                <span className="font-medium">Email:</span> {currentUser.shop.email}
+              </p>
               <p className="capitalize text-gray-500">
                 {currentUser.shop.street}, {currentUser.shop.city}, {currentUser.shop.province},{" "}
                 {currentUser.shop.country}, {currentUser.shop.zipCode}

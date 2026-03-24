@@ -263,141 +263,148 @@ export default function DrawerCart(props: any) {
       >
         <div className="p-8 text-white flex flex-col gap-2 w-full">
           {cartItems && cartItems.length > 0 ? (
-            cartItems.map((item) => (
-              <div className="flex flex-col justify-stretch " key={item.id}>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      value={item.id}
-                      onChange={(e) => checkboxChange(e, item)}
-                      className="rounded-full border-2 border-white w-8 h-8 flex items-center justify-center"
-                    />
-                    <Image
-                      src={`/uploads/products/${item.product.images[0]?.url}`}
-                      alt={item.product.name}
-                      width={100}
-                      height={100}
-                      className="w-32 h-32 object-cover"
-                    />
-                    <div className="text-sm w-full">
-                      <div className="flex justify-between items-center">
-                        <p className="underline">{item.product.shop.shopName}</p>
+            cartItems.map((item) => {
+              const variantDisplay = item.variant.attributes
+                .map((attr: any) => attr.attributeValue.value)
+                .join(" / ")
+              return (
+                <div className="flex flex-col justify-stretch " key={item.id}>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        value={item.id}
+                        onChange={(e) => checkboxChange(e, item)}
+                        className="rounded-full border-2 border-white w-8 h-8 flex items-center justify-center"
+                      />
+                      <Image
+                        src={
+                          item.product.images[0]
+                            ? `/uploads/products/${item.product.images[0].url}`
+                            : "/placeholder.png"
+                        }
+                        alt={item.product.name}
+                        width={100}
+                        height={100}
+                        className="w-32 h-32 object-cover"
+                      />
+                      <div className="text-sm w-full">
+                        <div className="flex justify-between items-center">
+                          <p className="underline">{item.product.shop.shopName}</p>
 
-                        <button onClick={() => handleDelete(item.id)}>
-                          <DeleteForeverIcon className="text-white" />
-                        </button>
-                      </div>
-                      <p className="text-white">{item.product.name}</p>
-                      <p className="text-gray-400">
-                        {item.variant.size} - {item.variant.color.name}
-                      </p>
-                      <p className="text-sm">
-                        {item.startDate && item.endDate
-                          ? new Intl.DateTimeFormat("en-US", {
-                              month: "long",
-                              day: "2-digit",
-                              year: "numeric",
-                            }).formatRange(new Date(item.startDate), new Date(item.endDate))
-                          : "Dates not set"}
-                      </p>
+                          <button onClick={() => handleDelete(item.id)}>
+                            <DeleteForeverIcon className="text-white" />
+                          </button>
+                        </div>
+                        <p className="text-white">{item.product.name}</p>
+                        <p className="text-gray-400">Variant: {variantDisplay || "Default"}</p>
+                        <p className="text-sm">
+                          {item.startDate && item.endDate
+                            ? new Intl.DateTimeFormat("en-US", {
+                                month: "long",
+                                day: "2-digit",
+                                year: "numeric",
+                              }).formatRange(new Date(item.startDate), new Date(item.endDate))
+                            : "Dates not set"}
+                        </p>
 
-                      <div className="flex flex-col gap-2 mt-4">
-                        {item.product.deliveryOption === "BOTH" ? (
-                          <select
-                            className="bg-transparent border-2 border-white rounded-lg p-2 text-white"
-                            value={deliveryMethods[item.variantId] || item.deliveryMethod}
-                            onChange={(e) =>
+                        <div className="flex flex-col gap-2 mt-4">
+                          {item.product.deliveryOption === "BOTH" ? (
+                            <select
+                              className="bg-transparent border-2 border-white rounded-lg p-2 text-white"
+                              value={deliveryMethods[item.variantId] || item.deliveryMethod}
+                              onChange={(e) =>
+                                updateCartItemDetails(item.variantId, {
+                                  deliveryMethod: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="pickup" className="text-slate-600 bg-transparent">
+                                PICKUP
+                              </option>
+                              <option value="deliver" className="text-slate-600 bg-transparent">
+                                DELIVER
+                              </option>
+                            </select>
+                          ) : item.product.deliveryOption === "PICKUP" ? (
+                            <p>PICKUP ONLY</p>
+                          ) : (
+                            <p>DELIVER ONLY</p>
+                          )}
+                        </div>
+
+                        <div className="flex my-2 py-2 justify-end">
+                          <button
+                            className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
+                            onClick={() =>
                               updateCartItemDetails(item.variantId, {
-                                deliveryMethod: e.target.value,
+                                newQuantity: item.quantity - 1,
                               })
                             }
                           >
-                            <option value="pickup" className="text-slate-600 bg-transparent">
-                              PICKUP
-                            </option>
-                            <option value="deliver" className="text-slate-600 bg-transparent">
-                              DELIVER
-                            </option>
-                          </select>
-                        ) : item.product.deliveryOption === "pickup" ? (
-                          <p>PICKUP ONLY</p>
-                        ) : (
-                          <p>DELIVER ONLY</p>
-                        )}
-                      </div>
-
-                      <div className="flex my-2 py-2 justify-end">
-                        <button
-                          className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
-                          onClick={() =>
-                            updateCartItemDetails(item.variantId, {
-                              newQuantity: item.quantity - 1,
-                            })
-                          }
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          className="w-12 text-center text-slate-600"
-                          onChange={(e) =>
-                            updateCartItemDetails(item.variantId, {
-                              newQuantity: parseInt(e.target.value),
-                            })
-                          }
-                        />
-                        <button
-                          className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
-                          onClick={() =>
-                            updateCartItemDetails(item.variantId, {
-                              newQuantity: item.quantity + 1,
-                            })
-                          }
-                        >
-                          +
-                        </button>
-                        <p className="mx-2">*</p>
-                        <p>&#x20B1;{item.variant.price}</p>
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            className="w-12 text-center text-slate-600"
+                            onChange={(e) =>
+                              updateCartItemDetails(item.variantId, {
+                                newQuantity: parseInt(e.target.value),
+                              })
+                            }
+                          />
+                          <button
+                            className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
+                            onClick={() =>
+                              updateCartItemDetails(item.variantId, {
+                                newQuantity: item.quantity + 1,
+                              })
+                            }
+                          >
+                            +
+                          </button>
+                          <p className="mx-2">*</p>
+                          <p>&#x20B1;{item.variant.price}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* grand total computation  */}
-                  <div className="flex text-right gap-4 justify-end items-center border-b border-slate-500 w-full">
-                    <p>&#x20B1;{item.quantity * item.variant.price}</p>
-                    <p>x</p>
-                    <p>
-                      {item.startDate && item.endDate
-                        ? Math.ceil(
-                            (new Date(item.endDate).getTime() -
-                              new Date(item.startDate).getTime()) /
-                              (1000 * 60 * 60 * 24)
-                          )
-                        : 0}{" "}
-                      days
-                    </p>
-                    <p>=</p>
-                    <p>
-                      &#x20B1;
-                      {(
-                        item.quantity *
-                        item.variant.price *
-                        (item.startDate && item.endDate
+                    {/* grand total computation  */}
+                    <div className="flex text-right gap-4 justify-end items-center border-b border-slate-500 w-full">
+                      <p>&#x20B1;{item.quantity * item.variant.price}</p>
+                      <p>x</p>
+                      <p>
+                        {item.startDate && item.endDate
                           ? Math.ceil(
                               (new Date(item.endDate).getTime() -
                                 new Date(item.startDate).getTime()) /
                                 (1000 * 60 * 60 * 24)
                             )
-                          : 0)
-                      ).toLocaleString("en-US")}
-                    </p>
+                          : 0}{" "}
+                        days
+                      </p>
+                      <p>=</p>
+                      <p>
+                        &#x20B1;
+                        {(
+                          item.quantity *
+                          item.variant.price *
+                          (item.startDate && item.endDate
+                            ? Math.ceil(
+                                (new Date(item.endDate).getTime() -
+                                  new Date(item.startDate).getTime()) /
+                                  (1000 * 60 * 60 * 24)
+                              )
+                            : 0)
+                        ).toLocaleString("en-US")}
+                      </p>
+                    </div>
+                    {/* grand total computation  */}
                   </div>
-                  {/* grand total computation  */}
                 </div>
-              </div>
-            ))
+              )
+            })
           ) : (
             <p className="text-center font-bold flex justify-center items-center">
               No items in cart

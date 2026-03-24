@@ -23,24 +23,24 @@ model User {
   isShopMode       Boolean   @default(false)
   isShopRegistered Boolean   @default(false)
   profileImage     String?
-  emailVerified    Boolean   @default(false) // Add this field
+  emailVerified    Boolean   @default(false)
   tokens           Token[]
   sessions         Session[]
 
   personalInfo  PersonalInfo?
   shop          Shop?
-  cartItems     CartItem[] // Relation to CartItem
+  cartItems     CartItem[]
   rents         Rent[]
-  reviews       Review[] // Relation to reviews
-  reports       Report[] // Relation to reports
-  shopReports   ReportShop[] // Relation to shop reports
+  reviews       Review[]
+  reports       Report[]
+  shopReports   ReportShop[]
   addresses     Address[]
   notifications Notification[]
 }
 
 model Shop {
   id              Int          @id @default(autoincrement())
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade) // Define `fields` and `references` here
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId          Int          @unique
   shopName        String
   email           String
@@ -57,13 +57,13 @@ model Shop {
   imageBg         String?
   documentDTI     String?
   dtiStatus       String       @default("pending")
-  dtiNotes        String       @default("pending")
+  dtiNotes        String?
   documentPermit  String?
   permitStatus    String       @default("pending")
-  permitNotes     String       @default("pending")
+  permitNotes     String?
   documentTax     String?
   taxStatus       String       @default("pending")
-  taxNotes        String       @default("pending")
+  taxNotes        String?
   linkFacebook    String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -134,7 +134,7 @@ model Token {
 model Product {
   id             Int              @id @default(autoincrement())
   shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  shopId         Int // Foreign key to Shop
+  shopId         Int
   name           String
   description    String?
   status         String           @default("active")
@@ -143,64 +143,69 @@ model Product {
   updatedAt      DateTime         @updatedAt
   variants       ProductVariant[] // Relationship with ProductVariant
   images         ProductImage[]
-  category       Category         @relation("ProductCategories", fields: [categoryid], references: [id]) // Many-to-Many relationship with Category
+  category       Category         @relation("ProductCategories", fields: [categoryid], references: [id])
   categoryid     Int
   cartItems      CartItem[]
-  reviews        Review[] // Relation to reviews
-  reports        Report[] // Relation to reports
+  reviews        Review[]
+  reports        Report[]
 }
 
 model DamagePolicies {
   id                    Int            @id @default(autoincrement())
   productVariantId      Int
   productVariant        ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
-  damageSeverity        String
-  damageSeverityPercent Float
+  damageSeverity        String // "MINOR", "MODERATE", "MAJOR", "TOTAL_LOSS"
+  damageSeverityPercent Float // Override for this specific item
+  description           String?
 }
 
 model ProductVariant {
-  id              Int              @id @default(autoincrement())
-  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId       Int // Foreign key to Product
-  size            String // Size (e.g., "S", "M", "L")
-  color           Color            @relation(fields: [colorId], references: [id], onDelete: Cascade) // Relation with Color
-  colorId         Int // Foreign key to Color
-  quantity        Int // Quantity available for this size and color combination
-  price           Float
-  replacementCost Float?
-  repairCost      Float?
-  damagePolicies  DamagePolicies[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  cartItems       CartItem[]
-  rentItems       RentItem[] // Relationship with RentItem
+  id        Int     @id @default(autoincrement())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+
+  // The "Anchor" fields for depreciation
+  originalMSRP         Float    @default(0)
+  originalPurchaseDate DateTime @default(now())
+  condition            String   @default("New")
+
+  quantity Int // Stock
+  price    Float // Rental Price per Day
+
+  damagePolicies DamagePolicies[]
+  rentItems      RentItem[]
+  attributes     ProductVariantAttribute[]
+  cartItems      CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ProductImage {
-  id        Int     @id @default(autoincrement())
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId Int // Foreign key to Product
-  url       String // URL of the image
+  id               Int             @id @default(autoincrement())
+  productId        Int
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url              String
+  attributeValueId Int?
+  attributeValue   AttributeValue? @relation(fields: [attributeValueId], references: [id])
 }
 
 model Category {
-  id        Int       @id @default(autoincrement())
-  name      String
-  slug      String    @unique
-  iconKey   String    @default("default")
+  id      Int    @id @default(autoincrement())
+  name    String
+  slug    String @unique
+  iconKey String @default("default")
+
+  // Platform-wide defaults for this category
+  annualDepreciationRate Float @default(0.10) // e.g., 0.10 = 10%
+  minimumValuePercent    Float @default(0.05) // Item never worth less than 5%
+  defaultMinorPercent    Float @default(0.15) // 15% of current value
+  defaultModeratePercent Float @default(0.30) // 30% of current value
+  defaultMajorPercent    Float @default(0.60) // 60% of current value
+
   products  Product[] @relation("ProductCategories")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-}
-
-model Color {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  hexCode   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  ProductVariant ProductVariant[]
 }
 
 model CartItem {
@@ -219,62 +224,93 @@ model CartItem {
   endDate        DateTime? // Optional rental end date
 }
 
+model Attribute {
+  id     Int              @id @default(autoincrement())
+  name   String           @unique // e.g., "Color", "Size", "Material"
+  values AttributeValue[]
+}
+
+model AttributeValue {
+  id          Int       @id @default(autoincrement())
+  attributeId Int
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String // e.g., "Red", "Large", "Cotton"
+  hexCode     String? // Optional: for colors
+
+  variantAttributes ProductVariantAttribute[]
+  images            ProductImage[]
+
+  @@unique([attributeId, value])
+}
+
+model ProductVariantAttribute {
+  productVariantId Int
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  attributeValueId Int
+  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
+
+  @@id([productVariantId, attributeValueId])
+}
+
 model Rent {
   id              Int        @id @default(autoincrement())
   userId          Int
   user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   totalPrice      Float
-  status          String
+  status          String // "PENDING", "ACTIVE", "RETURNED", "CANCELLED"
+  deliveryAddress String
+  items           RentItem[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
-  items           RentItem[] // Order contains multiple OrderItems
-  deliveryAddress String
 }
 
 model RentItem {
-  id                 Int            @id @default(autoincrement())
-  rentId             Int
-  rent               Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
-  productVariantId   Int
-  productVariant     ProductVariant @relation(fields: [productVariantId], references: [id])
-  quantity           Int
-  price              Float
-  status             String
-  deliveryMethod     String
-  note               String?
-  startDate          DateTime
-  endDate            DateTime
-  isReviewed         Boolean        @default(false)
-  reviews            Review[]
-  payments           Payment[]
+  id               Int            @id @default(autoincrement())
+  rentId           Int
+  rent             Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  productVariantId Int
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity         Int
+  price            Float
+  status           String // "RENTING", "RETURNED", "DAMAGED"
+  deliveryMethod   String
+  note             String?
+  startDate        DateTime
+  endDate          DateTime
+
+  returnedDamagedQty Int       @default(0)
   charges            Charge[]
-  returnedDamagedQty Int            @default(0)
-  isRepaired         Boolean?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  payments           Payment[]
+  reviews            Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Charge {
   id         Int      @id @default(autoincrement())
   rentItemId Int
   rentItem   RentItem @relation(fields: [rentItemId], references: [id])
-  type       String // "DAMAGED" or "LATE"
-  subType    String? // only if type = DAMAGED: "REPAIR" | "REPLACEMENT" | "MANUAL"
-  repairType String? // "MINOR" | "MODERATE" | "MAJOR" (only used if subType = REPAIR)
-  amount     Float
-  quantity   Int      @default(1)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  type       String // "DAMAGED", "LATE"
+
+  // Details for calculation
+  severity                 String? // "MINOR", "MODERATE", "MAJOR", "TOTAL_LOSS"
+  depreciatedValueAtDamage Float? // Snapshot of item value when broken
+
+  amount Float // Final calculated fee
+  status String @default("UNPAID") // "UNPAID", "PAID"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Payment {
   id         Int      @id @default(autoincrement())
-  rentItemId Int // Foreign key to RentItem
+  rentItemId Int
   rentItem   RentItem @relation(fields: [rentItemId], references: [id])
   amount     Float // Payment amount
-  status     String // Payment status (e.g., 'partial', 'paid', 'unpaid')
-  note       String? // Payment description
-  penaltyFee Float? // Penalty fee
+  status     String // "PENDING", "COMPLETED", "FAILED"
+  penaltyFee Float?
   createdAt  DateTime @default(now())
 }
 

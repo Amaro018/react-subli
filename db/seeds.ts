@@ -1,5 +1,6 @@
 import db from "./index"
 import { SecurePassword } from "@blitzjs/auth/secure-password"
+import { DAMAGE_TEMPLATES } from "./damageThresholds"
 
 const seed = async () => {
   // --------------------------------------------------------
@@ -288,40 +289,209 @@ const seed = async () => {
   // --------------------------------------------------------
   // 6. CATEGORIES & COLORS
   // --------------------------------------------------------
+  console.log("Seeding categories...")
   const categories = [
-    { name: "Events & Party", slug: "events-party", iconKey: "party" },
-    { name: "Camera & AV Equipment", slug: "camera-av", iconKey: "camera" },
-    { name: "Transportation", slug: "transportation", iconKey: "transport" },
-    { name: "Camping & Hiking Equipment", slug: "camping-hiking", iconKey: "camping" },
-    { name: "Tools & Construction Equipment", slug: "tools-construction", iconKey: "tools" },
-    { name: "Fashion & Apparel", slug: "fashion-apparel", iconKey: "fashion" },
-    { name: "Sports Equipment", slug: "sports-equipment", iconKey: "sports" },
-    { name: "Baby & Mobility", slug: "baby-mobility", iconKey: "baby" },
+    {
+      name: "Events & Party",
+      slug: "events-party",
+      iconKey: "party",
+      dep: 0.1,
+      min: 0.15,
+      mod: 0.3,
+      maj: 0.6,
+    },
+    {
+      name: "Camera & AV Equipment",
+      slug: "camera-av",
+      iconKey: "camera",
+      dep: 0.25,
+      min: 0.2,
+      mod: 0.4,
+      maj: 0.7,
+    },
+    {
+      name: "Transportation",
+      slug: "transportation",
+      iconKey: "transport",
+      dep: 0.15,
+      min: 0.1,
+      mod: 0.25,
+      maj: 0.5,
+    },
+    {
+      name: "Camping & Hiking Equipment",
+      slug: "camping-hiking",
+      iconKey: "camping",
+      dep: 0.2,
+      min: 0.15,
+      mod: 0.3,
+      maj: 0.6,
+    },
+    {
+      name: "Tools & Construction Equipment",
+      slug: "tools-construction",
+      iconKey: "tools",
+      dep: 0.15,
+      min: 0.1,
+      mod: 0.25,
+      maj: 0.5,
+    },
+    {
+      name: "Fashion & Apparel",
+      slug: "fashion-apparel",
+      iconKey: "fashion",
+      dep: 0.3,
+      min: 0.15,
+      mod: 0.35,
+      maj: 0.65,
+    },
+    {
+      name: "Sports Equipment",
+      slug: "sports-equipment",
+      iconKey: "sports",
+      dep: 0.2,
+      min: 0.15,
+      mod: 0.3,
+      maj: 0.6,
+    },
+    {
+      name: "Baby & Mobility",
+      slug: "baby-mobility",
+      iconKey: "baby",
+      dep: 0.2,
+      min: 0.1,
+      mod: 0.25,
+      maj: 0.55,
+    },
   ]
 
-  for (const category of categories) {
+  for (const cat of categories) {
     await db.category.upsert({
-      where: { slug: category.slug },
-      update: { name: category.name, iconKey: category.iconKey },
-      create: category,
+      where: { slug: cat.slug },
+      update: {
+        name: cat.name,
+        iconKey: cat.iconKey,
+        annualDepreciationRate: cat.dep,
+        defaultMinorPercent: cat.min,
+        defaultModeratePercent: cat.mod,
+        defaultMajorPercent: cat.maj,
+      },
+      create: {
+        name: cat.name,
+        slug: cat.slug,
+        iconKey: cat.iconKey,
+        annualDepreciationRate: cat.dep,
+        defaultMinorPercent: cat.min,
+        defaultModeratePercent: cat.mod,
+        defaultMajorPercent: cat.maj,
+      },
     })
   }
+  console.log("Syncing damage policy descriptions...")
+  const allProducts = await db.product.findMany({
+    include: { category: true, variants: true },
+  })
 
-  const colors = [
-    { name: "Red", hexCode: "#FF0000" },
-    { name: "Green", hexCode: "#00FF00" },
-    { name: "Blue", hexCode: "#0000FF" },
-    { name: "Black", hexCode: "#000000" },
-    { name: "White", hexCode: "#FFFFFF" },
-    // ... (Your other colors remain implied here)
-  ]
+  for (const product of allProducts) {
+    const template = DAMAGE_TEMPLATES[product.category.name] || DAMAGE_TEMPLATES["Default"]
 
-  for (const color of colors) {
-    await db.color.upsert({
-      where: { name: color.name },
+    for (const variant of product.variants) {
+      const severities = [
+        { type: "MINOR", desc: template.MINOR, pct: product.category.defaultMinorPercent },
+        { type: "MODERATE", desc: template.MODERATE, pct: product.category.defaultModeratePercent },
+        { type: "MAJOR", desc: template.MAJOR, pct: product.category.defaultMajorPercent },
+        { type: "TOTAL_LOSS", desc: "Item lost or irreparable", pct: 1.0 },
+      ]
+
+      for (const sev of severities) {
+        // Find if policy exists for this variant and severity
+        const existingPolicy = await db.damagePolicies.findFirst({
+          where: { productVariantId: variant.id, damageSeverity: sev.type },
+        })
+
+        await db.damagePolicies.upsert({
+          where: { id: existingPolicy?.id || 0 },
+          update: { description: sev.desc, damageSeverityPercent: sev.pct },
+          create: {
+            productVariantId: variant.id,
+            damageSeverity: sev.type,
+            damageSeverityPercent: sev.pct,
+            description: sev.desc,
+          },
+        })
+      }
+    }
+  }
+
+  // --------------------------------------------------------
+  // 7. ATTRIBUTES (Replaces Colors)
+  // --------------------------------------------------------
+  console.log("Seeding attributes...")
+
+  // Helper function to safely seed attributes using upsert
+  const seedAttribute = async (name: string, values: { value: string; hexCode?: string }[]) => {
+    const attribute = await db.attribute.upsert({
+      where: { name },
       update: {},
-      create: { name: color.name, hexCode: color.hexCode },
+      create: { name },
     })
+
+    for (const val of values) {
+      await db.attributeValue.upsert({
+        where: {
+          attributeId_value: {
+            attributeId: attribute.id,
+            value: val.value,
+          },
+        },
+        update: { hexCode: val.hexCode },
+        create: {
+          attributeId: attribute.id,
+          value: val.value,
+          hexCode: val.hexCode,
+        },
+      })
+    }
+    console.log(`Seeded attribute: ${name}`)
   }
+
+  await seedAttribute("Color", [
+    { value: "Red", hexCode: "#FF0000" },
+    { value: "Green", hexCode: "#00FF00" },
+    { value: "Blue", hexCode: "#0000FF" },
+    { value: "Black", hexCode: "#000000" },
+    { value: "White", hexCode: "#FFFFFF" },
+    { value: "Yellow", hexCode: "#FFFF00" },
+    { value: "Purple", hexCode: "#800080" },
+    { value: "Orange", hexCode: "#FFA500" },
+    { value: "Pink", hexCode: "#FFC0CB" },
+    { value: "Brown", hexCode: "#A52A2A" },
+    { value: "Gray", hexCode: "#808080" },
+  ])
+
+  await seedAttribute("Size", [
+    { value: "XS" },
+    { value: "S" },
+    { value: "M" },
+    { value: "L" },
+    { value: "XL" },
+  ])
+
+  await seedAttribute("Material", [
+    { value: "Cotton" },
+    { value: "Polyester" },
+    { value: "Silk" },
+    { value: "Linen" },
+  ])
+
+  await seedAttribute("Storage", [
+    { value: "64GB" },
+    { value: "128GB" },
+    { value: "256GB" },
+    { value: "512GB" },
+    { value: "1TB" },
+  ])
+
+  console.log("Finished seeding attributes.")
 }
 export default seed

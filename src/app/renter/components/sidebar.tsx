@@ -26,7 +26,12 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
-  const [userRents] = useQuery(getAllRentOfUser, { id: currentUser.id })
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [userRents] = useQuery(
+    getAllRentOfUser,
+    { id: currentUser.id },
+    { enabled: !!currentUser && !isLoggingOut }
+  )
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -121,7 +126,7 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           icon: <StorefrontIcon fontSize="small" />,
           href: "/renter/shop-register",
         },
-  ]
+  ].filter(Boolean)
 
   return (
     <aside
@@ -278,11 +283,11 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           <LogoutIcon fontSize="small" />
           {!isCollapsed && (
             <div className="text-sm font-bold w-full">
-              <LogoutButton />
+              <LogoutButton onLogout={() => setIsLoggingOut(true)} />
             </div>
           )}
           <div className={`absolute inset-0 opacity-0 ${isCollapsed ? "block" : "hidden"}`}>
-            <LogoutButton className="w-full h-full" />
+            <LogoutButton className="w-full h-full" onLogout={() => setIsLoggingOut(true)} />
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
-import { Ctx, resolver } from "@blitzjs/rpc"
+import { resolver } from "@blitzjs/rpc"
+import { Ctx } from "blitz"
 import db from "db"
 
 export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
@@ -27,7 +28,15 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
     include: {
       variants: {
         include: {
-          color: true, // Include the associated Color for each variant
+          attributes: {
+            include: {
+              attributeValue: {
+                include: {
+                  attribute: true,
+                },
+              },
+            },
+          },
           rentItems: true,
           damagePolicies: true,
         },

@@ -15,8 +15,9 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  FormHelperText,
 } from "@mui/material"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import createShop from "../../mutations/createShop"
 import uploadShopBg from "../../mutations/uploadShopBg"
 import { useMutation, useQuery } from "@blitzjs/rpc"
@@ -42,6 +43,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const [permitFile, setPermitFile] = useState<File | null>(null)
   const [previewShopBg, setPreviewShopBg] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, boolean>>({})
 
   const steps = ["SHOP DETAILS", "SHOP DOCUMENTS", "SHOP PROFILE"]
   const [activeStep, setActiveStep] = useState(0)
@@ -64,6 +66,12 @@ const FormShopRegister = (props: { currentUser: any }) => {
     documentPermit: "",
     documentTax: "",
   })
+
+  useEffect(() => {
+    if (currentUser?.isShopRegistered && !currentUser?.isShopMode) {
+      router.push("/renter/shop-register/pending")
+    }
+  }, [currentUser, router])
 
   const handleImageChangeShopBg = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -152,6 +160,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         return
       }
       setDtiFile(file)
+      setErrors((prev) => ({ ...prev, documentDTI: false }))
 
       const uniqueFileName = `${Date.now()}-${file.name}`
       setFormData((prevFormData) => ({ ...prevFormData, documentDTI: uniqueFileName }))
@@ -185,6 +194,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         return
       }
       setPermitFile(file)
+      setErrors((prev) => ({ ...prev, documentPermit: false }))
 
       const uniqueFileName = `${Date.now()}-${file.name}`
       setFormData((prevFormData) => ({ ...prevFormData, documentPermit: uniqueFileName }))
@@ -218,6 +228,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         return
       }
       setTaxFile(file)
+      setErrors((prev) => ({ ...prev, documentTax: false }))
 
       const uniqueFileName = `${Date.now()}-${file.name}`
       setFormData((prevFormData) => ({ ...prevFormData, documentTax: uniqueFileName }))
@@ -243,27 +254,52 @@ const FormShopRegister = (props: { currentUser: any }) => {
   }
 
   const handleNext = () => {
-    if (
-      formData.shopName == "" ||
-      formData.email == "" ||
-      formData.street == "" ||
-      formData.barangay == "" ||
-      formData.city == "" ||
-      formData.province == "" ||
-      formData.country == "" ||
-      formData.zipCode == "" ||
-      formData.contact == ""
-    ) {
-      toast.error("Please fill all the fields")
-    } else if (!formData.email.includes("@") || !formData.email.includes(".")) {
+    const newErrors: Record<string, boolean> = {}
+    let hasError = false
+    const requiredFields = ["shopName", "email", "description", "street", "barangay", "contact"]
+
+    requiredFields.forEach((field) => {
+      if (!formData[field as keyof typeof formData]) {
+        newErrors[field] = true
+        hasError = true
+      }
+    })
+
+    if (formData.email && (!formData.email.includes("@") || !formData.email.includes("."))) {
+      newErrors.email = true
+      hasError = true
       toast.error("Please enter a valid email address")
+    }
+
+    setErrors(newErrors)
+
+    if (hasError) {
+      toast.error("Please fill all the fields")
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
   }
 
   const handleNextNext = () => {
-    if (!formData.documentDTI || !formData.documentPermit || !formData.documentTax) {
+    const newErrors: Record<string, boolean> = {}
+    let hasError = false
+
+    if (!formData.documentDTI) {
+      newErrors.documentDTI = true
+      hasError = true
+    }
+    if (!formData.documentPermit) {
+      newErrors.documentPermit = true
+      hasError = true
+    }
+    if (!formData.documentTax) {
+      newErrors.documentTax = true
+      hasError = true
+    }
+
+    setErrors(newErrors)
+
+    if (hasError) {
       toast.error("Please fill all the fields")
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
@@ -277,6 +313,9 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const handleChange = (e: { target: { name: any; value: any } }) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: false }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -289,6 +328,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
         ...formData,
       })
       router.push("/renter/shop-register/pending")
+      router.refresh()
       toast.success("Shop registered successfully! Please wait for admin approval.")
       setLoading(false)
     } catch (error: any) {
@@ -308,7 +348,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     )
   }
 
-  if (currentUser!.isShopRegistered) {
+  if (currentUser?.isShopRegistered && currentUser?.isShopMode) {
     return (
       <div className="w-full">
         <Card elevation={0} className="rounded-xl border border-gray-200">
@@ -331,6 +371,14 @@ const FormShopRegister = (props: { currentUser: any }) => {
           </div>
         </Card>
       </div>
+    )
+  }
+
+  if (currentUser?.isShopRegistered && !currentUser?.isShopMode) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+        <CircularProgress />
+      </Box>
     )
   }
 
@@ -362,6 +410,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
                       onChange={handleChange}
                       fullWidth
                       variant="outlined"
+                      error={errors.shopName}
+                      helperText={errors.shopName ? "Shop Name is required" : ""}
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -373,6 +423,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
                       onChange={handleChange}
                       fullWidth
                       variant="outlined"
+                      error={errors.email}
+                      helperText={errors.email ? "Valid Email is required" : ""}
                     />
                   </Grid>
                   <Grid item xs={12}>
@@ -386,6 +438,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
                       rows={4}
                       fullWidth
                       variant="outlined"
+                      error={errors.description}
+                      helperText={errors.description ? "Description is required" : ""}
                     />
                   </Grid>
                 </Grid>
@@ -402,10 +456,12 @@ const FormShopRegister = (props: { currentUser: any }) => {
                       value={formData.street}
                       onChange={handleChange}
                       fullWidth
+                      error={errors.street}
+                      helperText={errors.street ? "Street Address is required" : ""}
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <FormControl fullWidth required>
+                    <FormControl fullWidth required error={errors.barangay}>
                       <InputLabel id="barangay-label">Barangay</InputLabel>
                       <Select
                         labelId="barangay-label"
@@ -421,6 +477,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
                           </MenuItem>
                         ))}
                       </Select>
+                      {errors.barangay && <FormHelperText>Barangay is required</FormHelperText>}
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -482,6 +539,8 @@ const FormShopRegister = (props: { currentUser: any }) => {
                       value={formData.contact}
                       onChange={handleChange}
                       fullWidth
+                      error={errors.contact}
+                      helperText={errors.contact ? "Phone Number is required" : ""}
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -529,12 +588,12 @@ const FormShopRegister = (props: { currentUser: any }) => {
                   <label htmlFor="documentDTI">
                     <Box
                       sx={{
-                        border: "2px dashed #ccc",
+                        border: errors.documentDTI ? "2px dashed #d32f2f" : "2px dashed #ccc",
                         borderRadius: 2,
                         padding: 4,
                         textAlign: "center",
                         cursor: "pointer",
-                        backgroundColor: "#f9fafb",
+                        backgroundColor: errors.documentDTI ? "#ffebee" : "#f9fafb",
                         transition: "all 0.2s",
                         "&:hover": { borderColor: "#1b2a80", backgroundColor: "#f0f4ff" },
                       }}
@@ -568,12 +627,12 @@ const FormShopRegister = (props: { currentUser: any }) => {
                   <label htmlFor="documentTax">
                     <Box
                       sx={{
-                        border: "2px dashed #ccc",
+                        border: errors.documentTax ? "2px dashed #d32f2f" : "2px dashed #ccc",
                         borderRadius: 2,
                         padding: 4,
                         textAlign: "center",
                         cursor: "pointer",
-                        backgroundColor: "#f9fafb",
+                        backgroundColor: errors.documentTax ? "#ffebee" : "#f9fafb",
                         transition: "all 0.2s",
                         "&:hover": { borderColor: "#1b2a80", backgroundColor: "#f0f4ff" },
                       }}
@@ -607,12 +666,12 @@ const FormShopRegister = (props: { currentUser: any }) => {
                   <label htmlFor="documentPermit">
                     <Box
                       sx={{
-                        border: "2px dashed #ccc",
+                        border: errors.documentPermit ? "2px dashed #d32f2f" : "2px dashed #ccc",
                         borderRadius: 2,
                         padding: 4,
                         textAlign: "center",
                         cursor: "pointer",
-                        backgroundColor: "#f9fafb",
+                        backgroundColor: errors.documentPermit ? "#ffebee" : "#f9fafb",
                         transition: "all 0.2s",
                         "&:hover": { borderColor: "#1b2a80", backgroundColor: "#f0f4ff" },
                       }}
@@ -683,7 +742,13 @@ const FormShopRegister = (props: { currentUser: any }) => {
 
                     <div className="relative w-40 h-40 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center border-4 border-white shadow-md">
                       {previewProfile ? (
-                        <Image src={previewProfile} alt="Profile" fill className="object-cover" />
+                        <Image
+                          src={previewProfile}
+                          alt="Profile"
+                          fill
+                          sizes="160px"
+                          className="object-cover"
+                        />
                       ) : (
                         <StorefrontIcon sx={{ fontSize: 60, color: "gray" }} />
                       )}
@@ -721,7 +786,13 @@ const FormShopRegister = (props: { currentUser: any }) => {
 
                     <div className="relative w-full h-40 bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center border border-gray-300">
                       {previewShopBg ? (
-                        <Image src={previewShopBg} alt="Cover" fill className="object-cover" />
+                        <Image
+                          src={previewShopBg}
+                          alt="Cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 800px"
+                          className="object-cover"
+                        />
                       ) : (
                         <Typography variant="caption" color="textSecondary">
                           No Cover Photo

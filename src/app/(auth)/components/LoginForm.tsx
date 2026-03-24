@@ -21,8 +21,7 @@ export const LoginForm = (props: LoginFormProps) => {
   const next = useSearchParams()?.get("next")
 
   return (
-    // Changed max-w-sm to max-w-md for better width, kept vertical compactness
-    <div className="flex w-full max-w-md flex-col items-center justify-center overflow-hidden rounded-lg bg-white shadow-xl">
+    <div className="flex w-full max-w-md flex-col items-center justify-center overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       {/* Compact Header Section */}
       <div className="flex w-full flex-col items-center justify-center gap-1 bg-[#1b2a80] p-3 text-white">
         <h1 className="text-lg font-bold">Welcome Back</h1>

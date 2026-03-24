@@ -13,8 +13,8 @@ const Footer = () => {
   ]
 
   return (
-    <footer className="mt-auto border-t border-gray-100 bg-white px-4 py-6 md:px-6">
-      <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+    <footer className="mt-auto border-t border-gray-100 bg-white">
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col items-center justify-between gap-4 px-4 py-6 sm:px-6 lg:px-8 md:flex-row">
         {/* Copyright Section */}
         <div className="text-sm text-gray-500">
           <p>

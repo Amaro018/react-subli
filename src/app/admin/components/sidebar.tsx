@@ -29,6 +29,77 @@ interface SidebarProps {
   isCollapsed: boolean
 }
 
+const SidebarDropdown = ({
+  title,
+  icon,
+  basePath,
+  submenuKey,
+  isOpen,
+  onToggle,
+  isCollapsed,
+  items,
+  pathname,
+  handleNavigation,
+}: {
+  title: string
+  icon: React.ReactNode
+  basePath: string
+  submenuKey: string
+  isOpen: boolean
+  onToggle: (key: string) => void
+  isCollapsed: boolean
+  items: { label: string; href: string }[]
+  pathname: string | null
+  handleNavigation: (e: React.MouseEvent, href: string) => void
+}) => {
+  return (
+    <div className="mt-2">
+      {isCollapsed ? (
+        <Link
+          href={basePath as any}
+          onClick={(e) => handleNavigation(e, basePath)}
+          className={`flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 lg:justify-center ${
+            pathname?.startsWith(basePath) ? "bg-white/20" : ""
+          }`}
+        >
+          {icon}
+        </Link>
+      ) : (
+        <>
+          <div
+            onClick={() => onToggle(submenuKey)}
+            className={`flex items-center justify-between px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 cursor-pointer ${
+              pathname?.startsWith(basePath) ? "bg-white/20" : ""
+            }`}
+          >
+            <div className="flex items-center">
+              {icon}
+              <span className="mx-3">{title}</span>
+            </div>
+            <ExpandMoreIcon
+              className={`w-5 h-5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            />
+          </div>
+          <div className={`${isOpen ? "block" : "hidden"} bg-black/20`}>
+            {items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href as any}
+                onClick={(e) => handleNavigation(e, item.href)}
+                className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
+                  pathname === item.href ? "text-white bg-white/10" : "text-gray-300"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: SidebarProps) => {
   const pathname = usePathname()
   const router = useRouter()
@@ -143,162 +214,43 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
             </Link>
 
             {/* Shops Dropdown */}
-            <div className="mt-2">
-              {isCollapsed ? (
-                <Link
-                  href="/admin/manage-shops"
-                  onClick={(e) => handleNavigation(e, "/admin/manage-shops")}
-                  className={`flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 lg:justify-center ${
-                    pathname?.startsWith("/admin/manage-shops") ? "bg-white/20" : ""
-                  }`}
-                >
-                  <StoreIcon className="w-6 h-6" />
-                </Link>
-              ) : (
-                <>
-                  <div
-                    onClick={() => toggleSubmenu("shops")}
-                    className={`flex items-center justify-between px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 cursor-pointer ${
-                      pathname?.startsWith("/admin/manage-shops") ? "bg-white/20" : ""
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <StoreIcon className="w-6 h-6" />
-                      <span className="mx-3">Shops</span>
-                    </div>
-                    <ExpandMoreIcon
-                      className={`w-5 h-5 transition-transform ${
-                        openSubmenus["shops"] ? "rotate-180" : ""
-                      }`}
-                    />
-                  </div>
-                  <div className={`${openSubmenus["shops"] ? "block" : "hidden"} bg-black/20`}>
-                    <Link
-                      href="/admin/manage-shops"
-                      onClick={(e) => handleNavigation(e, "/admin/manage-shops")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/manage-shops"
-                          ? "text-white bg-white/10"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Approved Shops
-                    </Link>
-                    <Link
-                      href="/admin/manage-shops/pending"
-                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/pending")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/manage-shops/pending"
-                          ? "text-white bg-white/10"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Pending Shops
-                    </Link>
-                    <Link
-                      href={"/admin/manage-shops/rejected" as any}
-                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/rejected")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/manage-shops/rejected"
-                          ? "text-white bg-white/10"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Rejected Shops
-                    </Link>
-                    <Link
-                      href={"/admin/manage-shops/reported" as any}
-                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/reported")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/manage-shops/reported"
-                          ? "text-white bg-white/10"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Reported Shops
-                    </Link>
-                    <Link
-                      href={"/admin/manage-shops/banned" as any}
-                      onClick={(e) => handleNavigation(e, "/admin/manage-shops/banned")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/manage-shops/banned"
-                          ? "text-white bg-white/10"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Banned Shops
-                    </Link>
-                  </div>
-                </>
-              )}
-            </div>
+            <SidebarDropdown
+              title="Shops"
+              icon={<StoreIcon className="w-6 h-6" />}
+              basePath="/admin/manage-shops"
+              submenuKey="shops"
+              isOpen={openSubmenus["shops"]}
+              onToggle={toggleSubmenu}
+              isCollapsed={isCollapsed}
+              pathname={pathname}
+              handleNavigation={handleNavigation}
+              items={[
+                { label: "All Shops", href: "/admin/manage-shops" },
+                { label: "Approved Shops", href: "/admin/manage-shops/approved" },
+                { label: "Pending Shops", href: "/admin/manage-shops/pending" },
+                { label: "Rejected Shops", href: "/admin/manage-shops/rejected" },
+                { label: "Reported Shops", href: "/admin/manage-shops/reported" },
+                { label: "Banned Shops", href: "/admin/manage-shops/banned" },
+              ]}
+            />
 
             {/* Products Dropdown */}
-            <div className="mt-2">
-              {isCollapsed ? (
-                <Link
-                  href={"/admin/products" as any}
-                  onClick={(e) => handleNavigation(e, "/admin/products")}
-                  className={`flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 lg:justify-center ${
-                    pathname?.startsWith("/admin/products") ? "bg-white/20" : ""
-                  }`}
-                >
-                  <InventoryIcon className="w-6 h-6" />
-                </Link>
-              ) : (
-                <>
-                  <div
-                    onClick={() => toggleSubmenu("products")}
-                    className={`flex items-center justify-between px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 cursor-pointer ${
-                      pathname?.startsWith("/admin/products") ? "bg-white/20" : ""
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <InventoryIcon className="w-6 h-6" />
-                      <span className="mx-3">Products</span>
-                    </div>
-                    <ExpandMoreIcon
-                      className={`w-5 h-5 transition-transform ${
-                        openSubmenus["products"] ? "rotate-180" : ""
-                      }`}
-                    />
-                  </div>
-                  <div className={`${openSubmenus["products"] ? "block" : "hidden"} bg-black/20`}>
-                    <Link
-                      href={"/admin/products" as any}
-                      onClick={(e) => handleNavigation(e, "/admin/products")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/products" ? "text-white bg-white/10" : "text-gray-300"
-                      }`}
-                    >
-                      All Products
-                    </Link>
-                    <Link
-                      href={"/admin/products/reported" as any}
-                      onClick={(e) => handleNavigation(e, "/admin/products/reported")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/products/reported"
-                          ? "text-white bg-white/10"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Reported Products
-                    </Link>
-                    <Link
-                      href={"/admin/products/banned" as any}
-                      onClick={(e) => handleNavigation(e, "/admin/products/banned")}
-                      className={`flex items-center pl-14 pr-4 py-2 text-sm hover:text-white hover:bg-white/5 ${
-                        pathname === "/admin/products/banned"
-                          ? "text-white bg-white/10"
-                          : "text-gray-300"
-                      }`}
-                    >
-                      Banned Products
-                    </Link>
-                  </div>
-                </>
-              )}
-            </div>
+            <SidebarDropdown
+              title="Products"
+              icon={<InventoryIcon className="w-6 h-6" />}
+              basePath="/admin/products"
+              submenuKey="products"
+              isOpen={openSubmenus["products"]}
+              onToggle={toggleSubmenu}
+              isCollapsed={isCollapsed}
+              pathname={pathname}
+              handleNavigation={handleNavigation}
+              items={[
+                { label: "All Products", href: "/admin/products" },
+                { label: "Reported Products", href: "/admin/products/reported" },
+                { label: "Banned Products", href: "/admin/products/banned" },
+              ]}
+            />
 
             <Link
               href={"/admin/orders" as any}

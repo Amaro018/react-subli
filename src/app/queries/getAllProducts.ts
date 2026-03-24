@@ -6,7 +6,17 @@ export default resolver.pipe(async () => {
     include: {
       variants: {
         include: {
-          color: true, // Include the associated Color for each variant
+          attributes: {
+            include: {
+              attributeValue: {
+                include: {
+                  attribute: true,
+                },
+              },
+            },
+          },
+          rentItems: true,
+          damagePolicies: true,
         },
       },
       shop: true,

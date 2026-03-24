@@ -37,7 +37,7 @@ export const SignupForm = (props: SignupFormProps) => {
   const router = useRouter()
 
   return (
-    <div className="flex w-full max-w-md flex-col items-center justify-center overflow-hidden rounded-lg bg-white shadow-xl">
+    <div className="flex w-full max-w-md flex-col items-center justify-center overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="flex w-full flex-col items-center justify-center gap-1 bg-[#1b2a80] p-3 text-white">
         <h1 className="text-lg font-bold">Create Account</h1>
         <p className="text-xs text-gray-200">Join Subli today</p>
@@ -149,7 +149,7 @@ const SignupFormContent = () => {
 
       const formErrors = await validateForm()
       // Check if any of the required fields in step 1 have errors
-      const hasError = step1Fields.some((field) => formErrors[field as keyof typeof formErrors])
+      const hasError = step1Fields.some((field) => (formErrors as Record<string, any>)[field])
 
       if (hasError) {
         toast.error("Please fill in all required fields correctly")
@@ -169,12 +169,11 @@ const SignupFormContent = () => {
             name="email"
             label="Email"
             placeholder="email@example.com"
-            fullWidth
             size="small"
             required
             helperText={
               touched.email && errors.email
-                ? errors.email
+                ? (errors.email as string)
                 : emailSuccessMsg && <span className="text-green-600">{emailSuccessMsg}</span>
             }
           />
@@ -182,7 +181,6 @@ const SignupFormContent = () => {
             name="password"
             label="Password"
             type="password"
-            fullWidth
             size="small"
             required
           />

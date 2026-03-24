@@ -88,7 +88,7 @@
     "preview-email": "3.0.7",
     "tailwindcss": "3.4.15",
     "ts-node": "10.9.2",
-    "typescript": "^5.4.5",
+    "typescript": "5.9.3",
     "vite-tsconfig-paths": "3.6.0",
     "vitest": "^0.25.8"
   },

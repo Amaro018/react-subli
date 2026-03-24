@@ -116,7 +116,11 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                 onClick={() => !isCollapsed && toggleMenu("products")}
                 className={`flex items-center px-4 py-2 mt-2 text-gray-100 rounded-md hover:bg-white/10 w-full ${
                   isCollapsed ? "lg:justify-center" : "justify-between"
-                } ${pathname?.startsWith("/shop/products") ? "bg-white/20" : ""}`}
+                } ${
+                  pathname?.startsWith("/shop/products") || pathname?.startsWith("/shop/inventory")
+                    ? "bg-white/20"
+                    : ""
+                }`}
               >
                 <div className="flex items-center">
                   <InventoryIcon className="w-6 h-6" />
@@ -142,6 +146,20 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                   className="flex items-center px-4 py-2 pl-12 text-sm text-gray-300 hover:text-white hover:bg-white/5"
                 >
                   Add Product
+                </Link>
+                <Link
+                  href={"/shop/inventory" as any}
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center px-4 py-2 pl-12 text-sm text-gray-300 hover:text-white hover:bg-white/5"
+                >
+                  Inventory
+                </Link>
+                <Link
+                  href={"/shop/products/reported" as any}
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center px-4 py-2 pl-12 text-sm text-gray-300 hover:text-white hover:bg-white/5"
+                >
+                  Reported Products
                 </Link>
               </div>
             </div>
