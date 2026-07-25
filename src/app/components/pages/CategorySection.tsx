@@ -7,6 +7,7 @@ import { categoryIconMap } from "../../utils/categoryIconMap"
 import { IconButton } from "@mui/material"
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft"
 import ChevronRightIcon from "@mui/icons-material/ChevronRight"
+import Link from "next/link"
 
 const CategorySection: React.FC = () => {
   const [categories] = useQuery(getCategories, null)
@@ -67,8 +68,9 @@ const CategorySection: React.FC = () => {
             const Icon = categoryIconMap[category.iconKey] ?? categoryIconMap.default
 
             return (
-              <div
+              <Link
                 key={category.id}
+                href={`/products?category=${encodeURIComponent(category.name)}`}
                 className="group flex-none flex h-32 w-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-lg sm:h-40 sm:w-36 md:h-44 md:w-40 lg:h-48 lg:w-44"
                 style={{ scrollSnapAlign: "start" }}
               >
@@ -79,7 +81,7 @@ const CategorySection: React.FC = () => {
                 <p className="mt-3 text-center text-xs font-semibold text-gray-700 group-hover:text-[#1b2a80] sm:text-sm">
                   {category.name}
                 </p>
-              </div>
+              </Link>
             )
           })}
         </div>

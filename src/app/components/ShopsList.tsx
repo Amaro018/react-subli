@@ -3,33 +3,21 @@ import React, { useState, useEffect, useRef } from "react"
 import { useQuery } from "@blitzjs/rpc"
 import getShops from "../queries/getShops"
 import getBarangays from "../queries/getBarangays"
+import getCategories from "../queries/getCategories"
 import Link from "next/link"
 import Image from "next/image"
-import {
-  Typography,
-  Rating,
-  TextField,
-  InputAdornment,
-  Checkbox,
-  FormControlLabel,
-  FormGroup,
-  FormControl,
-  Select,
-  MenuItem,
-  IconButton,
-  Pagination,
-} from "@mui/material"
-import SearchIcon from "@mui/icons-material/Search"
-import FilterListIcon from "@mui/icons-material/FilterList"
-import ClearIcon from "@mui/icons-material/Clear"
+import { Typography, Rating, FormControl, Select, MenuItem, Pagination } from "@mui/material"
 import SearchOffIcon from "@mui/icons-material/SearchOff"
 import StorefrontIcon from "@mui/icons-material/Storefront"
+import FilterSidebar from "./FilterSidebar"
+import TopSearchBar from "./TopSearchBar"
 
 export default function ShopsList() {
   const [shops] = useQuery(getShops, null)
   const [barangays] = useQuery(getBarangays, null)
+  const [categories] = useQuery(getCategories, null)
 
-  const activeShops = shops || []
+  const activeShops = shops?.filter((s: any) => s.status === "approved") || []
 
   // State for Search and Filters
   const [searchQuery, setSearchQuery] = useState("")
@@ -46,19 +34,8 @@ export default function ShopsList() {
     setCurrentPage(1)
   }, [searchQuery, selectedCategories, selectedLocation, sortBy])
 
-  // Fetch all available categories from the shops' products or shop's category field
-  const availableCategories = Array.from(
-    new Set(
-      activeShops
-        .flatMap((s: any) => {
-          if (s.category?.name) return [s.category.name]
-          if (typeof s.category === "string") return [s.category]
-          if (s.products) return s.products.map((p: any) => p.category?.name)
-          return []
-        })
-        .filter(Boolean)
-    )
-  )
+  // Fetch all available categories from the database
+  const availableCategories = categories ? categories.map((c: any) => c.name) : []
 
   // Fetch all available locations (barangays)
   const availableLocations = barangays ? barangays.map((b: any) => b.name) : []
@@ -124,158 +101,40 @@ export default function ShopsList() {
       ref={topRef}
     >
       {/* Left Section: Filter Sidebar */}
-      <div className="w-full md:w-[280px] flex-shrink-0">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 sticky top-6 flex flex-col divide-y divide-gray-100">
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FilterListIcon className="text-[#1b2a80]" />
-              <Typography variant="h6" fontWeight="bold" className="text-gray-900">
-                Filters
-              </Typography>
-            </div>
-            {(selectedCategories.length > 0 || selectedLocation !== "All") && (
-              <button
-                onClick={() => {
-                  setSelectedCategories([])
-                  setSelectedLocation("All")
-                }}
-                className="text-sm font-medium text-[#1b2a80] hover:text-blue-800 transition-colors"
-              >
-                Clear All
-              </button>
-            )}
-          </div>
-
-          {availableCategories.length > 0 && (
-            <div className="p-6 flex flex-col gap-4">
-              <Typography
-                variant="subtitle2"
-                fontWeight="bold"
-                className="text-gray-900 uppercase tracking-wider text-xs"
-              >
-                Categories
-              </Typography>
-              <FormGroup sx={{ gap: 1 }}>
-                {availableCategories.map((cat) => (
-                  <FormControlLabel
-                    key={cat as string}
-                    control={
-                      <Checkbox
-                        size="small"
-                        sx={{ color: "#cbd5e1", "&.Mui-checked": { color: "#1b2a80" } }}
-                        checked={selectedCategories.includes(cat as string)}
-                        onChange={() => handleCategoryToggle(cat as string)}
-                      />
-                    }
-                    label={
-                      <Typography variant="body2" className="text-gray-700">
-                        {cat as string}
-                      </Typography>
-                    }
-                    sx={{ margin: 0, ml: -1 }}
-                  />
-                ))}
-              </FormGroup>
-            </div>
-          )}
-
-          <div className="p-6 flex flex-col gap-4">
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              className="text-gray-900 uppercase tracking-wider text-xs"
-            >
-              Location
-            </Typography>
-            <FormControl fullWidth size="small">
-              <Select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                displayEmpty
-                sx={{
-                  bgcolor: "#f8fafc",
-                  borderRadius: "10px",
-                  "& fieldset": { borderColor: "#e2e8f0" },
-                  "&:hover fieldset": { borderColor: "#cbd5e1" },
-                  "&.Mui-focused fieldset": { borderColor: "#1b2a80" },
-                  fontSize: "0.875rem",
-                }}
-              >
-                <MenuItem value="All" sx={{ fontSize: "0.875rem" }}>
-                  All Barangays
-                </MenuItem>
-                {availableLocations.map((loc: string) => (
-                  <MenuItem key={loc} value={loc} sx={{ fontSize: "0.875rem" }}>
-                    {loc}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </div>
-        </div>
-      </div>
+      <FilterSidebar
+        showClearAll={
+          searchQuery !== "" || selectedCategories.length > 0 || selectedLocation !== "All"
+        }
+        onClearAll={() => {
+          setSearchQuery("")
+          setSelectedCategories([])
+          setSelectedLocation("All")
+        }}
+        availableCategories={availableCategories}
+        selectedCategories={selectedCategories}
+        onCategoryToggle={handleCategoryToggle}
+        onClearCategories={() => setSelectedCategories([])}
+        availableLocations={availableLocations}
+        selectedLocation={selectedLocation}
+        onLocationChange={(loc) => setSelectedLocation(loc)}
+      />
 
       {/* Right Section: Shops Grid */}
       <div className="flex-1 flex flex-col gap-6">
-        {/* Top Section: Sort and Search Bar */}
-        <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-4">
-          <FormControl
-            size="small"
-            sx={{
-              minWidth: 180,
-              bgcolor: "white",
-              borderRadius: "12px",
-              "& fieldset": { borderColor: "#e5e7eb" },
-            }}
-          >
-            <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              displayEmpty
-              sx={{ borderRadius: "12px", fontSize: "0.875rem" }}
-            >
-              <MenuItem value="relevance" sx={{ fontSize: "0.875rem" }}>
-                Relevance
-              </MenuItem>
-              <MenuItem value="newest" sx={{ fontSize: "0.875rem" }}>
-                Newest Shops
-              </MenuItem>
-              <MenuItem value="oldest" sx={{ fontSize: "0.875rem" }}>
-                Oldest Shops
-              </MenuItem>
-              <MenuItem value="rating_desc" sx={{ fontSize: "0.875rem" }}>
-                Highest Rated
-              </MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            className="w-full sm:w-96"
-            placeholder="Search for a shop..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            variant="outlined"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon className="text-gray-400" />
-                </InputAdornment>
-              ),
-              endAdornment: searchQuery ? (
-                <InputAdornment position="end">
-                  <IconButton onClick={() => setSearchQuery("")} edge="end" size="small">
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-              sx: {
-                bgcolor: "white",
-                borderRadius: "12px",
-                "& fieldset": { borderColor: "#e5e7eb" },
-              },
-            }}
-          />
-        </div>
+        <TopSearchBar
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          sortOptions={[
+            { value: "relevance", label: "Relevance" },
+            { value: "newest", label: "Newest Shops" },
+            { value: "oldest", label: "Oldest Shops" },
+            { value: "rating_desc", label: "Highest Rated" },
+          ]}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onSearchClear={() => setSearchQuery("")}
+          searchPlaceholder="Search for a shop..."
+        />
 
         {!sortedShops.length ? (
           <div className="py-24 flex flex-col items-center justify-center text-center bg-white rounded-2xl shadow-sm border border-gray-100 px-4 h-full min-h-[400px]">
@@ -337,6 +196,7 @@ export default function ShopsList() {
                           }
                           alt={shopName}
                           fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (

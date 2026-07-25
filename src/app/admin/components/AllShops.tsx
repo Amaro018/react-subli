@@ -1,7 +1,7 @@
 "use client"
 import { useQuery } from "@blitzjs/rpc"
 import getShops from "../../queries/getShops"
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import {
   TextField,
   InputAdornment,
@@ -104,12 +104,20 @@ export default function AllShops() {
 
   const filteredShops = sortedShops.filter((shop: ShopType) => {
     const matchesStatus = statusFilter === "all" ? true : shop.status === statusFilter
+    const ownerName = `${shop.user?.personalInfo?.firstName || ""} ${
+      shop.user?.personalInfo?.lastName || ""
+    }`.toLowerCase()
+
     const matchesSearch =
-      shop.shopName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      shop.user?.personalInfo?.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      shop.user?.personalInfo?.lastName?.toLowerCase().includes(searchQuery.toLowerCase())
+      (shop.shopName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ownerName.includes(searchQuery.toLowerCase()) ||
+      (shop.contact || "").toLowerCase().includes(searchQuery.toLowerCase())
     return matchesStatus && matchesSearch
   })
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter])
 
   const totalPages = Math.ceil(filteredShops.length / itemsPerPage)
   const paginatedShops = filteredShops.slice(
@@ -201,10 +209,10 @@ export default function AllShops() {
         <table className="w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider w-12">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider w-12">
                 #
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider">
                 <button
                   onClick={() => requestSort("shopName")}
                   className="flex items-center gap-1 group hover:text-gray-700"
@@ -212,7 +220,7 @@ export default function AllShops() {
                   Name {getSortIcon("shopName")}
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden lg:table-cell">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden lg:table-cell">
                 <button
                   onClick={() => requestSort("createdAt")}
                   className="flex items-center gap-1 group hover:text-gray-700"
@@ -220,7 +228,7 @@ export default function AllShops() {
                   Date Created {getSortIcon("createdAt")}
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden md:table-cell">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden md:table-cell">
                 <button
                   onClick={() => requestSort("owner")}
                   className="flex items-center gap-1 group hover:text-gray-700"
@@ -228,10 +236,10 @@ export default function AllShops() {
                   Owner {getSortIcon("owner")}
                 </button>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden lg:table-cell">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden lg:table-cell">
                 Contact
               </th>
-              <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 tracking-wider">
+              <th className="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 tracking-wider">
                 <button
                   onClick={() => requestSort("status")}
                   className="flex items-center gap-1 mx-auto group hover:text-gray-700"
@@ -249,26 +257,28 @@ export default function AllShops() {
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => handleOpen(shop)}
                 >
-                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                     {(currentPage - 1) * itemsPerPage + index + 1}
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{shop.shopName}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500 hidden lg:table-cell whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 text-sm font-medium text-gray-900">
+                    {shop.shopName}
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 hidden lg:table-cell whitespace-nowrap">
                     {new Date(shop.createdAt).toLocaleDateString(undefined, {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
                     })}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
                     {shop.user?.personalInfo
                       ? `${shop.user.personalInfo.firstName} ${shop.user.personalInfo.lastName}`
                       : "N/A"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 hidden lg:table-cell whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 hidden lg:table-cell whitespace-nowrap">
                     {shop.contact}
                   </td>
-                  <td className="px-6 py-4 text-center whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 text-center whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize items-center gap-1 ${getStatusColor(
                         shop.status

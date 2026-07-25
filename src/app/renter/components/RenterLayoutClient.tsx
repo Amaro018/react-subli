@@ -41,7 +41,7 @@ export default function RenterLayoutClient({
       </div>
 
       {/* Main Container */}
-      <div className="flex flex-1 pt-20 md:pt-16">
+      <div className="mx-auto flex w-full max-w-[1400px] flex-1 pt-20 md:pt-16">
         {/* Desktop Sidebar (Leftmost, No Border Radius) */}
         <div className="h-[calc(100vh-4rem)] sticky top-16 hidden md:block">
           <Sidebar currentUser={currentUser} />
@@ -62,12 +62,12 @@ export default function RenterLayoutClient({
         </Drawer>
 
         {/* Main Content Area */}
-        {/* Added 'pt-12' to mobile (md:pt-6) to create space 
+        {/* Added 'pt-16' to mobile to create space 
                    under the 'My Dashboard' fixed header 
                 */}
-        <main className="scrollbar-seamless h-[calc(100vh-4rem)] flex min-w-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-12 md:px-6 md:py-6">
-          {/* Content Card */}
-          <div className="mb-6 flex-1 rounded-xl bg-white p-4 shadow-sm md:p-6">{children}</div>
+        <main className="scrollbar-sidebar h-[calc(100vh-4rem)] flex min-w-0 flex-1 flex-col overflow-y-auto bg-white shadow-sm md:border-l md:border-gray-200">
+          {/* Content Area */}
+          <div className="flex-1 p-4 pt-16 md:p-8">{children}</div>
 
           {/* Footer */}
           <Footer />

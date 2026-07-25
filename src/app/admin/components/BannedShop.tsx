@@ -25,23 +25,23 @@ export default function BannedShop({ status }: BannedShopProps) {
   )
 
   return (
-    <div className="w-full rounded-lg border border-gray-200 shadow-sm">
+    <div className="w-full rounded-lg border border-gray-200 shadow-sm overflow-x-auto scrollbar-hide">
       <table className="w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider w-12">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider w-12">
               #
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider">
               Name
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden md:table-cell">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden md:table-cell">
               Owner
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden lg:table-cell">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 tracking-wider hidden lg:table-cell">
               Contact
             </th>
-            <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 tracking-wider">
               Status
             </th>
           </tr>
@@ -50,19 +50,21 @@ export default function BannedShop({ status }: BannedShopProps) {
           {paginatedShops.length > 0 ? (
             paginatedShops.map((shop: ShopType, index: number) => (
               <tr key={shop.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                   {(currentPage - 1) * itemsPerPage + index + 1}
                 </td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">{shop.shopName}</td>
-                <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell">
+                <td className="px-4 sm:px-6 py-4 text-sm font-medium text-gray-900">
+                  {shop.shopName}
+                </td>
+                <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 hidden md:table-cell">
                   {shop.user?.personalInfo
                     ? `${shop.user.personalInfo.firstName} ${shop.user.personalInfo.lastName}`
                     : "N/A"}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500 hidden lg:table-cell whitespace-nowrap">
+                <td className="px-4 sm:px-6 py-4 text-sm text-gray-500 hidden lg:table-cell whitespace-nowrap">
                   {shop.contact}
                 </td>
-                <td className="px-6 py-4 text-center">
+                <td className="px-4 sm:px-6 py-4 text-center">
                   <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 capitalize items-center gap-1">
                     <BlockIcon fontSize="inherit" />
                     {shop.status}

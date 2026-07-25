@@ -27,16 +27,23 @@ export default function CheckOutDrawer() {
             const variantDisplay = item.variant.attributes
               .map((attr: any) => attr.attributeValue.value)
               .join(" / ")
+            const variantAttrIds = item.variant.attributes.map(
+              (a: any) => a.attributeValueId || a.attributeValue?.id
+            )
+            const variantImage = item.product.images?.find(
+              (img: any) => img.attributeValueId && variantAttrIds.includes(img.attributeValueId)
+            )
+
+            const thumbnail =
+              variantImage ||
+              item.product.images?.find((img: any) => img.isThumbnail) ||
+              item.product.images?.[0]
             return (
               <div className="flex flex-col justify-stretch" key={item.id}>
                 <div>
                   <div className="flex items-center space-x-4">
                     <Image
-                      src={
-                        item.product.images[0]
-                          ? `/uploads/products/${item.product.images[0].url}`
-                          : "/placeholder.png"
-                      }
+                      src={thumbnail ? `/uploads/products/${thumbnail.url}` : "/placeholder.png"}
                       alt={item.product.name}
                       width={50}
                       height={50}
@@ -54,6 +61,8 @@ export default function CheckOutDrawer() {
                         month: "long",
                         day: "2-digit",
                         year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
                       }).format(new Date(item.startDate))}
                   </p>
                   <p>
@@ -62,6 +71,8 @@ export default function CheckOutDrawer() {
                         month: "long",
                         day: "2-digit",
                         year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
                       }).format(new Date(item.endDate))}
                   </p>
                   <p>{item.variant.price}</p>

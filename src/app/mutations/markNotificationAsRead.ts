@@ -13,7 +13,7 @@ export default async function markNotificationAsRead(
   ctx.session.$authorize()
   const { id } = MarkNotificationAsRead.parse(input)
 
-  const notification = await (db as any).notification.update({
+  const notification = await db.notification.update({
     where: { id },
     data: { isRead: true },
   })

@@ -24,7 +24,17 @@ export default resolver.pipe(resolver.zod(GetProductByShopId), async ({ shopId }
       },
       variants: {
         include: {
-          color: true,
+          attributes: {
+            include: {
+              attributeValue: {
+                include: {
+                  attribute: true,
+                },
+              },
+            },
+          },
+          damagePolicies: true,
+          rentItems: true,
         },
       },
       images: true,

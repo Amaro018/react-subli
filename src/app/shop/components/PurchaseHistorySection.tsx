@@ -8,15 +8,17 @@ import {
   Stack,
   Box,
   Tooltip,
+  SxProps,
+  Theme,
 } from "@mui/material"
 
 interface PurchaseHistorySectionProps {
   originalPurchaseDate: string
   condition: string
-  onChange: (field: string, value: any) => void
+  onChange: (field: string, value: string) => void
   disabledHistory?: boolean
   children?: React.ReactNode
-  sx?: any
+  sx?: SxProps<Theme>
 }
 
 const PurchaseHistorySection = memo(function PurchaseHistorySection({

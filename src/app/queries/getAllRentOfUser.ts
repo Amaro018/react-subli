@@ -13,13 +13,20 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
     },
     include: {
       user: true,
-
       items: {
         include: {
           reviews: true,
           productVariant: {
             include: {
-              color: true,
+              attributes: {
+                include: {
+                  attributeValue: {
+                    include: {
+                      attribute: true,
+                    },
+                  },
+                },
+              },
               product: {
                 include: {
                   variants: true,

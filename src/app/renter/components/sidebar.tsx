@@ -1,5 +1,5 @@
 ﻿"use client"
-import React, { useState } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import Image from "next/image"
@@ -25,39 +25,14 @@ interface SidebarProps {
   onMobileClose?: () => void
 }
 
-export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [userRents] = useQuery(
-    getAllRentOfUser,
-    { id: currentUser.id },
-    { enabled: !!currentUser && !isLoggingOut }
-  )
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  // State to track which dropdown is open
-  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({
-    "My Profile": true,
-    "My Rentals": true,
-  })
-
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed)
-
-  const toggleDropdown = (title: string) => {
-    if (isCollapsed) setIsCollapsed(false) // Expand sidebar if a dropdown is clicked
-    setOpenDropdowns((prev) => ({ ...prev, [title]: !prev[title] }))
-  }
-
-  const handleLinkClick = () => {
-    if (onMobileClose) onMobileClose()
-  }
-
-  const rents = userRents || []
-
-  const toPayCount = rents.filter((rent) => {
-    return rent.items.some((item) => {
+export const getBadgeCounts = (rents: any[]) => {
+  const toPayCount = rents.filter((rent: any) => {
+    return rent.items.some((item: any) => {
       if (item.status === "completed") return false
-      const totalPayment = item.payments.reduce((total, payment) => total + payment.amount, 0)
+      const totalPayment = item.payments.reduce(
+        (total: number, payment: any) => total + payment.amount,
+        0
+      )
       const startDate = new Date(item.startDate)
       const endDate = new Date(item.endDate)
       const today = new Date()
@@ -73,60 +48,113 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
     })
   }).length
 
-  const toDeliverCount = rents.filter((rent) => {
-    return rent.items.some((item) => item.deliveryMethod === "deliver")
+  const toDeliverCount = rents.filter((rent: any) => {
+    return rent.items.some((item: any) => item.deliveryMethod === "deliver")
   }).length
 
-  const toPickupCount = rents.filter((rent) => {
-    return rent.items.some((item) => item.deliveryMethod === "pickup")
+  const toPickupCount = rents.filter((rent: any) => {
+    return rent.items.some((item: any) => item.deliveryMethod === "pickup")
   }).length
 
-  const toRateCount = rents.filter((rent) => {
-    return rent.items.some((item) => item.status === "completed" && !item.isReviewed)
+  const toRateCount = rents.filter((rent: any) => {
+    return rent.items.some((item: any) => item.status === "completed" && !item.reviews?.length)
   }).length
 
-  const menuItems = [
-    {
-      title: "My Profile",
-      icon: <PersonIcon fontSize="small" />,
-      items: [
-        { name: "Profile", href: "/renter/renter-profile" },
-        { name: "Addresses", href: "/renter/renter-address" },
-        { name: "Change Password", href: "/renter/change-password" },
-      ],
-    },
-    {
-      title: "My Rentals",
-      icon: <ListAltIcon fontSize="small" />,
-      items: [
-        { name: "All Rentals", href: "/renter/orders" },
-        { name: "To Pay", href: "/renter/orders?status=to-pay", badge: toPayCount },
-        { name: "To Deliver", href: "/renter/orders?status=to-deliver", badge: toDeliverCount },
-        { name: "To Pickup", href: "/renter/orders?status=to-pickup", badge: toPickupCount },
-        { name: "Completed", href: "/renter/orders?status=completed" },
-      ],
-    },
-    {
-      title: "My Reviews",
-      icon: <RateReviewIcon fontSize="small" />,
-      items: [
-        { name: "All Reviews", href: "/renter/reviews" },
-        { name: "To Rate", href: "/renter/reviews?status=to-rate", badge: toRateCount },
-        { name: "Reviewed", href: "/renter/reviews?status=reviewed" },
-      ],
-    },
-    currentUser?.isShopRegistered
-      ? {
-          title: currentUser.shop?.status === "pending" ? "Shop Pending" : "Switch to Shop",
-          icon: <StorefrontIcon fontSize="small" />,
-          href: currentUser.shop?.status === "pending" ? "/renter/shop-register/pending" : "/shop",
-        }
-      : {
-          title: "Create a Shop",
-          icon: <StorefrontIcon fontSize="small" />,
-          href: "/renter/shop-register",
+  return { toPayCount, toDeliverCount, toPickupCount, toRateCount }
+}
+
+export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [userRents] = useQuery(
+    getAllRentOfUser,
+    { id: currentUser.id },
+    { enabled: !!currentUser && !isLoggingOut }
+  )
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  // State to track which dropdown is open
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({})
+
+  const toggleSidebar = () => setIsCollapsed(!isCollapsed)
+
+  const handleLinkClick = () => {
+    if (onMobileClose) onMobileClose()
+  }
+
+  const { toPayCount, toDeliverCount, toPickupCount, toRateCount } = useMemo(
+    () => getBadgeCounts(userRents || []),
+    [userRents]
+  )
+
+  const menuItems = useMemo(
+    () =>
+      [
+        {
+          title: "My Profile",
+          icon: <PersonIcon fontSize="small" />,
+          items: [
+            { name: "Profile", href: "/renter/renter-profile" },
+            { name: "Addresses", href: "/renter/renter-address" },
+            { name: "Change Password", href: "/renter/change-password" },
+          ],
         },
-  ].filter(Boolean)
+        {
+          title: "My Rentals",
+          icon: <ListAltIcon fontSize="small" />,
+          items: [
+            { name: "All Rentals", href: "/renter/orders" },
+            { name: "To Pay", href: "/renter/orders?status=to-pay", badge: toPayCount },
+            { name: "To Deliver", href: "/renter/orders?status=to-deliver", badge: toDeliverCount },
+            { name: "To Pickup", href: "/renter/orders?status=to-pickup", badge: toPickupCount },
+            { name: "Completed", href: "/renter/orders?status=completed" },
+          ],
+        },
+        {
+          title: "My Reviews",
+          icon: <RateReviewIcon fontSize="small" />,
+          items: [
+            { name: "All Reviews", href: "/renter/reviews" },
+            { name: "To Rate", href: "/renter/reviews?status=to-rate", badge: toRateCount },
+            { name: "Reviewed", href: "/renter/reviews?status=reviewed" },
+          ],
+        },
+        currentUser?.isShopRegistered
+          ? {
+              title: currentUser.isShopMode ? "Switch to Shop" : "Shop Pending",
+              icon: <StorefrontIcon fontSize="small" />,
+              href: currentUser.isShopMode ? "/shop" : "/renter/shop-register/pending",
+            }
+          : {
+              title: "Create a Shop",
+              icon: <StorefrontIcon fontSize="small" />,
+              href: "/renter/shop-register",
+            },
+      ].filter(Boolean),
+    [currentUser, toPayCount, toDeliverCount, toPickupCount, toRateCount]
+  )
+
+  useEffect(() => {
+    const activeDropdowns: Record<string, boolean> = {}
+    menuItems.forEach((section: any) => {
+      if (section.items) {
+        const isSectionActive = section.items.some((item: any) => {
+          const [itemPath, itemQuery] = item.href.split("?")
+          const itemParams = new URLSearchParams(itemQuery || "")
+          const itemStatus = itemParams.get("status")
+          const currentStatus = searchParams.get("status")
+          return pathname === itemPath && itemStatus === currentStatus
+        })
+        activeDropdowns[section.title] = isSectionActive
+      }
+    })
+    setOpenDropdowns(activeDropdowns)
+  }, [pathname, searchParams, menuItems])
+
+  const toggleDropdown = (title: string) => {
+    if (isCollapsed) setIsCollapsed(false) // Expand sidebar if a dropdown is clicked
+    setOpenDropdowns((prev) => ({ ...prev, [title]: !prev[title] }))
+  }
 
   return (
     <aside
@@ -184,7 +212,7 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
       </div>
 
       {/* Navigation with Dropdowns */}
-      <nav className="scrollbar-seamless flex-1 overflow-y-auto px-2 py-4">
+      <nav className="scrollbar-sidebar flex-1 overflow-y-auto px-2 py-4">
         {menuItems.map((section: any) => {
           if (section.href) {
             const [sectionPath, sectionQuery] = section.href.split("?")

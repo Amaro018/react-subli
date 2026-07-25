@@ -20,12 +20,33 @@ const getProductEventsById = resolver.pipe(
         variants: {
           select: {
             id: true,
-            size: true,
             quantity: true,
-            color: {
-              select: { name: true },
+            attributes: {
+              select: {
+                attributeValue: {
+                  select: {
+                    value: true,
+                    hexCode: true,
+                    attribute: {
+                      select: { name: true },
+                    },
+                  },
+                },
+              },
             },
             rentItems: {
+              where: {
+                OR: [
+                  {
+                    // Only fetch active/upcoming rentals for the calendar to plot
+                    status: { in: ["pending", "accepted", "rendering", "on_hand", "overdue"] },
+                  },
+                  {
+                    // Also fetch any past items that were permanently damaged to calculate stock deductions
+                    returnedDamagedQty: { gt: 0 },
+                  },
+                ],
+              },
               select: {
                 id: true,
 
@@ -40,6 +61,7 @@ const getProductEventsById = resolver.pipe(
                 quantity: true,
                 startDate: true,
                 endDate: true,
+                returnedDamagedQty: true,
               },
             },
           },

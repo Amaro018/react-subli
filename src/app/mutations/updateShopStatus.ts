@@ -115,7 +115,7 @@ export default resolver.pipe(
 
       // Notify the user about the shop status change
       if (status === "approved" || status === "rejected") {
-        await (db as any).notification.create({
+        await db.notification.create({
           data: {
             userId: shopUserId,
             title: `Shop Registration ${status === "approved" ? "Approved" : "Rejected"}`,

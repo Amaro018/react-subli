@@ -3,10 +3,6 @@ import db from "db"
 
 export default async function getShops(input: any, ctx: Ctx) {
   const shops = await db.shop.findMany({
-    // Keep your existing where conditions if you have any
-    where: {
-      status: "approved", // example
-    },
     // Add the include block here
     include: {
       user: {

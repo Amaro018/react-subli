@@ -1,5 +1,5 @@
 "use client"
-import React, { useRef } from "react"
+import React, { useRef, useState, useEffect } from "react"
 import { useQuery } from "@blitzjs/rpc"
 import getShops from "../../queries/getShops"
 import Link from "next/link"
@@ -12,6 +12,12 @@ import StorefrontIcon from "@mui/icons-material/Storefront"
 export default function TopShops() {
   const [shops] = useQuery(getShops, null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true)
+
+  // Sort shops by highest rating first and take the top 20
+  const topShops = [...(shops || [])]
+    .sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0))
+    .slice(0, 20)
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
@@ -25,26 +31,60 @@ export default function TopShops() {
     }
   }
 
+  useEffect(() => {
+    if (!isAutoScrolling || !topShops.length) return
+
+    const interval = setInterval(() => {
+      if (scrollContainerRef.current) {
+        const { current } = scrollContainerRef
+        const isAtEnd = current.scrollLeft + current.clientWidth >= current.scrollWidth - 10
+
+        if (isAtEnd) {
+          current.scrollTo({ left: 0, behavior: "smooth" })
+        } else {
+          current.scrollBy({ left: 300, behavior: "smooth" })
+        }
+      }
+    }, 3500) // Auto-scroll every 3.5 seconds
+
+    return () => clearInterval(interval)
+  }, [isAutoScrolling, topShops.length])
+
+  if (!topShops.length) return null
+
   return (
     <section className="py-12 md:py-16 bg-white w-full border-t border-gray-100">
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
-          <Typography variant="h4" component="h2" fontWeight="bold" color="text.primary">
-            Top Shops
-          </Typography>
-          <div className="hidden sm:flex gap-2">
-            <IconButton
-              onClick={() => scroll("left")}
-              sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-8 md:mb-10 gap-4 text-center sm:text-left">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-[#1b2a80] sm:text-3xl">
+              Top Shops
+            </h2>
+            <p className="mt-2 text-base text-gray-500">
+              The most trusted and highly rated lenders
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/shops?sort=rating_desc"
+              className="text-sm font-bold text-[#1b2a80] hover:text-blue-800 hover:underline transition-colors"
             >
-              <ChevronLeftIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => scroll("right")}
-              sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
-            >
-              <ChevronRightIcon />
-            </IconButton>
+              View All
+            </Link>
+            <div className="hidden sm:flex gap-2">
+              <IconButton
+                onClick={() => scroll("left")}
+                sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <IconButton
+                onClick={() => scroll("right")}
+                sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </div>
           </div>
         </div>
 
@@ -52,8 +92,12 @@ export default function TopShops() {
           ref={scrollContainerRef}
           className="flex overflow-x-auto gap-6 pb-4 scrollbar-seamless [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{ scrollSnapType: "x mandatory" }}
+          onMouseEnter={() => setIsAutoScrolling(false)}
+          onMouseLeave={() => setIsAutoScrolling(true)}
+          onTouchStart={() => setIsAutoScrolling(false)}
+          onTouchEnd={() => setIsAutoScrolling(true)}
         >
-          {shops.map((shop: any) => {
+          {topShops.map((shop: any) => {
             const shopName = shop.shopName || shop.name || "Shop"
             return (
               <div

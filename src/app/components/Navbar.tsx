@@ -86,7 +86,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
   let shopLabel = "Create a Shop"
 
   if (currentUser?.isShopRegistered) {
-    if (currentUser.shop?.status === "pending") {
+    if (!currentUser?.isShopMode) {
       shopHref = "/renter/shop-register/pending"
       shopLabel = "Shop Pending"
     } else {

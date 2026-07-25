@@ -6,6 +6,7 @@ import getNotifications from "../queries/getNotifications"
 import markNotificationAsRead from "../mutations/markNotificationAsRead"
 import markAllNotificationsAsRead from "../mutations/markAllNotificationsAsRead"
 import deleteAllNotifications from "../mutations/deleteAllNotifications"
+import deleteNotification from "../mutations/deleteNotification"
 import {
   List,
   ListItemText,
@@ -15,10 +16,17 @@ import {
   CircularProgress,
   ListItemButton,
   Button,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material"
 import CircleIcon from "@mui/icons-material/Circle"
 import DoneAllIcon from "@mui/icons-material/DoneAll"
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep"
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline"
 
 interface NotificationListProps {
   onClose?: () => void
@@ -33,6 +41,11 @@ export default function NotificationList({ onClose }: NotificationListProps) {
   const [markAsReadMutation] = useMutation(markNotificationAsRead)
   const [markAllAsReadMutation] = useMutation(markAllNotificationsAsRead)
   const [deleteAllMutation] = useMutation(deleteAllNotifications)
+  const [deleteMutation] = useMutation(deleteNotification)
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmMessage, setConfirmMessage] = useState("")
+  const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
 
   const handleNotificationClick = async (notification: any) => {
     if (!notification.isRead) {
@@ -73,6 +86,42 @@ export default function NotificationList({ onClose }: NotificationListProps) {
       }
     }
 
+    if (notification.title === "Product Created") {
+      const match = notification.message.match(/\[ID: (\d+)\]/)
+      if (match) {
+        router.push(`/shop/products?highlight=${match[1]}`)
+      } else {
+        router.push("/shop/products")
+      }
+    }
+
+    if (notification.title === "New Product Listed") {
+      const match = notification.message.match(/\[ID: (\d+)\]/)
+      if (match) {
+        router.push(`/admin/products?highlight=${match[1]}`)
+      } else {
+        router.push("/admin/products")
+      }
+    }
+
+    if (notification.title === "New Rent Order") {
+      const match = notification.message.match(/\[ID: (\d+)\]/)
+      if (match) {
+        router.push(`/shop/orders?highlight=${match[1]}`)
+      } else {
+        router.push("/shop/orders")
+      }
+    }
+
+    if (notification.title === "Rent Status Updated") {
+      const match = notification.message.match(/\[ID: (\d+)\]/)
+      if (match) {
+        router.push(`/renter/orders?highlight=${match[1]}`)
+      } else {
+        router.push("/renter/orders")
+      }
+    }
+
     if (onClose) onClose()
   }
 
@@ -85,15 +134,42 @@ export default function NotificationList({ onClose }: NotificationListProps) {
     }
   }
 
+  const handleConfirmClose = () => {
+    setConfirmOpen(false)
+  }
+
+  const handleConfirmAccept = async () => {
+    if (confirmAction) {
+      await confirmAction()
+    }
+    setConfirmOpen(false)
+  }
+
   const handleClearAll = async () => {
-    if (confirm("Are you sure you want to clear all notifications?")) {
+    setConfirmMessage("Are you sure you want to clear all notifications?")
+    setConfirmAction(() => async () => {
       try {
         await deleteAllMutation()
         await refetch()
       } catch (error) {
         console.error("Failed to delete all notifications", error)
       }
-    }
+    })
+    setConfirmOpen(true)
+  }
+
+  const handleDeleteNotification = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevents triggering the parent ListItemButton click event
+    setConfirmMessage("Are you sure you want to delete this notification?")
+    setConfirmAction(() => async () => {
+      try {
+        await deleteMutation({ id })
+        await refetch()
+      } catch (error) {
+        console.error("Failed to delete notification", error)
+      }
+    })
+    setConfirmOpen(true)
   }
 
   if (!notifications) {
@@ -163,7 +239,7 @@ export default function NotificationList({ onClose }: NotificationListProps) {
         </Button>
       </Box>
       <Divider />
-      <List sx={{ maxHeight: 400, overflow: "auto", p: 0 }}>
+      <List className="scrollbar-seamless" sx={{ maxHeight: 400, overflow: "auto", p: 0 }}>
         {groups.map((group) => {
           const groupItems = groupedNotifications[group]
           if (!groupItems || groupItems.length === 0) return null
@@ -181,8 +257,12 @@ export default function NotificationList({ onClose }: NotificationListProps) {
                     alignItems="flex-start"
                     onClick={() => handleNotificationClick(notification)}
                     sx={{
-                      bgcolor: notification.isRead ? "transparent" : "action.hover",
-                      transition: "background-color 0.3s",
+                      bgcolor: notification.isRead ? "transparent" : "#eef2ff",
+                      borderLeft: notification.isRead
+                        ? "4px solid transparent"
+                        : "4px solid #1b2a80",
+                      pl: notification.isRead ? 2 : 1.5,
+                      transition: "all 0.3s ease",
                     }}
                   >
                     <ListItemText
@@ -196,16 +276,19 @@ export default function NotificationList({ onClose }: NotificationListProps) {
                           <Typography
                             sx={{
                               display: "inline",
-                              fontWeight: notification.isRead ? "normal" : "bold",
+                              fontWeight: notification.isRead ? 500 : 700,
                               fontSize: "0.9rem",
+                              color: notification.isRead ? "text.primary" : "#1b2a80",
                             }}
                             component="span"
-                            color="text.primary"
                           >
                             {notification.title}
                           </Typography>
                           {!notification.isRead && (
-                            <CircleIcon sx={{ fontSize: 8, color: "primary.main", ml: 1 }} />
+                            <CircleIcon
+                              className="animate-pulse"
+                              sx={{ fontSize: 10, color: "#1b2a80", ml: 1 }}
+                            />
                           )}
                         </Box>
                       }
@@ -215,9 +298,9 @@ export default function NotificationList({ onClose }: NotificationListProps) {
                             sx={{ display: "block", mb: 0.5, lineHeight: 1.2 }}
                             component="span"
                             variant="caption"
-                            color="text.secondary"
+                            color={notification.isRead ? "text.secondary" : "text.primary"}
                           >
-                            {notification.message}
+                            {notification.message.replace(/\[ID: \d+\]/g, "").trim()}
                           </Typography>
                           <Typography
                             variant="caption"
@@ -229,6 +312,19 @@ export default function NotificationList({ onClose }: NotificationListProps) {
                         </React.Fragment>
                       }
                     />
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      onClick={(e) => handleDeleteNotification(notification.id, e)}
+                      sx={{
+                        mt: 0.5,
+                        ml: 1,
+                        color: "text.secondary",
+                        "&:hover": { color: "error.main" },
+                      }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
                   </ListItemButton>
                   {index < groupItems.length - 1 && <Divider component="li" />}
                 </React.Fragment>
@@ -247,6 +343,21 @@ export default function NotificationList({ onClose }: NotificationListProps) {
           </Box>
         </>
       )}
+
+      <Dialog open={confirmOpen} onClose={handleConfirmClose}>
+        <DialogTitle>Confirm Action</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{confirmMessage}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleConfirmClose} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmAccept} color="error" variant="contained" disableElevation>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

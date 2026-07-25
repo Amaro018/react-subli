@@ -1,113 +1,159 @@
-import React from "react"
-import { invoke } from "../../blitz-server"
-import getShop from "../../queries/getShopById"
-import getCurrentUser from "../../users/queries/getCurrentUser"
+"use client"
+import React, { useEffect, useState } from "react"
+import { useQuery } from "@blitzjs/rpc"
 import Navbar from "../../components/Navbar"
 import Footer from "../../components/Footer"
-import { notFound } from "next/navigation"
-import { Avatar, Typography, Rating } from "@mui/material"
-import StorefrontIcon from "@mui/icons-material/Storefront"
-import Image from "next/image"
-import Link from "next/link"
+import getUser from "../../utils/getUser"
+import getShopById from "../../queries/getShopById"
+import ResponsiveImage from "../../components/ResponsiveImage"
 import ShopProductsList from "../../components/ShopProductsList"
+import { Rating } from "@mui/material"
+import LocationOnIcon from "@mui/icons-material/LocationOn"
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined"
+import FacebookOutlinedIcon from "@mui/icons-material/FacebookOutlined"
 
-export default async function ShopPage({ params }: { params: { id: string } }) {
-  const shopId = Number(params.id)
+export default function ShopPage({ params }: any) {
+  const { id } = params
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
-  if (isNaN(shopId)) {
-    notFound()
-  }
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = await getUser()
+      setCurrentUser(user)
+    }
+    fetchUser()
+  }, [])
 
-  const currentUser = await invoke(getCurrentUser, null)
+  const [shop] = useQuery(getShopById, { id: Number(id) })
 
-  let shop: any
-  try {
-    shop = await invoke(getShop, { id: shopId })
-  } catch (error) {
-    notFound()
-  }
-
-  // Your schema uses shopName natively!
-  const shopName = shop?.shopName || shop?.name || "Unknown Shop"
-  const rating = (shop as any).rating || 0
-
-  // Safely format the image URL assuming it might just be a filename stored in the DB
-  const profileImageSrc = shop?.imageProfile
-    ? shop.imageProfile.startsWith("http") || shop.imageProfile.startsWith("/")
-      ? shop.imageProfile
-      : `/uploads/shop-profile/${shop.imageProfile}`
-    : undefined
-
-  // Format the background image URL similarly
-  const bgImageSrc = shop?.imageBg
-    ? shop.imageBg.startsWith("http") || shop.imageBg.startsWith("/")
-      ? shop.imageBg
-      : `/uploads/shop-bg/${shop.imageBg}` // Assuming background uploads go here
-    : undefined
+  const allReviews = shop?.products?.flatMap((p: any) => p.reviews || []) || []
+  const sumRating = allReviews.reduce((acc: number, review: any) => acc + (review.rating || 0), 0)
+  const averageRating = allReviews.length > 0 ? sumRating / allReviews.length : 0
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto scrollbar-seamless">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar currentUser={currentUser} />
+      <main className="flex-grow w-full max-w-[1400px] mx-auto px-4 py-8 sm:px-6 lg:px-8 flex flex-col gap-8">
+        {shop ? (
+          <>
+            {/* Shop Header Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+              {/* Shop Background Banner */}
+              <div className="relative w-full h-48 sm:h-64 bg-gray-200">
+                {shop.imageBg ? (
+                  <ResponsiveImage
+                    src={shop.imageBg}
+                    imageType="shop-bg"
+                    alt="Shop Background"
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-[#1b2a80] to-blue-500 opacity-80" />
+                )}
+              </div>
 
-      <main className="flex-grow bg-gray-50 py-12 md:py-16">
-        <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-            {/* Shop Background Section */}
-            <div className="w-full h-48 md:h-64 relative bg-gray-200">
-              {bgImageSrc ? (
-                <Image
-                  src={bgImageSrc}
-                  alt={`${shopName} background`}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-r from-[#1b2a80] to-blue-400 opacity-80" />
-              )}
-            </div>
-
-            {/* Shop Profile Logo and Info */}
-            <div className="px-8 pb-8 md:px-12 md:pb-12 relative flex flex-col md:flex-row items-center md:items-end justify-between gap-6 md:gap-8 text-center md:text-left">
-              <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 flex-1">
-                <div className="-mt-16 relative p-1.5 bg-white rounded-full flex-shrink-0">
-                  <Avatar
-                    src={profileImageSrc}
-                    sx={{ width: 120, height: 120, bgcolor: "#1b2a80", shadow: 1 }}
-                  >
-                    <StorefrontIcon sx={{ fontSize: "4rem" }} />
-                  </Avatar>
+              {/* Shop Details */}
+              <div className="px-6 pb-6 sm:px-8 sm:pb-8 relative flex flex-col sm:flex-row gap-6 sm:gap-8">
+                <div className="relative -mt-16 w-32 h-32 flex-shrink-0 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100 mx-auto sm:mx-0 z-10">
+                  <ResponsiveImage
+                    src={shop.imageProfile}
+                    imageType="shop-profile"
+                    alt={shop.shopName || "Shop Profile"}
+                    fill
+                    sizes="128px"
+                    className="object-cover"
+                  />
                 </div>
+                <div className="text-center sm:text-left flex flex-col flex-grow pt-2 sm:pt-4">
+                  <div className="w-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2 justify-center sm:justify-start">
+                      <h1 className="text-3xl font-bold text-gray-900 capitalize">
+                        {shop.shopName}
+                      </h1>
+                      <div className="flex items-center justify-center sm:justify-start gap-2">
+                        <Rating value={averageRating} precision={0.25} size="small" readOnly />
+                        <span className="text-sm font-bold text-gray-700">
+                          {averageRating.toFixed(1)}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          ({allReviews.length} {allReviews.length === 1 ? "review" : "reviews"})
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-start text-gray-500 font-medium text-sm mb-6">
+                      <LocationOnIcon fontSize="small" className="mr-1 text-[#1b2a80] shrink-0" />
+                      <span
+                        className="truncate max-w-[250px] sm:max-w-none"
+                        title={[
+                          shop.street,
+                          shop.barangay,
+                          shop.city,
+                          shop.province,
+                          shop.country,
+                          shop.zipCode,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      >
+                        {[shop.city, shop.province].filter(Boolean).join(", ")}
+                      </span>
+                    </div>
+                  </div>
 
-                <div className="mt-2 md:mt-4 flex-1">
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{shopName}</h1>
-                  <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ mb: 3, maxWidth: "1000px" }}
-                  >
-                    {shop.description || "This shop has not provided a description yet."}
-                  </Typography>
-                  <div className="flex items-center justify-center md:justify-start gap-2">
-                    <Rating value={rating} precision={0.1} readOnly />
-                    <span className="font-medium text-gray-700">{rating}</span>
-                    <span className="text-gray-500 text-sm">(0 reviews)</span>
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                    {shop.description ? (
+                      <div className="flex-1">
+                        <p className="text-gray-600 leading-relaxed text-sm whitespace-pre-line text-center sm:text-left">
+                          {shop.description}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex-1" />
+                    )}
+                    <div className="flex flex-row gap-3 items-center justify-center md:justify-end shrink-0 md:pt-1">
+                      {(shop.contact || shop.email) && (
+                        <a
+                          href={shop.contact ? `tel:${shop.contact}` : `mailto:${shop.email}`}
+                          className="p-3 bg-white border-2 border-[#1877F2] text-[#1877F2] hover:bg-blue-50 rounded-full transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center"
+                          title="Contact Shop"
+                        >
+                          <EmailOutlinedIcon fontSize="small" />
+                        </a>
+                      )}
+                      {shop.linkFacebook ? (
+                        <a
+                          href={shop.linkFacebook}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-3 bg-white border-2 border-[#1877F2] text-[#1877F2] hover:bg-blue-50 rounded-full transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center"
+                          title="Visit Facebook"
+                        >
+                          <FacebookOutlinedIcon fontSize="small" />
+                        </a>
+                      ) : (
+                        <div
+                          className="p-3 bg-white border-2 border-[#1877F2] text-[#1877F2] hover:bg-blue-50 rounded-full transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center cursor-not-allowed"
+                          title="No Facebook link available"
+                        >
+                          <FacebookOutlinedIcon fontSize="small" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Shop Actions */}
-              <div className="flex-shrink-0 w-full md:w-auto mt-4 md:mt-0 mb-2">
-                <button className="w-full md:w-auto inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-bold rounded-xl text-white bg-[#1b2a80] hover:bg-blue-800 shadow-sm transition-colors">
-                  Contact Shop
-                </button>
-              </div>
             </div>
+
+            {/* Shop Products Section */}
+            <ShopProductsList products={shop.products || []} />
+          </>
+        ) : (
+          <div className="py-24 flex flex-col items-center justify-center text-center bg-white rounded-2xl shadow-sm border border-gray-100 px-4 h-full min-h-[400px]">
+            <p className="text-gray-500 font-medium">Loading shop details...</p>
           </div>
-
-          <ShopProductsList products={shop?.products || []} />
-        </div>
+        )}
       </main>
-
       <Footer />
     </div>
   )

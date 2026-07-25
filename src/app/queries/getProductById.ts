@@ -16,10 +16,24 @@ const getProductById = async ({ id }: { id: number }) => {
       },
       variants: {
         include: {
-          color: true, // Include the associated Color for each variant
+          attributes: {
+            include: {
+              attributeValue: {
+                include: {
+                  attribute: true,
+                },
+              },
+            },
+          },
+          damagePolicies: true,
+          rentItems: true,
         },
       }, // Include related variants if needed
-      images: true,
+      images: {
+        include: {
+          attributeValue: true,
+        },
+      },
       shop: true,
     },
   })

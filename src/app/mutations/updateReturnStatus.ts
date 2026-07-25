@@ -1,27 +1,31 @@
 import db from "db"
+import { z } from "zod"
 
-type UpdateReturntStatusInput = {
-  rentItemId: number
-  status: "returned" | "returned_damaged"
-  noteMessage: string
-  amount: number
+export const UpdateReturnStatusSchema = z.object({
+  rentItemId: z.number(),
+  status: z.enum(["returned", "returned_damaged"]),
+  noteMessage: z.string(),
+  amount: z.number(),
 
-  manualFee: number
-  replacementFee: number
-  repairFee: number
-  repairFees: { [key: string]: number }
+  manualFee: z.number(),
+  replacementFee: z.number(),
+  repairFee: z.number(),
+  repairFees: z.record(z.string(), z.number()),
+  lateFee: z.number().optional(),
 
-  selectedQty: number
-  goodQty: number
-  manualQty: number
-  replacementQty: number
-  repairQty: number
-  repairQuantities: { [key: string]: number }
+  selectedQty: z.number(),
+  goodQty: z.number(),
+  manualQty: z.number(),
+  replacementQty: z.number(),
+  repairQty: z.number(),
+  repairQuantities: z.record(z.string(), z.number()),
 
-  isGrossNegligence: boolean
-  chargeLossOfUse: boolean
-  shopKeepsSalvage: boolean
-}
+  isGrossNegligence: z.boolean(),
+  chargeLossOfUse: z.boolean(),
+  shopKeepsSalvage: z.boolean(),
+})
+
+type UpdateReturntStatusInput = z.infer<typeof UpdateReturnStatusSchema>
 
 export default async function updateReturnStatus(input: UpdateReturntStatusInput) {
   const {
@@ -33,6 +37,7 @@ export default async function updateReturnStatus(input: UpdateReturntStatusInput
     replacementFee,
     repairFee,
     repairFees,
+    lateFee,
     selectedQty,
     goodQty,
     manualQty,
@@ -42,7 +47,7 @@ export default async function updateReturnStatus(input: UpdateReturntStatusInput
     isGrossNegligence,
     chargeLossOfUse,
     shopKeepsSalvage,
-  } = input
+  } = UpdateReturnStatusSchema.parse(input)
 
   const rentItemData = await db.rentItem.findUnique({
     where: { id: rentItemId },
@@ -50,43 +55,46 @@ export default async function updateReturnStatus(input: UpdateReturntStatusInput
 
   if (!rentItemData) throw new Error("Rent item not found")
 
-  const chargesToCreate = [
-    // Replacement
-    {
-      type: "damaged",
-      subType: "replacement",
+  const chargesToCreate: { type: string; severity?: string; amount: number; quantity: number }[] =
+    []
+
+  if (replacementQty > 0) {
+    chargesToCreate.push({
+      type: "DAMAGED",
       severity: "TOTAL_LOSS",
-      repairType: "total_loss",
       amount: replacementFee,
       quantity: replacementQty,
-    },
+    })
+  }
 
-    // Manual
-    { type: "damaged", subType: "manual", amount: manualFee, quantity: manualQty },
+  if (manualQty > 0) {
+    chargesToCreate.push({
+      type: "DAMAGED",
+      severity: "MANUAL",
+      amount: manualFee,
+      quantity: manualQty,
+    })
+  }
 
-    // Repairs: generate from repairTypes list
-    ...["minor", "moderate", "major", "default"].map((repairType) => {
-      if (repairType === "default") {
-        return {
-          type: "damaged",
-          subType: "repair",
-          severity: repairType,
-          repairType,
-          amount: repairFee ?? 0, // use singular
-          quantity: repairQty ?? 0, // use singular
-        }
-      }
+  for (const [severity, qty] of Object.entries(repairQuantities)) {
+    if (qty > 0) {
+      chargesToCreate.push({
+        type: "DAMAGED",
+        severity: severity.toUpperCase(),
+        amount: repairFees[severity] ?? 0,
+        quantity: qty,
+      })
+    }
+  }
 
-      return {
-        type: "damaged",
-        subType: "repair",
-        severity: repairType,
-        repairType,
-        amount: repairFees[repairType] ?? 0,
-        quantity: repairQuantities[repairType] ?? 0,
-      }
-    }),
-  ].filter((c) => c.quantity > 0)
+  if (lateFee && lateFee > 0) {
+    chargesToCreate.push({
+      type: "LATE",
+      severity: "LATE_RETURN",
+      amount: lateFee,
+      quantity: 1,
+    })
+  }
 
   // Advanced Resolution Workflow Modifiers
   const rawTotalDamageFee =
@@ -98,30 +106,24 @@ export default async function updateReturnStatus(input: UpdateReturntStatusInput
   if (rawTotalDamageFee > 0) {
     if (isGrossNegligence) {
       chargesToCreate.push({
-        type: "damaged",
-        subType: "penalty",
+        type: "DAMAGED",
         severity: "GROSS_NEGLIGENCE",
-        repairType: "gross_negligence",
         amount: rawTotalDamageFee * 0.2,
         quantity: 1,
       })
     }
     if (chargeLossOfUse) {
       chargesToCreate.push({
-        type: "damaged",
-        subType: "penalty",
+        type: "DAMAGED",
         severity: "LOSS_OF_USE",
-        repairType: "loss_of_use",
         amount: rentItemData.price * 3,
         quantity: 1,
       })
     }
     if (shopKeepsSalvage) {
       chargesToCreate.push({
-        type: "damaged",
-        subType: "credit",
+        type: "DAMAGED",
         severity: "SALVAGE_KEPT",
-        repairType: "salvage_kept",
         amount: -(rawTotalDamageFee * 0.15),
         quantity: 1,
       })
@@ -137,8 +139,8 @@ export default async function updateReturnStatus(input: UpdateReturntStatusInput
       charges: {
         create: chargesToCreate,
       },
-    } as any,
-    include: { charges: true } as any,
+    },
+    include: { charges: true },
   })
 
   return rentItem

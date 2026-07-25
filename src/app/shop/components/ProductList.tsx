@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import {
   Typography,
   CircularProgress,
@@ -21,9 +21,15 @@ import {
   Button,
   MenuItem,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useQuery, useMutation } from "@blitzjs/rpc"
-import getAllProducts from "../../queries/getAllProducts"
+import getProductByShopId from "../../queries/getProductByShopId"
 import EditProductForm from "./EditProductForm"
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp"
@@ -36,8 +42,6 @@ import ImageIcon from "@mui/icons-material/Image"
 import Image from "next/image"
 import {
   EditOutlined,
-  VisibilityOutlined,
-  VisibilityOffOutlined,
   ArchiveOutlined,
   RestoreOutlined,
   ContentCopyOutlined,
@@ -108,12 +112,19 @@ type RentItem = {
 }
 
 type Variant = {
-  id: any
+  id: number | string
   price: number
   quantity: number
   condition?: string
   attributes: ProductVariantAttribute[]
   rentItems: RentItem[]
+}
+
+type ProductImage = {
+  id: number
+  url: string
+  isThumbnail: boolean
+  attributeValueId: number | null
 }
 
 type ProductFormData = {
@@ -125,7 +136,8 @@ type ProductFormData = {
   category: Category
   categoryid: number
   variants: Variant[]
-  images?: any[]
+  images: ProductImage[]
+  updatedAt: string | Date
 }
 
 const emptyProduct: ProductFormData = {
@@ -140,6 +152,8 @@ const emptyProduct: ProductFormData = {
   },
   categoryid: 0,
   variants: [],
+  images: [],
+  updatedAt: new Date(),
 }
 
 function Row({
@@ -149,23 +163,38 @@ function Row({
   onRestore,
   onHardDelete,
   onDuplicate,
+  isHighlighted,
 }: {
-  product: any
-  onEdit: (p: any) => void
+  product: ProductFormData
+  onEdit: (p: ProductFormData) => void
   onArchive: (id: number) => void
   onRestore: (id: number) => void
   onHardDelete: (id: number) => void
   onDuplicate: (id: number) => void
+  isHighlighted?: boolean
 }) {
   const [open, setOpen] = useState(false)
 
-  const totalStock = product.variants.reduce((acc: number, v: any) => acc + v.quantity, 0)
+  const totalStock = product.variants.reduce((acc: number, v: Variant) => acc + v.quantity, 0)
   const variantCount = product.variants.length
-  const hasRentalHistory = product.variants.some((v: any) => v.rentItems && v.rentItems.length > 0)
+  const hasRentalHistory = product.variants.some(
+    (v: Variant) => v.rentItems && v.rentItems.length > 0
+  )
+
+  const thumbnail =
+    product.images?.find((img: ProductImage) => img.isThumbnail) || product.images?.[0]
 
   return (
     <React.Fragment>
-      <TableRow hover sx={{ "& > *": { borderBottom: "unset" } }}>
+      <TableRow
+        id={`product-row-${product.id}`}
+        hover
+        sx={{
+          "& > *": { borderBottom: "unset" },
+          bgcolor: isHighlighted ? "#eef2ff" : "inherit",
+          transition: "background-color 0.5s ease",
+        }}
+      >
         <TableCell align="center" sx={{ width: 60, py: 2 }}>
           <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
@@ -173,9 +202,9 @@ function Row({
         </TableCell>
         <TableCell component="th" scope="row" sx={{ py: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            {product.images && product.images.length > 0 ? (
+            {thumbnail ? (
               <Image
-                src={`/uploads/products/${product.images[0].url}`}
+                src={`/uploads/products/${thumbnail.url}`}
                 alt={product.name}
                 width={48}
                 height={48}
@@ -451,16 +480,16 @@ function Row({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {product.variants.map((variant: any, index: number) => {
+                  {product.variants.map((variant: Variant, index: number) => {
                     const variantName =
                       variant.attributes?.length > 0
                         ? variant.attributes
-                            .map((attr: any) => attr.attributeValue.value)
+                            .map((attr: ProductVariantAttribute) => attr.attributeValue.value)
                             .join(" / ")
                         : "Default Config"
 
                     const totalRented =
-                      variant.rentItems?.reduce((sum: number, rent: any) => {
+                      variant.rentItems?.reduce((sum: number, rent: RentItem) => {
                         if (rent.status === "rendering" || rent.status === "on_hand") {
                           return sum + rent.quantity
                         } else if (!rent.isRepaired && rent.returnedDamagedQty) {
@@ -548,24 +577,137 @@ function Row({
 
 const ProductList = (props: ProductListProps) => {
   const currentUser = props.currentUser
-  const [products, { isLoading, isError, error, refetch }] = useQuery(getAllProducts, null)
-  const [openEdit, setOpenEdit] = useState(false)
+  const shopId = currentUser?.shop?.id
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [sortOrder, setSortOrder] = useState("newest")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
+  const [products = [], { isLoading, isError, error, refetch }] = useQuery(
+    getProductByShopId,
+    shopId ? { shopId } : { shopId: 0 },
+    { enabled: !!shopId }
+  )
+
+  const [openEdit, setOpenEdit] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<ProductFormData>(emptyProduct)
   const [updateProductStatusMutation] = useMutation(updateProductStatus)
   const [deleteProductMutation] = useMutation(deleteProduct)
   const [duplicateProductMutation] = useMutation(duplicateProduct)
 
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmMessage, setConfirmMessage] = useState("")
+  const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+  const [confirmColor, setConfirmColor] = useState<"primary" | "error">("error")
+
+  const handleConfirmClose = () => {
+    setConfirmOpen(false)
+  }
+
+  const handleConfirmAccept = async () => {
+    if (confirmAction) {
+      await confirmAction()
+    }
+    setConfirmOpen(false)
+  }
+
+  const filteredProducts = useMemo(() => {
+    const productList = products as unknown as ProductFormData[]
+    return productList
+      .filter((product) => {
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        if (statusFilter === "all") return product.status !== "deleted" && matchesSearch
+        if (statusFilter === "archived") return product.status === "deleted" && matchesSearch
+        return product.status === statusFilter && matchesSearch
+      })
+      .sort((a, b) => {
+        if (sortOrder === "newest")
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        if (sortOrder === "oldest")
+          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+        if (sortOrder === "name_asc") return a.name.localeCompare(b.name)
+        if (sortOrder === "name_desc") return b.name.localeCompare(a.name)
+        if (sortOrder === "stock_high") {
+          return (
+            (b.variants?.reduce((acc: number, v: Variant) => acc + v.quantity, 0) || 0) -
+            (a.variants?.reduce((acc: number, v: Variant) => acc + v.quantity, 0) || 0)
+          )
+        }
+        if (sortOrder === "stock_low") {
+          return (
+            (a.variants?.reduce((acc: number, v: Variant) => acc + v.quantity, 0) || 0) -
+            (b.variants?.reduce((acc: number, v: Variant) => acc + v.quantity, 0) || 0)
+          )
+        }
+        return 0
+      })
+  }, [products, searchTerm, statusFilter, sortOrder])
+
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const highlightId = searchParams?.get("highlight")
+
+  const pageCount = useMemo(
+    () => Math.ceil(filteredProducts.length / itemsPerPage),
+    [filteredProducts.length, itemsPerPage]
+  )
+
+  const paginatedProducts = useMemo(() => {
+    return filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  }, [filteredProducts, currentPage, itemsPerPage])
+
+  useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout
+    let clearUrlTimeout: NodeJS.Timeout
+
+    if (highlightId && filteredProducts.length > 0) {
+      const targetId = Number(highlightId)
+      const index = filteredProducts.findIndex((p) => p.id === targetId)
+
+      if (index !== -1) {
+        // Pagination is 1-based in this component
+        const targetPage = Math.floor(index / itemsPerPage) + 1
+
+        if (currentPage !== targetPage) {
+          setCurrentPage(targetPage)
+        } else {
+          // Use a timeout to ensure the DOM has updated before scrolling
+          scrollTimeout = setTimeout(() => {
+            const el = document.getElementById(`product-row-${targetId}`)
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" })
+
+              // Clear the parameter from the URL after 2 seconds to fade out the highlight
+              clearUrlTimeout = setTimeout(() => {
+                const params = new URLSearchParams(searchParams.toString())
+                if (params.has("highlight")) {
+                  params.delete("highlight")
+                  router.replace(
+                    `${pathname || "/"}${params.toString() ? `?${params.toString()}` : ""}` as any,
+                    { scroll: false }
+                  )
+                }
+              }, 2000)
+            }
+          }, 100)
+        }
+      }
+    }
+
+    return () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+      if (clearUrlTimeout) clearTimeout(clearUrlTimeout)
+    }
+  }, [highlightId, filteredProducts, currentPage, itemsPerPage, pathname, router, searchParams])
+
   const handleArchiveProduct = async (id: number) => {
-    if (
-      window.confirm(
-        "Are you sure you want to archive this product? It will be hidden from your shop, but you can restore it later."
-      )
-    ) {
+    setConfirmMessage(
+      "Are you sure you want to archive this product? It will be hidden from your shop, but you can restore it later."
+    )
+    setConfirmColor("error")
+    setConfirmAction(() => async () => {
       try {
         await updateProductStatusMutation({ id, status: "deleted" })
         toast.success("Product archived successfully!")
@@ -573,26 +715,33 @@ const ProductList = (props: ProductListProps) => {
       } catch (error: any) {
         toast.error(error.message || "Failed to archive product")
       }
-    }
+    })
+    setConfirmOpen(true)
   }
 
   const handleRestoreProduct = async (id: number) => {
-    try {
-      // Restore as "inactive" (Unlisted) so the shop owner can review it before making it live
-      await updateProductStatusMutation({ id, status: "inactive" })
-      toast.success("Product restored and is now Unlisted!")
-      refetch()
-    } catch (error: any) {
-      toast.error(error.message || "Failed to restore product")
-    }
+    setConfirmMessage(
+      "Are you sure you want to restore this product? It will be restored as 'Unlisted' so you can review it before making it live."
+    )
+    setConfirmColor("primary")
+    setConfirmAction(() => async () => {
+      try {
+        await updateProductStatusMutation({ id, status: "inactive" })
+        toast.success("Product restored and is now Unlisted!")
+        refetch()
+      } catch (error: any) {
+        toast.error(error.message || "Failed to restore product")
+      }
+    })
+    setConfirmOpen(true)
   }
 
   const handleHardDeleteProduct = async (id: number) => {
-    if (
-      window.confirm(
-        "Are you sure you want to permanently delete this product? This action cannot be undone."
-      )
-    ) {
+    setConfirmMessage(
+      "Are you sure you want to permanently delete this product? This action cannot be undone."
+    )
+    setConfirmColor("error")
+    setConfirmAction(() => async () => {
       try {
         await deleteProductMutation({ id })
         toast.success("Product permanently deleted!")
@@ -600,20 +749,28 @@ const ProductList = (props: ProductListProps) => {
       } catch (error: any) {
         toast.error(error.message || "Failed to delete product")
       }
-    }
+    })
+    setConfirmOpen(true)
   }
 
   const handleDuplicateProduct = async (id: number) => {
-    try {
-      await duplicateProductMutation({ id })
-      toast.success("Product duplicated successfully! It is currently Unlisted.")
-      refetch()
-    } catch (error: any) {
-      toast.error(error.message || "Failed to duplicate product")
-    }
+    setConfirmMessage(
+      "Are you sure you want to duplicate this product? A copy will be created as an Unlisted product."
+    )
+    setConfirmColor("primary")
+    setConfirmAction(() => async () => {
+      try {
+        await duplicateProductMutation({ id })
+        toast.success("Product duplicated successfully! It is currently Unlisted.")
+        refetch()
+      } catch (error: any) {
+        toast.error(error.message || "Failed to duplicate product")
+      }
+    })
+    setConfirmOpen(true)
   }
 
-  const handleOpenEdit = (product: any) => {
+  const handleOpenEdit = (product: ProductFormData) => {
     setSelectedProduct(product)
     setOpenEdit(true)
   }
@@ -631,19 +788,6 @@ const ProductList = (props: ProductListProps) => {
     }
     return <Alert severity="error">Something went wrong</Alert>
   }
-
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    if (statusFilter === "all") return product.status !== "deleted" && matchesSearch
-    if (statusFilter === "archived") return product.status === "deleted" && matchesSearch
-    return product.status === statusFilter && matchesSearch
-  })
-
-  const pageCount = Math.ceil(filteredProducts.length / itemsPerPage)
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
     setCurrentPage(value)
@@ -671,10 +815,32 @@ const ProductList = (props: ProductListProps) => {
               "& .MuiOutlinedInput-root": { borderRadius: "8px" },
             }}
           >
-            <MenuItem value="all">All Active</MenuItem>
+            <MenuItem value="all">All Products</MenuItem>
             <MenuItem value="active">Listed Only</MenuItem>
             <MenuItem value="inactive">Unlisted Only</MenuItem>
             <MenuItem value="archived">Archived</MenuItem>
+          </TextField>
+          <TextField
+            select
+            label="Sort By"
+            variant="outlined"
+            size="small"
+            value={sortOrder}
+            onChange={(e) => {
+              setSortOrder(e.target.value)
+              setCurrentPage(1)
+            }}
+            sx={{
+              minWidth: 160,
+              "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+            }}
+          >
+            <MenuItem value="newest">Recently Updated</MenuItem>
+            <MenuItem value="oldest">Oldest Updated</MenuItem>
+            <MenuItem value="name_asc">Name (A-Z)</MenuItem>
+            <MenuItem value="name_desc">Name (Z-A)</MenuItem>
+            <MenuItem value="stock_high">Highest Stock</MenuItem>
+            <MenuItem value="stock_low">Lowest Stock</MenuItem>
           </TextField>
           <TextField
             label="Search by name"
@@ -689,7 +855,7 @@ const ProductList = (props: ProductListProps) => {
             }}
           />
           <Link
-            href={"/shop/products/add" as any}
+            href="/shop/products/add"
             className="bg-[#1b2a80] text-white px-6 py-2 rounded-lg hover:bg-[#111b52] transition-colors font-medium shadow-sm"
           >
             Create Product
@@ -798,6 +964,7 @@ const ProductList = (props: ProductListProps) => {
                     onHardDelete={handleHardDeleteProduct}
                     onRestore={handleRestoreProduct}
                     onDuplicate={handleDuplicateProduct}
+                    isHighlighted={product.id === Number(highlightId)}
                   />
                 ))}
               </TableBody>
@@ -823,9 +990,22 @@ const ProductList = (props: ProductListProps) => {
               : "No products found matching your search."}
           </Typography>
           {products.length === 0 && (
-            <Link href={"/shop/products/add" as any} className="mt-4 text-blue-600 hover:underline">
+            <Link href="/shop/products/add" className="mt-4 text-blue-600 hover:underline">
               Create your first product
             </Link>
+          )}
+          {products.length > 0 && (searchTerm || statusFilter !== "all") && (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setSearchTerm("")
+                setStatusFilter("all")
+                setCurrentPage(1)
+              }}
+              sx={{ mt: 2 }}
+            >
+              Clear Filters
+            </Button>
           )}
         </div>
       )}
@@ -840,12 +1020,38 @@ const ProductList = (props: ProductListProps) => {
           className="scrollbar-seamless"
         >
           <EditProductForm
-            currentUser={selectedProduct as any}
+            currentUser={
+              selectedProduct as unknown as React.ComponentProps<
+                typeof EditProductForm
+              >["currentUser"]
+            }
             handleCloseEdit={handleCloseEdit}
-            refetchProducts={refetch}
+            refetchProducts={async () => {
+              await refetch()
+            }}
           />
         </Box>
       </Modal>
+
+      <Dialog open={confirmOpen} onClose={handleConfirmClose}>
+        <DialogTitle>Confirm</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{confirmMessage}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleConfirmClose} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmAccept}
+            color={confirmColor}
+            variant="contained"
+            disableElevation
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }
