@@ -6,8 +6,7 @@ import Navbar from "../../components/Navbar"
 import getUser from "../../utils/getUser"
 import getShopById from "../../queries/getShopById"
 import Image from "next/image"
-// import ShopProducts from "../components/shop-products"
-import ShopProducts from "../../components/ShopProducts"
+import ShopProductsList from "../../components/ShopProductsList"
 
 export default function Page({ params }: any) {
   const { slug } = params
@@ -55,7 +54,7 @@ export default function Page({ params }: any) {
         {/* Here you can include the component to display shop products */}
         {/* <ShopProducts shopId={slug} /> */}
         <div className="p-4">
-          <ShopProducts shop={shop} />
+          <ShopProductsList products={shop?.products || []} />
         </div>
       </div>
     </>

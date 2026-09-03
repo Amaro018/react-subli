@@ -1,12 +1,11 @@
-import { Sidebar } from "../components/Sidebar"
+import { Sidebar } from "../components/sidebar"
 import { invoke } from "./../../blitz-server"
 import getCurrentUser from "../../users/queries/getCurrentUser"
 import CreateProductForm from "./../components/CreateProductForm"
 import ProductList from "../components/ProductList"
 import GetRentItemsByShopInput from "../../queries/getRentItemsByShop"
 import { useQuery } from "@blitzjs/rpc"
-// import OrderList from "../components/OrderList"
-import OrderList from "../components/OrderList1"
+import OrderList from "../components/OrderList"
 
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)

@@ -132,7 +132,7 @@ export default function PendingShop({ status }: PendingShopProps) {
       }
 
       await refetch()
-      setSelectedShop(updatedShop)
+      setSelectedShop(updatedShop as any)
     } catch (error) {
       console.error("Failed to update status:", error)
       toast.error("Failed to update status. Please try again.")

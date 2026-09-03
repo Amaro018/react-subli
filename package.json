@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "prepare": "husky install",
     "prisma:generate": "npx prisma generate --schema=db/schema.prisma",
-    "db:seed": "node db/seedsRunner.cjs"
+    "db:seed": "blitz db seed"
   },
   "prisma": {
     "schema": "db/schema.prisma"

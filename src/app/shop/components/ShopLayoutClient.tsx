@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from "react"
-import { Sidebar } from "./Sidebar"
+import { Sidebar } from "./sidebar"
 import Header from "./Header"
 import Footer from "../../components/Footer"
 

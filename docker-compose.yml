@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: subli-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./subli-react.sqlite
+      - SESSION_SECRET_KEY=${SESSION_SECRET_KEY:-subli_default_session_secret_key_min_32_characters_long}
+      - APP_URL=http://localhost:3000
+      - PORT=3000
+      - AUTO_SEED=true
+      - MAILTRAP_HOST=sandbox.smtp.mailtrap.io
+      - MAILTRAP_PORT=2525
+      - MAILTRAP_USER=ac6e09b289a536
+      - MAILTRAP_PASS=18969daee068e2
+    env_file:
+      - .env
+    volumes:
+      # Persist SQLite database and schema/migrations
+      - sqlite_data:/app/db
+      # Persist user uploaded files
+      - uploads_data:/app/public/uploads
+
+volumes:
+  sqlite_data:
+    driver: local
+  uploads_data:
+    driver: local
