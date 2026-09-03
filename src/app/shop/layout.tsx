@@ -14,8 +14,11 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
 
   if (!currentUser) redirect("/login")
 
-  // If NOT in shop mode, redirect back to renter dashboard
+  // If NOT in shop mode, redirect back to renter dashboard or suspended shop view
   if (!currentUser.isShopMode) {
+    if (currentUser.shop?.status === "banned") {
+      redirect("/renter/my-shop/pending")
+    }
     redirect("/renter")
   }
 

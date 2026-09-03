@@ -31,7 +31,7 @@ import getCurrentUser from "../users/queries/getCurrentUser"
 
 //the mutation for creating rent
 import createRent from "../mutations/createRent"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 
 // Helper function to calculate rental duration in fractional days for accurate pricing
 const getRentalDurationInDays = (

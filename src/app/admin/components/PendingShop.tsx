@@ -15,7 +15,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import updateShopStatus from "../../mutations/updateShopStatus"
 import { useMutation } from "@blitzjs/rpc"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import DocumentViewer from "./DocumentViewer"
 
 const style = {

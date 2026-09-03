@@ -16,7 +16,7 @@ import {
   MenuItem,
   Chip,
 } from "@mui/material"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import { useMutation } from "@blitzjs/rpc"
 import addPayment from "../../mutations/addPayment"
 import { formatDateTime, calculateRentTotals } from "./utils"

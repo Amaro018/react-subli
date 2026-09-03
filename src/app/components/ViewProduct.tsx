@@ -10,6 +10,8 @@ import ProductDescription from "./ProductDescription"
 import ProductReviews from "./ProductReviews"
 import ProductDamagePolicies from "./ProductDamagePolicies"
 import ProductBookingForm from "./ProductBookingForm"
+import ReportProductModal from "./ReportProductModal"
+import FlagIcon from "@mui/icons-material/Flag"
 
 export default function ViewProduct({
   productId,
@@ -23,6 +25,7 @@ export default function ViewProduct({
 
   const [selectedVariant, setSelectedVariant] = React.useState<any | null>(null)
   const [selectedColor, setSelectedColor] = React.useState<number | null>(null)
+  const [reportModalOpen, setReportModalOpen] = React.useState(false)
 
   const sum = product.reviews?.reduce((acc: any, review: any) => acc + review.rating, 0)
   const average = sum / product.reviews?.length
@@ -88,6 +91,18 @@ export default function ViewProduct({
                     ({product.reviews?.length || 0}{" "}
                     {product.reviews?.length === 1 ? "review" : "reviews"})
                   </a>
+                  {currentUser && (
+                    <>
+                      <span className="text-gray-300 text-sm">•</span>
+                      <button
+                        onClick={() => setReportModalOpen(true)}
+                        className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 font-semibold transition-colors"
+                      >
+                        <FlagIcon sx={{ fontSize: 16 }} />
+                        Report
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -113,6 +128,13 @@ export default function ViewProduct({
 
       {/* Reviews Section */}
       <ProductReviews reviews={product.reviews} />
+
+      <ReportProductModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        productId={product.id}
+        productName={product.name}
+      />
     </div>
   )
 }

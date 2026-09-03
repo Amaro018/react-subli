@@ -10,7 +10,7 @@ import {
   DialogContent,
 } from "@mui/material"
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import addToCart from "../mutations/addToCart"
 import createRent from "../mutations/createRent"
 import getAllRentItems from "../queries/getAllRentItems"

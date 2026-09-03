@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import React, { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -94,8 +94,8 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           title: "My Profile",
           icon: <PersonIcon fontSize="small" />,
           items: [
-            { name: "Profile", href: "/renter/renter-profile" },
-            { name: "Addresses", href: "/renter/renter-address" },
+            { name: "Profile", href: "/renter/my-profile" },
+            { name: "Addresses", href: "/renter/my-address" },
             { name: "Change Password", href: "/renter/change-password" },
           ],
         },
@@ -119,19 +119,38 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
             { name: "Reviewed", href: "/renter/reviews?status=reviewed" },
           ],
         },
-        currentUser?.isShopRegistered
+        currentUser?.isShopRegistered && currentUser.shop
+          ? currentUser.shop.status === "banned"
+            ? {
+                title: "Shop Suspended",
+                icon: <StorefrontIcon fontSize="small" />,
+                href: "/renter/my-shop/suspended",
+              }
+            : {
+                title:
+                  currentUser.isShopMode || currentUser.shop.status === "approved"
+                    ? "Switch to Shop"
+                    : "Shop Pending",
+                icon: <StorefrontIcon fontSize="small" />,
+                href:
+                  currentUser.isShopMode || currentUser.shop.status === "approved"
+                    ? "/shop"
+                    : "/renter/my-shop/pending",
+              }
+          : currentUser?.isShopRegistered
           ? {
-              title: currentUser.isShopMode ? "Switch to Shop" : "Shop Pending",
+              // Fallback for when shop is not loaded yet but we know it's registered
+              title: "Shop Pending",
               icon: <StorefrontIcon fontSize="small" />,
-              href: currentUser.isShopMode ? "/shop" : "/renter/shop-register/pending",
+              href: "/renter/my-shop/pending",
             }
           : {
               title: "Create a Shop",
               icon: <StorefrontIcon fontSize="small" />,
-              href: "/renter/shop-register",
+              href: "/renter/my-shop",
             },
       ].filter(Boolean),
-    [currentUser, toPayCount, toDeliverCount, toPickupCount, toRateCount]
+    [currentUser, toPayCount, toDeliverCount, toPickupCount, toRateCount] // currentUser.shop is implicitly included
   )
 
   useEffect(() => {
@@ -302,22 +321,18 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
 
       {/* Logout Footer */}
       <div className="border-t border-gray-100 p-3">
-        <div
-          onClick={handleLinkClick}
-          className={`relative w-full flex items-center gap-4 px-3 py-3 rounded-full text-red-600 hover:bg-red-50 transition-colors cursor-pointer ${
+        <LogoutButton
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full text-red-600 hover:bg-red-50 transition-colors cursor-pointer ${
             isCollapsed ? "justify-center" : ""
           }`}
+          onLogout={() => {
+            setIsLoggingOut(true)
+            handleLinkClick()
+          }}
         >
-          <LogoutIcon fontSize="small" />
-          {!isCollapsed && (
-            <div className="text-sm font-bold w-full">
-              <LogoutButton onLogout={() => setIsLoggingOut(true)} />
-            </div>
-          )}
-          <div className={`absolute inset-0 opacity-0 ${isCollapsed ? "block" : "hidden"}`}>
-            <LogoutButton className="w-full h-full" onLogout={() => setIsLoggingOut(true)} />
-          </div>
-        </div>
+          <LogoutIcon fontSize="small" className="shrink-0" />
+          {!isCollapsed && <span className="text-sm font-bold">Logout</span>}
+        </LogoutButton>
       </div>
     </aside>
   )

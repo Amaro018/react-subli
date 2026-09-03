@@ -38,7 +38,7 @@ import updateRentStatus from "../../mutations/updateRentStatus"
 import updateReturnStatus from "../../mutations/updateReturnStatus"
 
 import getCurrentUser from "./../../users/queries/getCurrentUser"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { calculateCurrentValue } from "./utils"
 import RentItemRow, { RentItemData } from "./RentItemRow"

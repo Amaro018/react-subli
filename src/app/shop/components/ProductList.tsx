@@ -37,7 +37,7 @@ import Link from "next/link"
 import updateProductStatus from "../../mutations/updateProductStatus"
 import deleteProduct from "../../mutations/deleteProduct"
 import duplicateProduct from "../../mutations/duplicateProduct"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import ImageIcon from "@mui/icons-material/Image"
 import Image from "next/image"
 import {

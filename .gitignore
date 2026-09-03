@@ -49,3 +49,5 @@ db/subli-react.sqlite
 #key github ssh
 my-ssh-key-github
 my-ssh-key-github.pub
+
+public/uploads/

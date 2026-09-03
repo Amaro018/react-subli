@@ -113,6 +113,18 @@ export default resolver.pipe(
           data: updateData,
         })
 
+        // Create audit log entry for document changes
+        if (changedDocs.length > 0) {
+          await tx.shopAuditLog.create({
+            data: {
+              shopId: shopId,
+              action: "DOCUMENTS_RESUBMITTED",
+              details: `Documents resubmitted: ${changedDocs.join(", ")}`,
+              adminId: null, // Shop owner action
+            },
+          })
+        }
+
         if (changedDocs.length > 0) {
           const admins = await tx.user.findMany({
             where: { role: "ADMIN" },

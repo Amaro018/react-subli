@@ -27,7 +27,7 @@ import { DAMAGE_TEMPLATES } from "@/db/damageThresholds"
 import ProductVariantsSection from "./ProductVariantsSection"
 import PurchaseHistorySection from "./PurchaseHistorySection"
 import ProductBasicInfoSection from "./ProductBasicInfoSection"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import { FORM_DEFAULTS } from "./formConstants"
 import { calculateCurrentValue, cartesian } from "./utils"
 
@@ -389,27 +389,23 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
 
     try {
       const template = DAMAGE_TEMPLATES[selectedCategory?.name || ""] || DAMAGE_TEMPLATES["Default"]
-      const uploadedImages: {
-        url: string
+      const imagesToUpload: {
+        fileName: string
+        fileData: string
         attributeValueId: number | null
         isThumbnail: boolean
       }[] = []
 
       for (let index = 0; index < selectedFiles.length; index++) {
         const fileObj = selectedFiles[index]!
-        const uniqueFileName = `${Date.now()}-${fileObj.file.name}`
         const base64String: string = await new Promise((res) => {
           const reader = new FileReader()
           reader.onloadend = () => res(reader.result as string)
           reader.readAsDataURL(fileObj.file)
         })
-        await uploadShopBgMutation({
-          fileName: uniqueFileName,
-          data: base64String,
-          targetDirectory: "products",
-        })
-        uploadedImages.push({
-          url: uniqueFileName,
+        imagesToUpload.push({
+          fileName: `${Date.now()}-${fileObj.file.name}`,
+          fileData: base64String,
           attributeValueId: fileObj.attributeValueId,
           isThumbnail: index === thumbnailIndex,
         })
@@ -418,7 +414,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
       const finalData = {
         ...formData,
         status: isDraft ? "inactive" : "active",
-        images: uploadedImages,
+        images: imagesToUpload,
         variants: formData.variants
           .filter((v) => v.active)
           .map((v) => ({

@@ -271,22 +271,17 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
         </div>
 
         <div className="p-2 border-t border-white/10">
-          <div
-            className={`relative flex items-center px-4 py-2 text-gray-100 rounded-md transition-colors duration-200 hover:bg-white/10 cursor-pointer ${
+          <LogoutButton
+            className={`w-full flex items-center px-4 py-2 text-gray-100 rounded-md transition-colors duration-200 hover:bg-white/10 cursor-pointer ${
               isCollapsed ? "lg:justify-center" : ""
             }`}
-            onClick={() => setIsOpen(false)}
+            onLogout={() => setIsOpen(false)}
           >
-            <LogoutIcon className="w-6 h-6" />
-            <div className={`mx-3 w-full ${isCollapsed ? "lg:hidden" : ""}`}>
-              <LogoutButton />
-            </div>
-            <div
-              className={`absolute inset-0 opacity-0 ${isCollapsed ? "lg:block" : "hidden"} hidden`}
-            >
-              <LogoutButton className="w-full h-full" />
-            </div>
-          </div>
+            <LogoutIcon className="w-6 h-6 shrink-0" />
+            <span className={`mx-3 text-sm font-medium ${isCollapsed ? "lg:hidden" : ""}`}>
+              Logout
+            </span>
+          </LogoutButton>
         </div>
       </div>
     </>

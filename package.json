@@ -11,11 +11,11 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "prepare": "husky install",
-    "prisma:generate": "npx prisma generate --schema=db/schema.prisma",
-    "db:seed": "node db/seedsRunner.cjs"
+    "prisma:generate": "npx prisma generate --schema=db/schema.prisma"
   },
   "prisma": {
-    "schema": "db/schema.prisma"
+    "schema": "db/schema.prisma",
+    "seed": "blitz db seed"
   },
   "prettier": {
     "semi": false,

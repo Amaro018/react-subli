@@ -15,6 +15,11 @@ export default async function getShops(input: any, ctx: Ctx) {
           category: true, // This fetches the category associated with each product
         },
       },
+      appeals: {
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
   })
 

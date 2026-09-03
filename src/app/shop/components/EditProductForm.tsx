@@ -29,7 +29,7 @@ import PurchaseHistorySection from "./PurchaseHistorySection"
 import DamagePoliciesSection from "./DamagePoliciesSection"
 import { DAMAGE_TEMPLATES } from "@/db/damageThresholds"
 import ProductVariantsSection from "./ProductVariantsSection"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import { FORM_DEFAULTS } from "./formConstants"
 import { calculateCurrentValue, cartesian } from "./utils"
 

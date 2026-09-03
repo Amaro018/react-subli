@@ -2,7 +2,7 @@ import "./styles/globals.css"
 import { BlitzProvider } from "./blitz-client"
 import { Inter } from "next/font/google"
 import Footer from "./components/Footer"
-import { Toaster, toast } from "sonner"
+import { Toaster } from "sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -17,7 +17,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <BlitzProvider>
           <>
-            <Toaster position="top-right" richColors />
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+              visibleToasts={3}
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  marginBottom: "8px",
+                },
+              }}
+            />
             <main className="h-[100vh]">{children}</main>
           </>
         </BlitzProvider>

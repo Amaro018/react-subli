@@ -43,6 +43,16 @@ export default resolver.pipe(
       data: { isShopRegistered: true },
     })
 
+    // Create audit log entry for new shop registration
+    await db.shopAuditLog.create({
+      data: {
+        shopId: shop.id,
+        action: "SHOP_CREATED",
+        details: `Shop registration submitted by user`,
+        adminId: null, // User created this shop, not an admin action
+      },
+    })
+
     // Notify Admins
     const admins = await db.user.findMany({
       where: { isAdmin: true },

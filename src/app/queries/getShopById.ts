@@ -7,19 +7,28 @@ const GetShopById = z.object({
 })
 
 export default resolver.pipe(resolver.zod(GetShopById), async ({ id }) => {
-  const shop = await db.shop.findFirst({
+  // If not banned, fetch the full shop details
+  const fullShopDetails = await db.shop.findFirst({
     where: { id: typeof id === "string" ? parseInt(id) : id },
     include: {
       products: {
         include: {
           category: true,
-          variants: true,
-          reviews: true,
+          variants: {
+            include: {
+              attributes: { include: { attributeValue: { include: { attribute: true } } } },
+            },
+          },
+          reviews: { include: { user: { include: { personalInfo: true } } } },
           images: true,
         },
       },
     },
   })
-  if (!shop) throw new Error("Shop not found")
-  return shop
+
+  if (!fullShopDetails) {
+    throw new Error("Shop not found")
+  }
+
+  return fullShopDetails
 })

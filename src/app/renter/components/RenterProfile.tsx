@@ -7,7 +7,7 @@ import { useMutation, useQuery } from "@blitzjs/rpc" // Added useQuery
 import uploadShopBg from "../../mutations/uploadShopBg"
 import updateProfileImage from "../../mutations/updateProfileImage"
 import EditIcon from "@mui/icons-material/Edit"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import getBarangays from "../../queries/getBarangays"
 
 export default function RenterProfile(props: any) {

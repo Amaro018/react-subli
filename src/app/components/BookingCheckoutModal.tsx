@@ -14,7 +14,7 @@ import {
   MenuItem,
 } from "@mui/material"
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 
 const TEXTFIELD_SX = {
   "& .MuiOutlinedInput-root": {

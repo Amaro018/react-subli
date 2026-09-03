@@ -47,6 +47,12 @@ export default function NotificationList({ onClose }: NotificationListProps) {
   const [confirmMessage, setConfirmMessage] = useState("")
   const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
 
+  const navigateAfterDelay = (path: string, delay = 220) => {
+    window.setTimeout(() => {
+      router.push(path)
+    }, delay)
+  }
+
   const handleNotificationClick = async (notification: any) => {
     if (!notification.isRead) {
       try {
@@ -59,67 +65,71 @@ export default function NotificationList({ onClose }: NotificationListProps) {
 
     if (notification.title === "New Shop Registration") {
       const match = notification.message.match(/\/admin\/shops\/(\d+)/)
-      if (match) {
-        router.push(`/admin/manage-shops/pending?shopId=${match[1]}`)
-      } else {
-        router.push("/admin/manage-shops/pending")
-      }
+      navigateAfterDelay(
+        match ? `/admin/manage-shops/pending?shopId=${match[1]}` : "/admin/manage-shops/pending"
+      )
     }
 
-    if (notification.title === "Shop Registration Approved") {
-      router.push("/renter/shop-register")
+    if (
+      notification.title === "Shop Registration Approved" ||
+      notification.title === "Your Shop Has Been Reinstated"
+    ) {
+      navigateAfterDelay("/renter/my-shop")
     }
 
     if (
       notification.title === "Shop Registration Rejected" ||
-      notification.title === "Registration Submitted"
+      notification.title === "Registration Submitted" ||
+      notification.title === "Your Shop Has Been Banned"
     ) {
-      router.push("/renter/shop-register/pending")
+      navigateAfterDelay("/renter/my-shop/pending")
     }
 
     if (notification.title === "Document Resubmitted") {
       const match = notification.message.match(/\/admin\/shops\/(\d+)/)
-      if (match) {
-        router.push(`/admin/manage-shops/rejected?shopId=${match[1]}`)
-      } else {
-        router.push("/admin/manage-shops/rejected")
-      }
+      navigateAfterDelay(
+        match ? `/admin/manage-shops/rejected?shopId=${match[1]}` : "/admin/manage-shops/rejected"
+      )
     }
 
     if (notification.title === "Product Created") {
       const match = notification.message.match(/\[ID: (\d+)\]/)
-      if (match) {
-        router.push(`/shop/products?highlight=${match[1]}`)
-      } else {
-        router.push("/shop/products")
-      }
+      navigateAfterDelay(match ? `/shop/products?highlight=${match[1]}` : "/shop/products")
     }
 
     if (notification.title === "New Product Listed") {
       const match = notification.message.match(/\[ID: (\d+)\]/)
-      if (match) {
-        router.push(`/admin/products?highlight=${match[1]}`)
-      } else {
-        router.push("/admin/products")
-      }
+      navigateAfterDelay(
+        match ? `/admin/manage-products?highlight=${match[1]}` : "/admin/manage-products"
+      )
+    }
+
+    if (notification.title === "New Product Report") {
+      const match = notification.message.match(/\[Report ID: (\d+)\]/)
+      navigateAfterDelay(
+        match
+          ? `/admin/manage-products/reported?highlightReport=${match[1]}`
+          : "/admin/manage-products/reported"
+      )
+    }
+
+    if (notification.title === "New Shop Report") {
+      const match = notification.message.match(/\[Report ID: (\d+)\]/)
+      navigateAfterDelay(
+        match
+          ? `/admin/manage-shops/reported?highlightReport=${match[1]}`
+          : "/admin/manage-shops/reported"
+      )
     }
 
     if (notification.title === "New Rent Order") {
       const match = notification.message.match(/\[ID: (\d+)\]/)
-      if (match) {
-        router.push(`/shop/orders?highlight=${match[1]}`)
-      } else {
-        router.push("/shop/orders")
-      }
+      navigateAfterDelay(match ? `/shop/orders?highlight=${match[1]}` : "/shop/orders")
     }
 
     if (notification.title === "Rent Status Updated") {
       const match = notification.message.match(/\[ID: (\d+)\]/)
-      if (match) {
-        router.push(`/renter/orders?highlight=${match[1]}`)
-      } else {
-        router.push("/renter/orders")
-      }
+      navigateAfterDelay(match ? `/renter/orders?highlight=${match[1]}` : "/renter/orders")
     }
 
     if (onClose) onClose()

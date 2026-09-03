@@ -9,7 +9,7 @@
     "\\src\\app\\(auth)\\components",
     "\\src\\app\\queries",
     "\\src\\app\\renter",
-    "\\src\\app\\renter\\renter-profile",
+    "\\src\\app\\renter\\my-profile",
     "\\src\\app\\styles"
   ],
   "SelectedNode": "\\src\\app\\(auth)\\components\\LoginForm.tsx",
