@@ -1,25 +1,24 @@
-import { Sidebar } from "../components/Sidebar"
-import { invoke } from "./../../blitz-server"
+import { invoke } from "../../blitz-server"
 import getCurrentUser from "../../users/queries/getCurrentUser"
-import CreateProductForm from "./../components/CreateProductForm"
-import ProductList from "../components/ProductList"
-import GetRentItemsByShopInput from "../../queries/getRentItemsByShop"
-import { useQuery } from "@blitzjs/rpc"
-// import OrderList from "../components/OrderList"
-import OrderList from "../components/OrderList1"
+import OrderList from "../components/OrderList"
+import ErrorMessage from "../../renter/components/ErrorMessage"
 
 export default async function Page() {
   const currentUser = await invoke(getCurrentUser, null)
-  return (
-    <div className="flex flex-row w-full gap-2 ">
-      <div className="relative">
-        <Sidebar currentUser={currentUser} />
-      </div>
-      <div className="ml-36 p-16 w-full">
-        <div>
-          <OrderList />
-        </div>
-      </div>
-    </div>
-  )
+
+  if (!currentUser) {
+    return <ErrorMessage message="Access denied" title="Login Required" currentUser={null} />
+  }
+
+  if (!currentUser.shop) {
+    return (
+      <ErrorMessage
+        message="You need a registered shop to access this page."
+        title="Shop Required"
+        currentUser={currentUser}
+      />
+    )
+  }
+
+  return <OrderList />
 }

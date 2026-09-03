@@ -22,7 +22,7 @@ import {
 } from "@mui/material"
 import { Signup } from "../validations"
 import checkEmail from "../../mutations/checkEmail"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import Link from "next/link"
 import { useFormikContext } from "formik"
 import { z } from "zod"

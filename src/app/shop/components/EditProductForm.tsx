@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react"
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import {
   Button,
   Paper,
@@ -29,7 +29,9 @@ import PurchaseHistorySection from "./PurchaseHistorySection"
 import DamagePoliciesSection from "./DamagePoliciesSection"
 import { DAMAGE_TEMPLATES } from "@/db/damageThresholds"
 import ProductVariantsSection from "./ProductVariantsSection"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
+import { FORM_DEFAULTS } from "./formConstants"
+import { calculateCurrentValue, cartesian } from "./utils"
 
 export type AttributeValue = {
   id: number
@@ -37,43 +39,61 @@ export type AttributeValue = {
   hexCode: string | null
 }
 
-type Attribute = {
+export type Attribute = {
   id: number
   name: string
   values: AttributeValue[]
 }
 
-type Category = {
+export type Category = {
   id: number
   name: string
   defaultMinorPercent: number
   defaultModeratePercent: number
   defaultMajorPercent: number
+  annualDepreciationRate?: number
+}
+
+export type RentItem = {
+  id: number
+  status: string
+  quantity: number
+  returnedDamagedQty: number
+  isRepaired: boolean | null
+}
+
+export type ProductImage = {
+  url: string
+  isThumbnail: boolean
+  attributeValueId: number | null
 }
 
 export type ProductVariantAttribute = {
   attributeValue: AttributeValue & { attribute: Attribute }
 }
 
-type Variant = {
-  id: any
+export type Variant = {
+  id: number | string
   attributeValueIds: { [attributeId: number]: number }
   price: number
   quantity: number
-  damagePolicies: DamagePolicies[] | any
+  damagePolicies: DamagePolicies[]
   originalMSRP: number
   originalPurchaseDate: string
   condition: string
   active?: boolean
+  replacementCost?: number
+  manualRepairCost?: number
 }
 
-type DamagePolicies = {
-  id: number
+export type DamagePolicies = {
+  id?: number
   damageSeverity: string
   damageSeverityPercent: number
+  description?: string
 }
 
-type Product = {
+export type Product = {
   id: number
   name: string
   status: string
@@ -84,10 +104,10 @@ type Product = {
   variants: Array<
     Omit<Variant, "attributeValueIds"> & {
       attributes: ProductVariantAttribute[]
-      rentItems: any[] // Assuming rentItems exist
+      rentItems: RentItem[]
     }
   >
-  images: any[]
+  images: ProductImage[]
 }
 
 type ProductFormData = Omit<Product, "variants"> & {
@@ -97,25 +117,22 @@ type ProductFormData = Omit<Product, "variants"> & {
 type EditProductFormProps = {
   currentUser: Product
   handleCloseEdit: () => void
-  refetchProducts: () => Promise<any>
+  refetchProducts: () => Promise<void>
 }
 
-// Cartesian product helper
-const cartesian = (args: any[][]) => {
-  const r: any[] = [],
-    max = args.length - 1
-  function helper(arr: any[], i: number) {
-    for (var j = 0, l = args[i]!.length; j < l; j++) {
-      var a = arr.slice(0)
-      a.push(args[i]![j])
-      if (i == max) r.push(a)
-      else helper(a, i + 1)
-    }
-  }
-  if (args.length === 0) return []
-  helper([], 0)
-  return r
-}
+const getNotEmptyDamagePolicies = () => [
+  { damageSeverity: "minor", damageSeverityPercent: FORM_DEFAULTS.DAMAGE_POLICY_MINOR_PERCENT },
+  {
+    damageSeverity: "moderate",
+    damageSeverityPercent: FORM_DEFAULTS.DAMAGE_POLICY_MODERATE_PERCENT,
+  },
+  { damageSeverity: "major", damageSeverityPercent: FORM_DEFAULTS.DAMAGE_POLICY_MAJOR_PERCENT },
+  {
+    damageSeverity: "total_loss",
+    damageSeverityPercent: 100,
+    description: "Item is lost, stolen, or irreparable.",
+  },
+]
 
 const EditProductForm = (props: EditProductFormProps) => {
   const [attributes, { refetch: refetchAttributes }] = useQuery(getAttributes, null)
@@ -131,7 +148,12 @@ const EditProductForm = (props: EditProductFormProps) => {
           acc[attr.attributeValue.attribute.id] = attr.attributeValue.id
           return acc
         }, {} as { [attributeId: number]: number })
-        return { ...variant, attributeValueIds, active: true } as Variant
+
+        const damagePolicies = variant.damagePolicies?.length
+          ? variant.damagePolicies
+          : getNotEmptyDamagePolicies()
+
+        return { ...variant, attributeValueIds, damagePolicies, active: true } as Variant
       }),
     }
   })
@@ -167,8 +189,13 @@ const EditProductForm = (props: EditProductFormProps) => {
     return initialOptions
   })
 
+  const [thumbnailIndex, setThumbnailIndex] = useState<number | null>(() => {
+    const thumbIndex = props.currentUser.images.findIndex((img: ProductImage) => img.isThumbnail)
+    return thumbIndex !== -1 ? thumbIndex : props.currentUser.images.length > 0 ? 0 : null
+  })
+
   const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>(() => {
-    return props.currentUser.images.map((img: any) => ({
+    return props.currentUser.images.map((img: ProductImage) => ({
       file: new File([img.url], img.url), // creates a File object from the URL
       preview: `/uploads/products/${img.url}`,
       attributeValueId: img.attributeValueId ?? null,
@@ -176,6 +203,22 @@ const EditProductForm = (props: EditProductFormProps) => {
   })
 
   const [loading, setLoading] = useState(false)
+
+  // Keep a ref of selected files to clean up blob URLs on unmount
+  const selectedFilesRef = useRef(selectedFiles)
+  useEffect(() => {
+    selectedFilesRef.current = selectedFiles
+  }, [selectedFiles])
+
+  useEffect(() => {
+    return () => {
+      selectedFilesRef.current.forEach((fileObj) => {
+        if (fileObj.preview.startsWith("blob:")) {
+          URL.revokeObjectURL(fileObj.preview)
+        }
+      })
+    }
+  }, [])
 
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
   const [updateProductMutation] = useMutation(updateProduct)
@@ -204,8 +247,20 @@ const EditProductForm = (props: EditProductFormProps) => {
   const handleRemoveFile = useCallback((index: number) => {
     setSelectedFiles((prev) => {
       const newFiles = [...prev]
-      URL.revokeObjectURL(newFiles[index]!.preview)
+      if (newFiles[index]?.preview.startsWith("blob:")) {
+        URL.revokeObjectURL(newFiles[index]!.preview)
+      }
       newFiles.splice(index, 1)
+
+      // Adjust thumbnail index after removing a file
+      setThumbnailIndex((currentThumbnailIndex) => {
+        if (currentThumbnailIndex === null) return null
+        if (newFiles.length === 0) return null
+        if (index === currentThumbnailIndex) return 0 // Reset to first image
+        if (index < currentThumbnailIndex) return currentThumbnailIndex - 1 // Shift index down
+        return currentThumbnailIndex // Index is unaffected
+      })
+
       return newFiles
     })
   }, [])
@@ -217,6 +272,7 @@ const EditProductForm = (props: EditProductFormProps) => {
       })
       return []
     })
+    setThumbnailIndex(null)
   }, [])
 
   const handleFileAttributeChange = useCallback(
@@ -245,27 +301,35 @@ const EditProductForm = (props: EditProductFormProps) => {
   )
 
   const selectedCategory = categories?.find((c: Category) => c.id === formData.categoryid)
-  const minorMax = selectedCategory ? Math.round(selectedCategory.defaultMinorPercent * 100) : 15
-  const modMax = selectedCategory ? Math.round(selectedCategory.defaultModeratePercent * 100) : 30
-  const majMax = selectedCategory ? Math.round(selectedCategory.defaultMajorPercent * 100) : 60
+  const minorMax = selectedCategory
+    ? Math.round(selectedCategory.defaultMinorPercent * 100)
+    : FORM_DEFAULTS.DAMAGE_POLICY_MINOR_PERCENT
+  const modMax = selectedCategory
+    ? Math.round(selectedCategory.defaultModeratePercent * 100)
+    : FORM_DEFAULTS.DAMAGE_POLICY_MODERATE_PERCENT
+  const majMax = selectedCategory
+    ? Math.round(selectedCategory.defaultMajorPercent * 100)
+    : FORM_DEFAULTS.DAMAGE_POLICY_MAJOR_PERCENT
 
   const hasRentalHistory = useMemo(() => {
-    return props.currentUser.variants.some((v: any) => v.rentItems && v.rentItems.length > 0)
+    return props.currentUser.variants.some(
+      (v: Product["variants"][0]) => v.rentItems && v.rentItems.length > 0
+    )
   }, [props.currentUser])
 
-  const handleSharedVariantChange = useCallback((field: string, value: any) => {
+  const handleSharedVariantChange = useCallback((field: string, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
-      variants: prev.variants.map((v: any) => ({ ...v, [field]: value })),
+      variants: prev.variants.map((v: Variant) => ({ ...v, [field]: value })),
     }))
   }, [])
 
   const updateSharedDamagePolicy = useCallback((severity: string, percent: number) => {
     setFormData((prev) => ({
       ...prev,
-      variants: prev.variants.map((v: any) => ({
+      variants: prev.variants.map((v: Variant) => ({
         ...v,
-        damagePolicies: (v.damagePolicies || []).map((dp: any) =>
+        damagePolicies: (v.damagePolicies || []).map((dp: DamagePolicies) =>
           dp.damageSeverity === severity ? { ...dp, damageSeverityPercent: percent } : dp
         ),
       })),
@@ -287,22 +351,25 @@ const EditProductForm = (props: EditProductFormProps) => {
   const firstVariant = formData.variants[0] || {}
 
   const minorPercent =
-    firstVariant.damagePolicies?.find((dp: any) => dp.damageSeverity === "minor")
+    firstVariant.damagePolicies?.find((dp: DamagePolicies) => dp.damageSeverity === "minor")
       ?.damageSeverityPercent || 0
   const moderatePercent =
-    firstVariant.damagePolicies?.find((dp: any) => dp.damageSeverity === "moderate")
+    firstVariant.damagePolicies?.find((dp: DamagePolicies) => dp.damageSeverity === "moderate")
       ?.damageSeverityPercent || 0
   const majorPercent =
-    firstVariant.damagePolicies?.find((dp: any) => dp.damageSeverity === "major")
+    firstVariant.damagePolicies?.find((dp: DamagePolicies) => dp.damageSeverity === "major")
       ?.damageSeverityPercent || 0
 
-  const handleVariantChange = useCallback((index: number, field: keyof Variant, value: any) => {
-    setFormData((prev) => {
-      const updatedVariants = [...prev.variants]
-      updatedVariants[index] = { ...updatedVariants[index]!, [field]: value }
-      return { ...prev, variants: updatedVariants }
-    })
-  }, [])
+  const handleVariantChange = useCallback(
+    (index: number, field: keyof Variant, value: string | number | boolean | DamagePolicies[]) => {
+      setFormData((prev) => {
+        const updatedVariants = [...prev.variants]
+        updatedVariants[index] = { ...updatedVariants[index]!, [field]: value }
+        return { ...prev, variants: updatedVariants }
+      })
+    },
+    []
+  )
 
   const handleCreateAttribute = async (name: string) => {
     try {
@@ -310,8 +377,8 @@ const EditProductForm = (props: EditProductFormProps) => {
       toast.success(`Option "${name}" created!`)
       await refetchAttributes()
       return newAttr.id
-    } catch (e: any) {
-      toast.error(e.message || "Failed to create option")
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "Failed to create option")
     }
   }
 
@@ -321,30 +388,19 @@ const EditProductForm = (props: EditProductFormProps) => {
       toast.success(`Value "${value}" created!`)
       await refetchAttributes()
       return newVal.id
-    } catch (e: any) {
-      toast.error(e.message || "Failed to create value")
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "Failed to create value")
     }
   }
 
-  const createEmptyVariant = useCallback((baseVariant?: any): Variant => {
-    const getNotEmptyDamagePolicies = () => [
-      { id: 1, damageSeverity: "minor", damageSeverityPercent: 15 },
-      { id: 2, damageSeverity: "moderate", damageSeverityPercent: 30 },
-      { id: 3, damageSeverity: "major", damageSeverityPercent: 60 },
-      {
-        id: 4,
-        damageSeverity: "total_loss",
-        damageSeverityPercent: 100,
-        description: "Item is lost, stolen, or irreparable.",
-      },
-    ]
+  const createEmptyVariant = useCallback((baseVariant?: Partial<Variant>): Variant => {
     return {
       id: crypto.randomUUID(),
       attributeValueIds: {},
       quantity: baseVariant?.quantity || 0,
       price: baseVariant?.price || 0,
       damagePolicies:
-        baseVariant?.damagePolicies?.map((dp: any) => ({ ...dp, id: undefined })) ||
+        baseVariant?.damagePolicies?.map((dp: DamagePolicies) => ({ ...dp, id: undefined })) ||
         getNotEmptyDamagePolicies(),
       originalMSRP: baseVariant?.originalMSRP || 0,
       originalPurchaseDate:
@@ -396,11 +452,14 @@ const EditProductForm = (props: EditProductFormProps) => {
 
   const currentValuePreview = useMemo(() => {
     const msrp = firstVariant.originalMSRP || 0
-    const date = new Date(firstVariant.originalPurchaseDate || new Date())
-    const years = (new Date().getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
-    const depRate = selectedCategory?.annualDepreciationRate || 0.15
-    const value = msrp * Math.pow(1 - depRate, Math.max(0, years))
-    return Math.max(value, msrp * 0.1) // Floor at 10%
+    const depRate =
+      selectedCategory?.annualDepreciationRate || FORM_DEFAULTS.ANNUAL_DEPRECIATION_RATE
+    return calculateCurrentValue(
+      msrp,
+      firstVariant.originalPurchaseDate || new Date(),
+      depRate,
+      FORM_DEFAULTS.MINIMUM_VALUE_FLOOR_PERCENT
+    )
   }, [firstVariant.originalMSRP, firstVariant.originalPurchaseDate, selectedCategory])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -418,7 +477,7 @@ const EditProductForm = (props: EditProductFormProps) => {
         )
         return
       }
-      const hasActiveVariants = formData.variants.some((v: any) => v.active !== false)
+      const hasActiveVariants = formData.variants.some((v: Variant) => v.active !== false)
       if (!hasActiveVariants) {
         toast.error("Please include at least one active variant before submitting.")
         return
@@ -427,10 +486,12 @@ const EditProductForm = (props: EditProductFormProps) => {
 
     try {
       const template = DAMAGE_TEMPLATES[selectedCategory?.name || ""] || DAMAGE_TEMPLATES["Default"]
-      const finalImages: { url: string; attributeValueId: number | null }[] = []
+      const finalImages: { url: string; attributeValueId: number | null; isThumbnail: boolean }[] =
+        []
 
       // Process and upload new images while keeping existing ones
-      for (const fileObj of selectedFiles) {
+      for (let index = 0; index < selectedFiles.length; index++) {
+        const fileObj = selectedFiles[index]!
         if (fileObj.preview.startsWith("blob:")) {
           // This is a new file that needs to be uploaded
           const file = fileObj.file
@@ -452,12 +513,14 @@ const EditProductForm = (props: EditProductFormProps) => {
           finalImages.push({
             url: uniqueFileName,
             attributeValueId: fileObj.attributeValueId,
+            isThumbnail: index === thumbnailIndex,
           })
         } else {
           // This is an existing file, keep its original filename
           finalImages.push({
             url: fileObj.file.name,
             attributeValueId: fileObj.attributeValueId,
+            isThumbnail: index === thumbnailIndex,
           })
         }
       }
@@ -471,8 +534,8 @@ const EditProductForm = (props: EditProductFormProps) => {
         categoryid: formData.categoryid,
         images: finalImages,
         variants: formData.variants
-          .filter((v: any) => v.active !== false)
-          .map((v: any) => ({
+          .filter((v: Variant) => v.active !== false)
+          .map((v: Variant) => ({
             id: typeof v.id === "number" ? v.id : undefined, // Pass existing variant ID for updates
             quantity: v.quantity,
             price: v.price,
@@ -484,8 +547,8 @@ const EditProductForm = (props: EditProductFormProps) => {
             attributes: Object.values(v.attributeValueIds).map((valueId) => ({
               attributeValueId: valueId,
             })),
-            damagePolicies: (v.damagePolicies || []).map((dp: any) => ({
-              id: dp.id,
+            damagePolicies: (v.damagePolicies || []).map((dp: DamagePolicies) => ({
+              id: typeof dp.id === "number" ? dp.id : undefined,
               damageSeverity: dp.damageSeverity,
               damageSeverityPercent: dp.damageSeverityPercent,
               description:
@@ -494,13 +557,13 @@ const EditProductForm = (props: EditProductFormProps) => {
                   : template[dp.damageSeverity.toUpperCase() as keyof typeof template],
             })),
           })),
-      } as any)
+      } as Parameters<typeof updateProductMutation>[0])
 
       toast.success("Product updated successfully!")
       await props.refetchProducts()
       props.handleCloseEdit()
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update product")
+    } catch (error: unknown) {
+      toast.error((error as Error).message || "Failed to update product")
     } finally {
       setLoading(false)
     }
@@ -569,7 +632,7 @@ const EditProductForm = (props: EditProductFormProps) => {
                 categoryId={formData.categoryid}
                 description={formData.description}
                 deliveryOption={formData.deliveryOption}
-                categories={categories as any}
+                categories={categories as Category[]}
                 onChange={handleInputChange}
                 disabledCategory={hasRentalHistory}
               />
@@ -592,12 +655,14 @@ const EditProductForm = (props: EditProductFormProps) => {
                     onRemoveAllFiles={handleRemoveAllFiles}
                     onFileAttributeChange={handleFileAttributeChange}
                     selectableAttributeValues={selectableAttributeValues || []}
+                    thumbnailIndex={thumbnailIndex}
+                    onSetThumbnail={setThumbnailIndex}
                   />
 
                   <ProductVariantsSection
                     hasVariants={hasVariants}
                     setHasVariants={setHasVariants}
-                    options={options as any}
+                    options={options}
                     handleAddOption={() =>
                       setOptions((prev) => [
                         ...prev,
@@ -618,8 +683,8 @@ const EditProductForm = (props: EditProductFormProps) => {
                       newOptions[index]!.values = values
                       setOptions(newOptions)
                     }}
-                    attributes={attributes as any}
-                    variants={formData.variants as any}
+                    attributes={attributes as Attribute[]}
+                    variants={formData.variants}
                     handleVariantChange={handleVariantChange}
                     onCreateAttribute={handleCreateAttribute}
                     onCreateAttributeValue={handleCreateAttributeValue}

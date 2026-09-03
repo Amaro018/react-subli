@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getCategories from "../../queries/getCategories"
 import {
@@ -27,7 +27,9 @@ import { DAMAGE_TEMPLATES } from "@/db/damageThresholds"
 import ProductVariantsSection from "./ProductVariantsSection"
 import PurchaseHistorySection from "./PurchaseHistorySection"
 import ProductBasicInfoSection from "./ProductBasicInfoSection"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
+import { FORM_DEFAULTS } from "./formConstants"
+import { calculateCurrentValue, cartesian } from "./utils"
 
 type DamagePolicies = {
   id: number
@@ -69,13 +71,25 @@ type ProductFormData = {
   deliveryOption: "DELIVERY" | "PICKUP" | "BOTH"
   categoryid: number
   variants: Variant[]
-  images: any[]
+  images: { url: string; attributeValueId: number | null; isThumbnail: boolean }[]
 }
 
 const getNotEmptyDamagePolicies = (): DamagePolicies[] => [
-  { id: 1, damageSeverity: "minor", damageSeverityPercent: 15 },
-  { id: 2, damageSeverity: "moderate", damageSeverityPercent: 30 },
-  { id: 3, damageSeverity: "major", damageSeverityPercent: 60 },
+  {
+    id: 1,
+    damageSeverity: "minor",
+    damageSeverityPercent: FORM_DEFAULTS.DAMAGE_POLICY_MINOR_PERCENT,
+  },
+  {
+    id: 2,
+    damageSeverity: "moderate",
+    damageSeverityPercent: FORM_DEFAULTS.DAMAGE_POLICY_MODERATE_PERCENT,
+  },
+  {
+    id: 3,
+    damageSeverity: "major",
+    damageSeverityPercent: FORM_DEFAULTS.DAMAGE_POLICY_MAJOR_PERCENT,
+  },
   {
     id: 4,
     damageSeverity: "total_loss",
@@ -98,22 +112,6 @@ function createEmptyVariant(): Variant {
   }
 }
 
-// Cartesian product helper (moved outside component to be stable)
-const cartesian = (args: any[][]) => {
-  const r: any[] = [],
-    max = args.length - 1
-  function helper(arr: any[], i: number) {
-    for (var j = 0, l = args[i]!.length; j < l; j++) {
-      var a = arr.slice(0)
-      a.push(args[i]![j])
-      if (i == max) r.push(a)
-      else helper(a, i + 1)
-    }
-  }
-  helper([], 0)
-  return r
-}
-
 const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }) => {
   const router = useRouter()
   const { handleClose } = props
@@ -124,6 +122,23 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
     { id: string; attributeId: number | ""; values: number[] }[]
   >([])
   const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([])
+  const [thumbnailIndex, setThumbnailIndex] = useState<number | null>(null)
+
+  // Keep a ref of selected files to clean up blob URLs on unmount
+  const selectedFilesRef = useRef(selectedFiles)
+  useEffect(() => {
+    selectedFilesRef.current = selectedFiles
+  }, [selectedFiles])
+
+  useEffect(() => {
+    return () => {
+      selectedFilesRef.current.forEach((fileObj) => {
+        if (fileObj.preview.startsWith("blob:")) {
+          URL.revokeObjectURL(fileObj.preview)
+        }
+      })
+    }
+  }, [])
 
   const [categories] = useQuery(getCategories, null)
   const [attributes, { refetch: refetchAttributes }] = useQuery(getAttributes, null)
@@ -147,9 +162,15 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
 
   // --- DERIVED STATE ---
   const selectedCategory = categories?.find((c) => c.id === formData.categoryid)
-  const minorMax = selectedCategory ? Math.round(selectedCategory.defaultMinorPercent * 100) : 15
-  const modMax = selectedCategory ? Math.round(selectedCategory.defaultModeratePercent * 100) : 30
-  const majMax = selectedCategory ? Math.round(selectedCategory.defaultMajorPercent * 100) : 60
+  const minorMax = selectedCategory
+    ? Math.round(selectedCategory.defaultMinorPercent * 100)
+    : FORM_DEFAULTS.DAMAGE_POLICY_MINOR_PERCENT
+  const modMax = selectedCategory
+    ? Math.round(selectedCategory.defaultModeratePercent * 100)
+    : FORM_DEFAULTS.DAMAGE_POLICY_MODERATE_PERCENT
+  const majMax = selectedCategory
+    ? Math.round(selectedCategory.defaultMajorPercent * 100)
+    : FORM_DEFAULTS.DAMAGE_POLICY_MAJOR_PERCENT
 
   const currentTemplate =
     DAMAGE_TEMPLATES[selectedCategory?.name || ""] || DAMAGE_TEMPLATES["Default"]
@@ -169,11 +190,14 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
 
   const currentValuePreview = useMemo(() => {
     const msrp = firstVariantMSRP
-    const date = new Date(firstVariantPurchaseDate || new Date())
-    const years = (new Date().getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
-    const depRate = selectedCategory?.annualDepreciationRate || 0.15
-    const value = msrp * Math.pow(1 - depRate, Math.max(0, years))
-    return Math.max(value, msrp * 0.1) // Floor at 10%
+    const depRate =
+      selectedCategory?.annualDepreciationRate || FORM_DEFAULTS.ANNUAL_DEPRECIATION_RATE
+    return calculateCurrentValue(
+      msrp,
+      firstVariantPurchaseDate || new Date(),
+      depRate,
+      FORM_DEFAULTS.MINIMUM_VALUE_FLOOR_PERCENT
+    )
   }, [firstVariantMSRP, firstVariantPurchaseDate, selectedCategory])
 
   // --- HANDLERS ---
@@ -181,7 +205,60 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  const handleVariantChange = (index: number, field: keyof Variant, value: any) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files).map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        attributeValueId: null,
+      }))
+      setSelectedFiles((prev) => {
+        const updatedFiles = [...prev, ...newFiles]
+        // If there was no thumbnail, set the first image as the default.
+        if (thumbnailIndex === null && updatedFiles.length > 0) {
+          setThumbnailIndex(0)
+        }
+        return updatedFiles
+      })
+    }
+  }
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => {
+      const newFiles = [...prev]
+      const fileToRemove = newFiles[index]
+      if (fileToRemove?.preview.startsWith("blob:")) {
+        URL.revokeObjectURL(fileToRemove.preview)
+      }
+      newFiles.splice(index, 1)
+
+      setThumbnailIndex((currentThumbnailIndex) => {
+        if (currentThumbnailIndex === null) return null
+        if (newFiles.length === 0) return null
+        if (index === currentThumbnailIndex) return 0
+        if (index < currentThumbnailIndex) return currentThumbnailIndex - 1
+        return currentThumbnailIndex
+      })
+
+      return newFiles
+    })
+  }
+
+  const handleRemoveAllFiles = () => {
+    selectedFiles.forEach((fileObj) => {
+      if (fileObj.preview.startsWith("blob:")) {
+        URL.revokeObjectURL(fileObj.preview)
+      }
+    })
+    setSelectedFiles([])
+    setThumbnailIndex(null)
+  }
+
+  const handleVariantChange = (
+    index: number,
+    field: keyof Variant,
+    value: string | number | boolean | DamagePolicies[]
+  ) => {
     setFormData((prev) => {
       const updatedVariants = [...prev.variants]
       updatedVariants[index] = { ...updatedVariants[index]!, [field]: value }
@@ -208,8 +285,8 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
       toast.success(`Option "${name}" created!`)
       await refetchAttributes()
       return newAttr.id
-    } catch (e: any) {
-      toast.error(e.message || "Failed to create option")
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "Failed to create option")
     }
   }
 
@@ -219,8 +296,8 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
       toast.success(`Value "${value}" created!`)
       await refetchAttributes()
       return newVal.id
-    } catch (e: any) {
-      toast.error(e.message || "Failed to create value")
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "Failed to create value")
     }
   }
 
@@ -286,7 +363,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    const submitter = (e.nativeEvent as any).submitter as HTMLButtonElement
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement
     const isDraft = submitter?.name === "draft"
 
     // Validate Variant Options
@@ -312,27 +389,32 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
 
     try {
       const template = DAMAGE_TEMPLATES[selectedCategory?.name || ""] || DAMAGE_TEMPLATES["Default"]
-      const uploadedImages: any[] = []
+      const imagesToUpload: {
+        fileName: string
+        fileData: string
+        attributeValueId: number | null
+        isThumbnail: boolean
+      }[] = []
 
-      for (const fileObj of selectedFiles) {
-        const uniqueFileName = `${Date.now()}-${fileObj.file.name}`
+      for (let index = 0; index < selectedFiles.length; index++) {
+        const fileObj = selectedFiles[index]!
         const base64String: string = await new Promise((res) => {
           const reader = new FileReader()
           reader.onloadend = () => res(reader.result as string)
           reader.readAsDataURL(fileObj.file)
         })
-        await uploadShopBgMutation({
-          fileName: uniqueFileName,
-          data: base64String,
-          targetDirectory: "products",
+        imagesToUpload.push({
+          fileName: `${Date.now()}-${fileObj.file.name}`,
+          fileData: base64String,
+          attributeValueId: fileObj.attributeValueId,
+          isThumbnail: index === thumbnailIndex,
         })
-        uploadedImages.push({ url: uniqueFileName, attributeValueId: fileObj.attributeValueId })
       }
 
       const finalData = {
         ...formData,
         status: isDraft ? "inactive" : "active",
-        images: uploadedImages,
+        images: imagesToUpload,
         variants: formData.variants
           .filter((v) => v.active)
           .map((v) => ({
@@ -351,11 +433,11 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
           })),
       }
 
-      await createProductMutation(finalData as any)
+      await createProductMutation(finalData as Parameters<typeof createProductMutation>[0])
       toast.success(isDraft ? "Product saved to drafts!" : "Product created successfully!")
       handleClose ? handleClose() : router.push("/shop/products")
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create product")
+    } catch (error: unknown) {
+      toast.error((error as Error).message || "Failed to create product")
     } finally {
       setLoading(false)
     }
@@ -389,7 +471,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
                 categoryId={formData.categoryid}
                 description={formData.description}
                 deliveryOption={formData.deliveryOption}
-                categories={categories as any}
+                categories={categories}
                 onChange={handleInputChange}
               />
 
@@ -406,26 +488,17 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
                   </Box>
                   <ProductImageUploader
                     selectedFiles={selectedFiles}
-                    onImageChange={(e) => {
-                      if (e.target.files) {
-                        const newFiles = Array.from(e.target.files).map((file) => ({
-                          file,
-                          preview: URL.createObjectURL(file),
-                          attributeValueId: null,
-                        }))
-                        setSelectedFiles((prev) => [...prev, ...newFiles])
-                      }
-                    }}
-                    onRemoveFile={(i) =>
-                      setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))
-                    }
-                    onRemoveAllFiles={() => setSelectedFiles([])}
+                    onImageChange={handleImageChange}
+                    onRemoveFile={handleRemoveFile}
+                    onRemoveAllFiles={handleRemoveAllFiles}
                     onFileAttributeChange={(i, id) => {
                       const next = [...selectedFiles]
                       next[i]!.attributeValueId = id
                       setSelectedFiles(next)
                     }}
                     selectableAttributeValues={selectableAttributeValues}
+                    thumbnailIndex={thumbnailIndex}
+                    onSetThumbnail={setThumbnailIndex}
                   />
                 </Stack>
               </Paper>
@@ -433,7 +506,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
               <ProductVariantsSection
                 hasVariants={hasVariants}
                 setHasVariants={setHasVariants}
-                options={options as any}
+                options={options}
                 handleAddOption={() =>
                   setOptions((prev) => [
                     ...prev,
@@ -454,7 +527,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
                   newOptions[index]!.values = values
                   setOptions(newOptions)
                 }}
-                attributes={attributes as any}
+                attributes={attributes}
                 variants={formData.variants}
                 handleVariantChange={handleVariantChange}
                 onCreateAttribute={handleCreateAttribute}
@@ -469,7 +542,7 @@ const CreateProductForm = (props: { currentUser: any; handleClose?: () => void }
                 sx={{ bgcolor: "#f8fafc" }}
                 originalPurchaseDate={formData.variants[0]?.originalPurchaseDate || ""}
                 condition={formData.variants[0]?.condition || "New"}
-                onChange={(field, value) => handleVariantChange(0, field as any, value)}
+                onChange={(field, value) => handleVariantChange(0, field as keyof Variant, value)}
               >
                 <Box
                   sx={{ p: 3, bgcolor: "#eef2ff", borderRadius: 2, border: "1px solid #c7d2fe" }}

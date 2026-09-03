@@ -23,7 +23,7 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward"
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore"
 import DocumentViewer from "./DocumentViewer"
 import updateShopStatus from "../../mutations/updateShopStatus"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 
 const style = {
   position: "absolute" as "absolute",

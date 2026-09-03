@@ -1,20 +1,26 @@
+import { resolver } from "@blitzjs/rpc"
 import db from "db"
+import { z } from "zod"
 
-export default async function deleteCartItemById(input: { id: number }) {
-  const { id } = input
+const DeleteCartItemInput = z.object({
+  id: z.number(),
+})
 
-  // Find and delete the cart item
-  const cartItem = await db.cartItem.findUnique({
-    where: { id },
-  })
+export default resolver.pipe(
+  resolver.zod(DeleteCartItemInput),
+  resolver.authorize(),
+  async ({ id }, ctx) => {
+    const userId = ctx.session.userId
 
-  if (!cartItem) {
-    throw new Error("Cart item not found")
+    // deleteMany safely ensures the user can only delete their own cart items
+    const result = await db.cartItem.deleteMany({
+      where: { id, userId },
+    })
+
+    if (result.count === 0) {
+      throw new Error("Cart item not found or unauthorized")
+    }
+
+    return { success: true }
   }
-
-  await db.cartItem.delete({
-    where: { id },
-  })
-
-  return { success: true }
-}
+)

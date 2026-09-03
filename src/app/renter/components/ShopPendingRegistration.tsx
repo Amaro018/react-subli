@@ -1,28 +1,88 @@
 "use client"
-import React from "react"
-import { useMutation } from "@blitzjs/rpc"
-import { Box, Button, Typography } from "@mui/material"
+import React, { useEffect } from "react"
+import { useMutation, useQuery, invalidateQuery } from "@blitzjs/rpc"
+import { Box, Button, Typography, TextField } from "@mui/material"
 import Image from "next/image"
 import PendingIcon from "@mui/icons-material/Pending"
 import CancelIcon from "@mui/icons-material/Cancel"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
+import BlockIcon from "@mui/icons-material/Block"
 import updateShopDocument from "../../mutations/updateShopDocument"
 import CircularProgress from "@mui/material/CircularProgress"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
+import getShopReports from "../../queries/getShopReports"
+import getCurrentUser from "../../users/queries/getCurrentUser"
+import createSuspensionAppeal from "../../mutations/createSuspensionAppeal"
+import ShopSuspendedView from "../components/ShopSuspendedView"
 
 export const ShopPendingRegistration = (props: any) => {
   const router = useRouter()
   const currentUser = props.currentUser
 
   const [loading, setLoading] = React.useState(false)
+  const [appealLoading, setAppealLoading] = React.useState(false)
+  const [appealMessage, setAppealMessage] = React.useState("")
+  const [reports] = useQuery(
+    getShopReports,
+    { shopId: currentUser?.shop?.id ?? 0 },
+    {
+      enabled: !!currentUser?.shop && currentUser.shop.status === "banned",
+    }
+  )
+  const [createAppealMutation] = useMutation(createSuspensionAppeal)
   const [updateShopDocumentMutation] = useMutation(updateShopDocument)
+
+  useEffect(() => {
+    // If the user lands here and the shop is already approved,
+    // invalidate the user query to update the UI (sidebar/navbar).
+    if (currentUser?.shop?.status === "approved") {
+      invalidateQuery(getCurrentUser, null)
+    }
+  }, [currentUser?.shop?.status])
+
+  if (currentUser?.shop?.status === "approved") {
+    return (
+      <div className="w-full">
+        <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-700">
+              <svg viewBox="0 0 24 24" className="h-10 w-10" fill="currentColor" aria-hidden="true">
+                <path d="M7 18h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2zm1-6h8v2H8v-2zm0-3h8v2H8V9zm0 6h5v2H8v-2z" />
+              </svg>
+            </div>
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              Shop Already Registered
+            </Typography>
+            <Typography color="text.secondary" mb={4}>
+              Your shop has already been approved and is ready for dashboard access.
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={() => router.push("/shop")}
+            >
+              Go to Shop Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentUser?.shop?.status === "banned") {
+    return <ShopSuspendedView shop={currentUser.shop} />
+  }
 
   const refreshPage = () => {
     window.location.reload()
   }
 
-  const handleFileChange = async (event: any, docType: "dti" | "permit" | "tax") => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    docType: "dti" | "permit" | "tax"
+  ) => {
     const file = event.target.files?.[0]
     event.target.value = ""
     if (file) {
@@ -64,6 +124,23 @@ export const ShopPendingRegistration = (props: any) => {
 
       reader.readAsDataURL(file)
     }
+  }
+
+  const handleAppeal = async () => {
+    setAppealLoading(true)
+    try {
+      await createAppealMutation({ shopId: currentUser.shop.id, message: appealMessage })
+      toast.success(
+        "Your request for review has been submitted. Please wait for an admin to respond."
+      )
+      // You might want to refetch data that shows appeal status
+      // For now, we can just disable the button or show a success state.
+      // Let's just clear the message and disable the button for now.
+      setAppealMessage("")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to submit appeal. Please try again later.")
+    }
+    setAppealLoading(false)
   }
 
   if (loading) {
@@ -137,6 +214,65 @@ export const ShopPendingRegistration = (props: any) => {
         <div className="w-full text-red-700 text-sm bg-red-50 p-4 rounded-md border border-red-200 shadow-sm">
           <span className="font-bold block mb-1 text-base">Rejection Reason:</span>
           <p className="whitespace-pre-wrap leading-relaxed">{currentUser.shop.rejectionReason}</p>
+        </div>
+      )}
+
+      {currentUser.shop.status === "banned" && (
+        <div className="w-full text-red-700 bg-red-50 p-6 rounded-lg border-2 border-dashed border-red-200 shadow-sm text-center">
+          <BlockIcon sx={{ fontSize: 48, color: "error.main" }} className="mb-3" />
+          <h3 className="text-2xl font-bold text-red-800 mb-2">Shop Suspended</h3>
+          {currentUser.shop.banReason && (
+            <>
+              <p className="font-semibold text-red-800 mb-1">Reason for Suspension:</p>
+              <p className="whitespace-pre-wrap leading-relaxed text-red-700">
+                {currentUser.shop.banReason}
+              </p>
+            </>
+          )}
+          {reports && reports.length > 0 && (
+            <div className="mt-6 w-full text-left">
+              <h4 className="font-bold text-lg text-gray-800 mb-2 text-center">
+                Anonymous Reports Leading to Suspension
+              </h4>
+              <div className="space-y-3 max-h-48 overflow-y-auto p-3 bg-white rounded-md border">
+                {reports.map((report: any) => (
+                  <div key={report.id} className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <p className="text-sm text-gray-700">{report.reason}</p>
+                    <p className="text-xs text-gray-400 text-right mt-1">
+                      {new Date(report.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="mt-6 w-full">
+            <p className="text-sm text-gray-600 mb-2">
+              If you believe this suspension is a mistake, you can request a review. An
+              administrator will re-evaluate your shop status.
+            </p>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              variant="outlined"
+              label="Your Appeal Message"
+              placeholder="Please explain why you believe the suspension should be lifted."
+              value={appealMessage}
+              onChange={(e) => setAppealMessage(e.target.value)}
+              className="mb-4 bg-white"
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAppeal}
+              disabled={appealLoading || !appealMessage.trim()}
+              startIcon={appealLoading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{ textTransform: "none", fontSize: "1rem", px: 4, py: 1.5 }}
+            >
+              {appealLoading ? "Submitting..." : "Request a Review"}
+            </Button>
+          </div>
         </div>
       )}
 

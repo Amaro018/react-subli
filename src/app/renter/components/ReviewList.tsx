@@ -18,7 +18,7 @@ import getAllRentOfUser from "../../queries/getAllRentOfUser"
 import Image from "next/image"
 import addProductReview from "../../mutations/addProductReview"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 
 export const ReviewList = (props: any): React.ReactElement | null => {
   const currentUser = props.currentUser

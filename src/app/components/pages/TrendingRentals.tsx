@@ -1,5 +1,5 @@
 "use client"
-import React, { useRef } from "react"
+import React, { useRef, useState, useEffect } from "react"
 import { useQuery } from "@blitzjs/rpc"
 import getAllProducts from "../../queries/getAllProducts"
 import Link from "next/link"
@@ -11,9 +11,33 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight"
 export default function TrendingRentals() {
   const [products] = useQuery(getAllProducts, null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true)
 
-  // Filter active products and optionally sort/slice them to show the "top" rented items
-  const topProducts = products?.filter((p) => p.status === "active").slice(0, 8) || []
+  const getAverageRating = (product: any) => {
+    if (!product.reviews?.length) return 0
+    const sum = product.reviews.reduce((acc: any, review: any) => acc + review.rating, 0)
+    return sum / product.reviews.length
+  }
+
+  const getRentalCount = (product: any) => {
+    return (
+      product.variants?.reduce(
+        (acc: number, variant: any) => acc + (variant.rentItems?.length || 0),
+        0
+      ) || 0
+    )
+  }
+
+  // Filter active products, sort by highest rating, then by rental count, and slice top 20
+  const topProducts =
+    products
+      ?.filter((p) => p.status === "active")
+      .sort((a, b) => {
+        const ratingDiff = getAverageRating(b) - getAverageRating(a)
+        if (ratingDiff !== 0) return ratingDiff
+        return getRentalCount(b) - getRentalCount(a)
+      })
+      .slice(0, 20) || []
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
@@ -27,28 +51,58 @@ export default function TrendingRentals() {
     }
   }
 
+  useEffect(() => {
+    if (!isAutoScrolling || !topProducts.length) return
+
+    const interval = setInterval(() => {
+      if (scrollContainerRef.current) {
+        const { current } = scrollContainerRef
+        const isAtEnd = current.scrollLeft + current.clientWidth >= current.scrollWidth - 10
+
+        if (isAtEnd) {
+          current.scrollTo({ left: 0, behavior: "smooth" })
+        } else {
+          current.scrollBy({ left: 300, behavior: "smooth" })
+        }
+      }
+    }, 3500) // Auto-scroll every 3.5 seconds
+
+    return () => clearInterval(interval)
+  }, [isAutoScrolling, topProducts.length])
+
   if (!topProducts.length) return null
 
   return (
     <section className="py-12 md:py-16 bg-white w-full">
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
-          <Typography variant="h4" component="h2" fontWeight="bold" color="text.primary">
-            Top Rentals
-          </Typography>
-          <div className="hidden sm:flex gap-2">
-            <IconButton
-              onClick={() => scroll("left")}
-              sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-8 md:mb-10 gap-4 text-center sm:text-left">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-[#1b2a80] sm:text-3xl">
+              Top Rentals
+            </h2>
+            <p className="mt-2 text-base text-gray-500">Most popular equipment rented by others</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/products?sort=rating_desc"
+              className="text-sm font-bold text-[#1b2a80] hover:text-blue-800 hover:underline transition-colors"
             >
-              <ChevronLeftIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => scroll("right")}
-              sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
-            >
-              <ChevronRightIcon />
-            </IconButton>
+              View All
+            </Link>
+            <div className="hidden sm:flex gap-2">
+              <IconButton
+                onClick={() => scroll("left")}
+                sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <IconButton
+                onClick={() => scroll("right")}
+                sx={{ bgcolor: "grey.100", "&:hover": { bgcolor: "grey.200" } }}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </div>
           </div>
         </div>
 
@@ -56,6 +110,10 @@ export default function TrendingRentals() {
           ref={scrollContainerRef}
           className="flex overflow-x-auto gap-6 pb-4 scrollbar-seamless [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{ scrollSnapType: "x mandatory" }}
+          onMouseEnter={() => setIsAutoScrolling(false)}
+          onMouseLeave={() => setIsAutoScrolling(true)}
+          onTouchStart={() => setIsAutoScrolling(false)}
+          onTouchEnd={() => setIsAutoScrolling(true)}
         >
           {topProducts.map((product: any) => {
             // Calculate starting price
@@ -64,9 +122,9 @@ export default function TrendingRentals() {
               : 0
 
             // Calculate average rating
-            const sum =
-              product.reviews?.reduce((acc: any, review: any) => acc + review.rating, 0) || 0
-            const average = product.reviews?.length ? sum / product.reviews.length : 0
+            const average = getAverageRating(product)
+            const thumbnail =
+              product.images?.find((img: any) => img.isThumbnail) || product.images?.[0]
 
             return (
               <div
@@ -75,14 +133,15 @@ export default function TrendingRentals() {
                 style={{ scrollSnapAlign: "start" }}
               >
                 <Link
-                  href={`/product/${product.id}`}
+                  href={`/products/${product.id}`}
                   className="block relative w-full h-[200px] overflow-hidden rounded-t-xl bg-gray-50"
                 >
-                  {product.images && product.images.length > 0 && (
+                  {thumbnail && (
                     <Image
-                      src={`/uploads/products/${product.images[0].url}`}
+                      src={`/uploads/products/${thumbnail.url}`}
                       alt={product.name}
                       fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 280px"
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   )}
@@ -90,7 +149,7 @@ export default function TrendingRentals() {
 
                 <div className="p-4 flex flex-col flex-grow">
                   <Link
-                    href={`/product/${product.id}`}
+                    href={`/products/${product.id}`}
                     className="hover:text-blue-600 transition-colors mb-1"
                   >
                     <Typography

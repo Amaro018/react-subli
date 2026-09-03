@@ -6,30 +6,29 @@ import getCategories from "../queries/getCategories"
 import getBarangays from "../queries/getBarangays"
 import Link from "next/link"
 import Image from "next/image"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import {
   Typography,
   Rating,
   TextField,
-  InputAdornment,
-  Checkbox,
-  FormControlLabel,
-  FormGroup,
-  Divider,
   FormControl,
   Select,
   MenuItem,
-  IconButton,
   Pagination,
 } from "@mui/material"
-import SearchIcon from "@mui/icons-material/Search"
-import FilterListIcon from "@mui/icons-material/FilterList"
-import ClearIcon from "@mui/icons-material/Clear"
 import SearchOffIcon from "@mui/icons-material/SearchOff"
-import LocationOnIcon from "@mui/icons-material/LocationOn"
-import CategoryIcon from "@mui/icons-material/Category"
 import PaymentsIcon from "@mui/icons-material/Payments"
+import FilterSidebar from "./FilterSidebar"
+import TopSearchBar from "./TopSearchBar"
 
 export default function ProductsList() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const initialSort = searchParams.get("sort") || "oldest"
+  const initialCategory = searchParams.get("category")
+  const initialSearch = searchParams.get("search") || ""
+
   const [products] = useQuery(getAllProducts, null)
   const [categories] = useQuery(getCategories, null)
   const [barangays] = useQuery(getBarangays, null)
@@ -37,12 +36,14 @@ export default function ProductsList() {
   const activeProducts = products?.filter((p) => p.status === "active") || []
 
   // State for Search and Filters
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    initialCategory ? initialCategory.split(",") : []
+  )
   const [selectedLocation, setSelectedLocation] = useState<string>("All")
   const [minPrice, setMinPrice] = useState<string>("")
   const [maxPrice, setMaxPrice] = useState<string>("")
-  const [sortBy, setSortBy] = useState<string>("oldest")
+  const [sortBy, setSortBy] = useState<string>(initialSort)
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1)
@@ -60,9 +61,19 @@ export default function ProductsList() {
   const availableLocations = barangays ? barangays.map((b: any) => b.name) : []
 
   const handleCategoryToggle = (category: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-    )
+    const newCategories = selectedCategories.includes(category)
+      ? selectedCategories.filter((c) => c !== category)
+      : [...selectedCategories, category]
+
+    setSelectedCategories(newCategories)
+
+    const params = new URLSearchParams(searchParams.toString())
+    if (newCategories.length > 0) {
+      params.set("category", newCategories.join(","))
+    } else {
+      params.delete("category")
+    }
+    router.replace(`${pathname}?${params.toString()}` as any, { scroll: false })
   }
 
   // Apply Search and Category Filters
@@ -124,231 +135,121 @@ export default function ProductsList() {
       ref={topRef}
     >
       {/* Left Section: Filter Sidebar */}
-      <div className="w-full md:w-[280px] flex-shrink-0">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 sticky top-6 flex flex-col divide-y divide-gray-100">
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FilterListIcon className="text-[#1b2a80]" />
-              <Typography variant="h6" fontWeight="bold" className="text-gray-900">
-                Filters
-              </Typography>
-            </div>
-            {(selectedCategories.length > 0 ||
-              selectedLocation !== "All" ||
-              minPrice !== "" ||
-              maxPrice !== "") && (
-              <button
-                onClick={() => {
-                  setSelectedCategories([])
-                  setSelectedLocation("All")
-                  setMinPrice("")
-                  setMaxPrice("")
-                }}
-                className="text-sm font-medium text-[#1b2a80] hover:text-blue-800 transition-colors"
-              >
-                Clear All
-              </button>
-            )}
+      <FilterSidebar
+        showClearAll={
+          searchQuery !== "" ||
+          selectedCategories.length > 0 ||
+          selectedLocation !== "All" ||
+          minPrice !== "" ||
+          maxPrice !== ""
+        }
+        onClearAll={() => {
+          setSearchQuery("")
+          setSelectedCategories([])
+          setSelectedLocation("All")
+          setMinPrice("")
+          setMaxPrice("")
+          const params = new URLSearchParams(searchParams.toString())
+          params.delete("search")
+          params.delete("category")
+          router.replace(`${pathname}?${params.toString()}` as any, { scroll: false })
+        }}
+        availableCategories={availableCategories}
+        selectedCategories={selectedCategories}
+        onCategoryToggle={handleCategoryToggle}
+        onClearCategories={() => {
+          setSelectedCategories([])
+          const params = new URLSearchParams(searchParams.toString())
+          params.delete("category")
+          router.replace(`${pathname}?${params.toString()}` as any, { scroll: false })
+        }}
+        availableLocations={availableLocations}
+        selectedLocation={selectedLocation}
+        onLocationChange={(loc) => setSelectedLocation(loc)}
+      >
+        <div className="p-6 flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <PaymentsIcon sx={{ fontSize: 16, color: "#1b2a80" }} />
+            <Typography
+              variant="subtitle2"
+              fontWeight="bold"
+              className="text-gray-900 uppercase tracking-wider text-xs"
+            >
+              Price Range (₱)
+            </Typography>
           </div>
-
-          <div className="p-6 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <CategoryIcon sx={{ fontSize: 16, color: "#1b2a80" }} />
-              <Typography
-                variant="subtitle2"
-                fontWeight="bold"
-                className="text-gray-900 uppercase tracking-wider text-xs"
-              >
-                Categories
-              </Typography>
-            </div>
-            <FormGroup sx={{ gap: 1 }}>
-              {availableCategories.map((cat) => (
-                <FormControlLabel
-                  key={cat as string}
-                  control={
-                    <Checkbox
-                      size="small"
-                      sx={{
-                        color: "#cbd5e1",
-                        "&.Mui-checked": { color: "#1b2a80" },
-                      }}
-                      checked={selectedCategories.includes(cat as string)}
-                      onChange={() => handleCategoryToggle(cat as string)}
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" className="text-gray-700">
-                      {cat as string}
-                    </Typography>
-                  }
-                  sx={{ margin: 0, ml: -1 }}
-                />
-              ))}
-            </FormGroup>
-          </div>
-
-          <div className="p-6 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <LocationOnIcon sx={{ fontSize: 16, color: "#1b2a80" }} />
-              <Typography
-                variant="subtitle2"
-                fontWeight="bold"
-                className="text-gray-900 uppercase tracking-wider text-xs"
-              >
-                Location
-              </Typography>
-            </div>
-            <FormControl fullWidth size="small">
-              <Select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                displayEmpty
-                sx={{
+          <div className="flex gap-3 items-center">
+            <TextField
+              size="small"
+              placeholder="Min"
+              type="number"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": {
                   bgcolor: "#f8fafc",
                   borderRadius: "10px",
                   "& fieldset": { borderColor: "#e2e8f0" },
                   "&:hover fieldset": { borderColor: "#cbd5e1" },
                   "&.Mui-focused fieldset": { borderColor: "#1b2a80" },
-                  fontSize: "0.875rem",
-                }}
-              >
-                <MenuItem value="All" sx={{ fontSize: "0.875rem" }}>
-                  All Barangays
-                </MenuItem>
-                {availableLocations.map((loc: string) => (
-                  <MenuItem key={loc} value={loc} sx={{ fontSize: "0.875rem" }}>
-                    {loc}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </div>
-
-          <div className="p-6 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <PaymentsIcon sx={{ fontSize: 16, color: "#1b2a80" }} />
-              <Typography
-                variant="subtitle2"
-                fontWeight="bold"
-                className="text-gray-900 uppercase tracking-wider text-xs"
-              >
-                Price Range (₱)
-              </Typography>
-            </div>
-            <div className="flex gap-3 items-center">
-              <TextField
-                size="small"
-                placeholder="Min"
-                type="number"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    bgcolor: "#f8fafc",
-                    borderRadius: "10px",
-                    "& fieldset": { borderColor: "#e2e8f0" },
-                    "&:hover fieldset": { borderColor: "#cbd5e1" },
-                    "&.Mui-focused fieldset": { borderColor: "#1b2a80" },
-                  },
-                  "& input": { fontSize: "0.875rem", padding: "8px 12px" },
-                }}
-              />
-              <span className="text-gray-400 font-medium">-</span>
-              <TextField
-                size="small"
-                placeholder="Max"
-                type="number"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    bgcolor: "#f8fafc",
-                    borderRadius: "10px",
-                    "& fieldset": { borderColor: "#e2e8f0" },
-                    "&:hover fieldset": { borderColor: "#cbd5e1" },
-                    "&.Mui-focused fieldset": { borderColor: "#1b2a80" },
-                  },
-                  "& input": { fontSize: "0.875rem", padding: "8px 12px" },
-                }}
-              />
-            </div>
+                },
+                "& input": { fontSize: "0.875rem", padding: "8px 12px" },
+              }}
+            />
+            <span className="text-gray-400 font-medium">-</span>
+            <TextField
+              size="small"
+              placeholder="Max"
+              type="number"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  bgcolor: "#f8fafc",
+                  borderRadius: "10px",
+                  "& fieldset": { borderColor: "#e2e8f0" },
+                  "&:hover fieldset": { borderColor: "#cbd5e1" },
+                  "&.Mui-focused fieldset": { borderColor: "#1b2a80" },
+                },
+                "& input": { fontSize: "0.875rem", padding: "8px 12px" },
+              }}
+            />
           </div>
         </div>
-      </div>
+      </FilterSidebar>
 
       {/* Right Section: Product Grid */}
       <div className="flex-1 flex flex-col gap-6">
-        {/* Top Section: Sort and Search Bar */}
-        <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-4">
-          <FormControl
-            size="small"
-            sx={{
-              minWidth: 180,
-              bgcolor: "white",
-              borderRadius: "12px",
-              "& fieldset": { borderColor: "#e5e7eb" },
-            }}
-          >
-            <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              displayEmpty
-              sx={{ borderRadius: "12px", fontSize: "0.875rem" }}
-            >
-              <MenuItem value="relevance" sx={{ fontSize: "0.875rem" }}>
-                Relevance
-              </MenuItem>
-              <MenuItem value="newest" sx={{ fontSize: "0.875rem" }}>
-                Newest Arrivals
-              </MenuItem>
-              <MenuItem value="oldest" sx={{ fontSize: "0.875rem" }}>
-                Oldest Arrivals
-              </MenuItem>
-              <MenuItem value="price_asc" sx={{ fontSize: "0.875rem" }}>
-                Price: Low to High
-              </MenuItem>
-              <MenuItem value="price_desc" sx={{ fontSize: "0.875rem" }}>
-                Price: High to Low
-              </MenuItem>
-              <MenuItem value="rating_desc" sx={{ fontSize: "0.875rem" }}>
-                Highest Rated
-              </MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            className="w-full sm:w-96"
-            placeholder="Search for equipment, gear, and more..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            variant="outlined"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon className="text-gray-400" />
-                </InputAdornment>
-              ),
-              endAdornment: searchQuery ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="clear search"
-                    onClick={() => setSearchQuery("")}
-                    edge="end"
-                    size="small"
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-              sx: {
-                bgcolor: "white",
-                borderRadius: "12px",
-                "& fieldset": { borderColor: "#e5e7eb" },
-              },
-            }}
-          />
-        </div>
+        <TopSearchBar
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          sortOptions={[
+            { value: "relevance", label: "Relevance" },
+            { value: "newest", label: "Newest Arrivals" },
+            { value: "oldest", label: "Oldest Arrivals" },
+            { value: "price_asc", label: "Price: Low to High" },
+            { value: "price_desc", label: "Price: High to Low" },
+            { value: "rating_desc", label: "Highest Rated" },
+          ]}
+          searchQuery={searchQuery}
+          onSearchChange={(val) => {
+            setSearchQuery(val)
+            const params = new URLSearchParams(searchParams.toString())
+            if (val) {
+              params.set("search", val)
+            } else {
+              params.delete("search")
+            }
+            router.replace(`${pathname}?${params.toString()}` as any, { scroll: false })
+          }}
+          onSearchClear={() => {
+            setSearchQuery("")
+            const params = new URLSearchParams(searchParams.toString())
+            params.delete("search")
+            router.replace(`${pathname}?${params.toString()}` as any, { scroll: false })
+          }}
+          searchPlaceholder="Search for equipment, gear, and more..."
+        />
 
         {!sortedProducts.length ? (
           <div className="py-24 flex flex-col items-center justify-center text-center bg-white rounded-2xl shadow-sm border border-gray-100 px-4 h-full min-h-[400px]">
@@ -374,6 +275,11 @@ export default function ProductsList() {
                   setSelectedLocation("All")
                   setMinPrice("")
                   setMaxPrice("")
+
+                  const params = new URLSearchParams(searchParams.toString())
+                  params.delete("search")
+                  params.delete("category")
+                  router.replace(`${pathname}?${params.toString()}` as any, { scroll: false })
                 }}
                 className="px-6 py-2.5 bg-[#1b2a80] text-white rounded-xl font-medium hover:bg-[#152266] transition-colors shadow-sm text-sm"
               >
@@ -391,6 +297,8 @@ export default function ProductsList() {
                 const sum =
                   product.reviews?.reduce((acc: any, review: any) => acc + review.rating, 0) || 0
                 const average = product.reviews?.length ? sum / product.reviews.length : 0
+                const thumbnail =
+                  product.images?.find((img: any) => img.isThumbnail) || product.images?.[0]
 
                 return (
                   <div
@@ -398,21 +306,22 @@ export default function ProductsList() {
                     className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col"
                   >
                     <Link
-                      href={`/product/${product.id}`}
+                      href={`/products/${product.id}`}
                       className="block relative w-full h-[200px] overflow-hidden rounded-t-xl bg-gray-50"
                     >
-                      {product.images && product.images.length > 0 && (
+                      {thumbnail && (
                         <Image
-                          src={`/uploads/products/${product.images[0].url}`}
+                          src={`/uploads/products/${thumbnail.url}`}
                           alt={product.name}
                           fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       )}
                     </Link>
                     <div className="p-4 flex flex-col flex-grow">
                       <Link
-                        href={`/product/${product.id}`}
+                        href={`/products/${product.id}`}
                         className="hover:text-blue-600 transition-colors mb-1"
                       >
                         <Typography

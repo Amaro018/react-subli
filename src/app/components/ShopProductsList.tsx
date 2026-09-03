@@ -5,22 +5,15 @@ import Image from "next/image"
 import {
   Typography,
   Rating,
-  TextField,
-  InputAdornment,
   Checkbox,
   FormControlLabel,
   FormGroup,
-  FormControl,
-  Select,
-  MenuItem,
-  IconButton,
   Pagination,
 } from "@mui/material"
-import SearchIcon from "@mui/icons-material/Search"
 import FilterListIcon from "@mui/icons-material/FilterList"
-import ClearIcon from "@mui/icons-material/Clear"
 import SearchOffIcon from "@mui/icons-material/SearchOff"
 import CategoryIcon from "@mui/icons-material/Category"
+import TopSearchBar from "./TopSearchBar"
 
 export default function ShopProductsList({ products }: { products: any[] }) {
   const activeProducts = products?.filter((p: any) => p.status?.toLowerCase() === "active") || []
@@ -188,76 +181,22 @@ export default function ShopProductsList({ products }: { products: any[] }) {
 
         {/* Right Section: Product Grid */}
         <div className="flex-1 flex flex-col gap-6">
-          {/* Top Section: Sort and Search Bar */}
-          <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-4">
-            <FormControl
-              size="small"
-              sx={{
-                minWidth: 180,
-                bgcolor: "white",
-                borderRadius: "12px",
-                "& fieldset": { borderColor: "#e5e7eb" },
-              }}
-            >
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                displayEmpty
-                sx={{ borderRadius: "12px", fontSize: "0.875rem" }}
-              >
-                <MenuItem value="relevance" sx={{ fontSize: "0.875rem" }}>
-                  Relevance
-                </MenuItem>
-                <MenuItem value="newest" sx={{ fontSize: "0.875rem" }}>
-                  Newest Arrivals
-                </MenuItem>
-                <MenuItem value="oldest" sx={{ fontSize: "0.875rem" }}>
-                  Oldest Arrivals
-                </MenuItem>
-                <MenuItem value="price_asc" sx={{ fontSize: "0.875rem" }}>
-                  Price: Low to High
-                </MenuItem>
-                <MenuItem value="price_desc" sx={{ fontSize: "0.875rem" }}>
-                  Price: High to Low
-                </MenuItem>
-                <MenuItem value="rating_desc" sx={{ fontSize: "0.875rem" }}>
-                  Highest Rated
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              className="w-full sm:w-96"
-              placeholder="Search for items in shop..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              variant="outlined"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon className="text-gray-400" />
-                  </InputAdornment>
-                ),
-                endAdornment: searchQuery ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="clear search"
-                      onClick={() => setSearchQuery("")}
-                      edge="end"
-                      size="small"
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-                sx: {
-                  bgcolor: "white",
-                  borderRadius: "12px",
-                  "& fieldset": { borderColor: "#e5e7eb" },
-                },
-              }}
-            />
-          </div>
+          <TopSearchBar
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            sortOptions={[
+              { value: "relevance", label: "Relevance" },
+              { value: "newest", label: "Newest Arrivals" },
+              { value: "oldest", label: "Oldest Arrivals" },
+              { value: "price_asc", label: "Price: Low to High" },
+              { value: "price_desc", label: "Price: High to Low" },
+              { value: "rating_desc", label: "Highest Rated" },
+            ]}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSearchClear={() => setSearchQuery("")}
+            searchPlaceholder="Search for items in shop..."
+          />
 
           {!sortedProducts.length ? (
             <div className="py-24 flex flex-col items-center justify-center text-center bg-white rounded-2xl shadow-sm border border-gray-100 px-4 h-full min-h-[400px]">
@@ -293,6 +232,8 @@ export default function ShopProductsList({ products }: { products: any[] }) {
                   const sum =
                     product.reviews?.reduce((acc: any, review: any) => acc + review.rating, 0) || 0
                   const average = product.reviews?.length ? sum / product.reviews.length : 0
+                  const thumbnail =
+                    product.images?.find((img: any) => img.isThumbnail) || product.images?.[0]
 
                   return (
                     <div
@@ -303,16 +244,16 @@ export default function ShopProductsList({ products }: { products: any[] }) {
                         href={`/product/${product.id}`}
                         className="block relative w-full h-[200px] overflow-hidden rounded-t-xl bg-gray-50"
                       >
-                        {product.images && product.images.length > 0 ? (
+                        {thumbnail ? (
                           <Image
                             src={
-                              product.images[0].url.startsWith("http") ||
-                              product.images[0].url.startsWith("/")
-                                ? product.images[0].url
-                                : `/uploads/products/${product.images[0].url}`
+                              thumbnail.url.startsWith("http") || thumbnail.url.startsWith("/")
+                                ? thumbnail.url
+                                : `/uploads/products/${thumbnail.url}`
                             }
                             alt={product.name}
                             fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                             className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                           />
                         ) : (

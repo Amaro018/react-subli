@@ -1,6 +1,7 @@
+import { resolver } from "@blitzjs/rpc"
 import db from "db"
 
-export default async function getAdminStats() {
+export default resolver.pipe(resolver.authorize(), async () => {
   const [
     totalShops,
     pendingShops,
@@ -10,13 +11,13 @@ export default async function getAdminStats() {
     reportedProducts,
     totalOrders,
     totalUsers,
-  ] = await Promise.all([
-    db.shop.count({ where: { status: "approved" } }),
+  ] = await db.$transaction([
+    db.shop.count(),
     db.shop.count({ where: { status: "pending" } }),
     db.shop.count({ where: { status: "rejected" } }),
-    db.shop.count({ where: { status: "reported" } }),
+    db.reportShop.count({ where: { status: "pending" } }),
     db.product.count(),
-    db.product.count({ where: { status: "reported" } }),
+    db.report.count({ where: { status: "pending" } }),
     db.rent.count(),
     db.user.count(),
   ])
@@ -31,4 +32,4 @@ export default async function getAdminStats() {
     totalOrders,
     totalUsers,
   }
-}
+})

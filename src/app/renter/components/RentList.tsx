@@ -1,6 +1,17 @@
 "use client"
 import React, { useState } from "react"
-import { Typography, CircularProgress, Button, Box, Tabs, Tab, Badge } from "@mui/material"
+import {
+  Typography,
+  CircularProgress,
+  Button,
+  Box,
+  Tabs,
+  Tab,
+  Badge,
+  Alert,
+  TextField,
+  MenuItem,
+} from "@mui/material"
 import { useQuery } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
 import Image from "next/image"
@@ -13,6 +24,45 @@ export const RentList = (props: any) => {
   const router = useRouter()
   const pathname = usePathname()
   const currentStatus = searchParams.get("status") || "all"
+  const sortBy = searchParams.get("sortBy") || "urgency"
+
+  const calculateItemFinancials = (item: any) => {
+    const startDate = new Date(item.startDate)
+    const endDate = new Date(item.endDate)
+    const today = new Date()
+
+    let diffMs = endDate.getTime() - startDate.getTime()
+    diffMs += (endDate.getTimezoneOffset() - startDate.getTimezoneOffset()) * 60 * 1000
+    const duration = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+
+    const unitPrice = item.price || item.productVariant?.price || 0
+    const rentAmount = unitPrice * duration * item.quantity
+    const initialFee = rentAmount * 0.5
+
+    const isCompleted = ["completed", "canceled", "returned", "returned_damaged"].includes(
+      item.status
+    )
+    const lapseInDays =
+      !isCompleted && today > endDate
+        ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+        : 0
+    const penalty = unitPrice * lapseInDays * item.quantity
+
+    const totalPayment =
+      item.payments?.reduce((total: number, payment: any) => total + payment.amount, 0) || 0
+    const balance = rentAmount - totalPayment + penalty
+
+    return {
+      duration,
+      rentAmount,
+      initialFee,
+      lapseInDays,
+      penalty,
+      totalPayment,
+      balance,
+      unitPrice,
+    }
+  }
 
   const [userRents] = useQuery(getAllRentOfUser, { id: userId })
 
@@ -30,67 +80,118 @@ export const RentList = (props: any) => {
     setCurrentPage(1) // Reset to first page on tab change
   }
 
-  const toPayCount = userRents.filter((rent) => {
-    return rent.items.some((item) => {
-      if (item.status === "completed") return false
-      const totalPayment = item.payments.reduce((total, payment) => total + payment.amount, 0)
-      const startDate = new Date(item.startDate)
-      const endDate = new Date(item.endDate)
-      const today = new Date()
-      const duration =
-        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-      const rentalCost = item.productVariant.price * duration * item.quantity
-      const lapseInDays =
-        today > endDate
-          ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
-          : 0
-      const penalty = item.price * lapseInDays * item.quantity
-      return totalPayment < rentalCost + penalty
+  const handleSortChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const params = new URLSearchParams(searchParams)
+    params.set("sortBy", event.target.value)
+    router.replace(`${pathname}?${params.toString()}` as any)
+    setCurrentPage(1)
+  }
+
+  const toPayCount = userRents.filter((rent: any) => {
+    return rent.items.some((item: any) => {
+      if (["completed", "canceled"].includes(item.status)) return false
+      const { balance } = calculateItemFinancials(item)
+      return balance > 0
     })
   }).length
 
-  const toDeliverCount = userRents.filter((rent) => {
-    return rent.items.some((item) => item.deliveryMethod === "deliver")
+  const toDeliverCount = userRents.filter((rent: any) => {
+    return rent.items.some(
+      (item: any) =>
+        item.deliveryMethod === "deliver" &&
+        !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+    )
   }).length
 
-  const toPickupCount = userRents.filter((rent) => {
-    return rent.items.some((item) => item.deliveryMethod === "pickup")
+  const toPickupCount = userRents.filter((rent: any) => {
+    return rent.items.some(
+      (item: any) =>
+        item.deliveryMethod === "pickup" &&
+        !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+    )
+  }).length
+
+  const dueTodayCount = userRents.filter((rent: any) => {
+    return rent.items.some((item: any) => {
+      if (["completed", "returned", "returned_damaged", "canceled"].includes(item.status))
+        return false
+      const endDate = new Date(item.endDate)
+      const today = new Date()
+      return (
+        endDate.getDate() === today.getDate() &&
+        endDate.getMonth() === today.getMonth() &&
+        endDate.getFullYear() === today.getFullYear()
+      )
+    })
   }).length
 
   // Filter rents by status
-  const filteredRents =
+  const baseFilteredRents =
     currentStatus === "all"
       ? userRents
-      : userRents.filter((rent) => {
+      : userRents.filter((rent: any) => {
           // Map URL status to DB status if needed
-          if (currentStatus === "completed") return rent.status === "completed"
-          if (currentStatus === "to-pay") {
-            return rent.items.some((item) => {
-              if (item.status === "completed") return false
-              const totalPayment = item.payments.reduce(
-                (total, payment) => total + payment.amount,
-                0
+          if (currentStatus === "completed") {
+            return (
+              rent.items.length > 0 &&
+              rent.items.every((item: any) =>
+                ["completed", "returned", "returned_damaged", "canceled"].includes(item.status)
               )
-              const startDate = new Date(item.startDate)
-              const endDate = new Date(item.endDate)
-              const today = new Date()
-              const duration =
-                Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-              const rentalCost = item.productVariant.price * duration * item.quantity
-              const lapseInDays =
-                today > endDate
-                  ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
-                  : 0
-              const penalty = item.price * lapseInDays * item.quantity
-              return totalPayment < rentalCost + penalty
+            )
+          }
+          if (currentStatus === "to-pay") {
+            return rent.items.some((item: any) => {
+              if (["completed", "canceled"].includes(item.status)) return false
+              const { balance } = calculateItemFinancials(item)
+              return balance > 0
             })
           }
           if (currentStatus === "to-deliver")
-            return rent.items.some((item) => item.deliveryMethod === "deliver")
+            return rent.items.some(
+              (item: any) =>
+                item.deliveryMethod === "deliver" &&
+                !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+            )
           if (currentStatus === "to-pickup")
-            return rent.items.some((item) => item.deliveryMethod === "pickup")
-          return rent.status === currentStatus
+            return rent.items.some(
+              (item: any) =>
+                item.deliveryMethod === "pickup" &&
+                !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+            )
+
+          return rent.items.some((item: any) => item.status === currentStatus)
         })
+
+  // Sort by priority (Overdue > Due Today > Others)
+  const filteredRents = [...baseFilteredRents].sort((a: any, b: any) => {
+    if (sortBy === "newest") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    }
+
+    // Default to Urgency priority
+    const getPriority = (rent: any) => {
+      const today = new Date()
+      let priority = 0
+      for (const item of rent.items) {
+        const isCompleted = ["completed", "returned", "returned_damaged", "canceled"].includes(
+          item.status
+        )
+        if (isCompleted) continue
+
+        const endDate = new Date(item.endDate)
+        const isDueToday =
+          endDate.getDate() === today.getDate() &&
+          endDate.getMonth() === today.getMonth() &&
+          endDate.getFullYear() === today.getFullYear()
+        const isOverdue = today > endDate && !isDueToday
+
+        if (isOverdue) return 2 // Highest priority
+        if (isDueToday) priority = Math.max(priority, 1)
+      }
+      return priority
+    }
+    return getPriority(b) - getPriority(a)
+  })
 
   // Paginate rents
   const totalPages = Math.ceil(filteredRents.length / itemsPerPage)
@@ -120,6 +221,37 @@ export const RentList = (props: any) => {
 
   return (
     <div className="w-full">
+      {dueTodayCount > 0 && (
+        <Alert severity="warning" className="mb-4 rounded-xl shadow-sm border border-orange-200">
+          You have <strong>{dueTodayCount}</strong> {dueTodayCount > 1 ? "orders" : "order"} due for
+          return today!
+        </Alert>
+      )}
+
+      {/* Header with Title and Sort */}
+      <div className="flex flex-col sm:flex-row justify-between items-center w-full p-4 mb-6 bg-white rounded-xl shadow-sm border border-gray-200">
+        <div>
+          <p className="text-2xl font-bold text-gray-800">My Rentals</p>
+          <p className="text-sm text-gray-500 mt-1">Track and manage your rental items</p>
+        </div>
+        <div className="flex items-center gap-4 mt-4 sm:mt-0">
+          <TextField
+            select
+            label="Sort By"
+            size="small"
+            value={sortBy}
+            onChange={handleSortChange}
+            sx={{
+              minWidth: 160,
+              "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+            }}
+          >
+            <MenuItem value="urgency">Urgency (Due Soon)</MenuItem>
+            <MenuItem value="newest">Recency (Newest First)</MenuItem>
+          </TextField>
+        </div>
+      </div>
+
       {/* Filter Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
         <Tabs
@@ -159,35 +291,56 @@ export const RentList = (props: any) => {
 
       {/* Rent List */}
       {paginatedRents.length === 0 && <p className="text-center">{getEmptyMessage()}</p>}
-      {paginatedRents.map((rent) => (
+      {paginatedRents.map((rent: any) => (
         <div
           className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-2 w-full"
           key={rent.id}
         >
           <div className="flex flex-col w-full">
             <div className="flex justify-between items-center w-full border-b border-gray-200 p-2">
-              <p>
-                {rent.items.length > 1 ? "Items Renting :" : "Item Renting :"} {rent.items.length}
+              <p className="font-semibold text-gray-700">
+                Order Reference: #{rent.id.toString().padStart(6, "0")}
               </p>
-              <p className="font-bold bg-gray-200 p-2 rounded-full">{rent.status}</p>
+              <p className="text-sm text-gray-500">
+                {rent.items.length > 1 ? "Items :" : "Item :"} {rent.items.length}
+              </p>
             </div>
 
-            {rent.items.map((item) => {
-              const startDate = new Date(item.startDate)
-              const endDate = new Date(item.endDate)
+            {rent.items.map((item: any) => {
+              const {
+                duration,
+                rentAmount,
+                initialFee,
+                lapseInDays,
+                penalty,
+                totalPayment,
+                balance,
+                unitPrice,
+              } = calculateItemFinancials(item)
+
               const today = new Date()
+              const endDate = new Date(item.endDate)
+              const isCompleted = [
+                "completed",
+                "returned",
+                "returned_damaged",
+                "canceled",
+              ].includes(item.status)
+              const isDueToday =
+                !isCompleted &&
+                endDate.getDate() === today.getDate() &&
+                endDate.getMonth() === today.getMonth() &&
+                endDate.getFullYear() === today.getFullYear()
+              const isOverdue = !isCompleted && today > endDate && !isDueToday
 
-              // Check if today is past the end date
-              const lapseInDays =
-                item.status !== "completed" && today > endDate
-                  ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24)) // Days overdue
-                  : 0 // No penalty if today is before or on the end date OR status is "completed"
-
-              const penalty = item.price * lapseInDays * item.quantity
-              const totalPayment = item.payments.reduce(
-                (total, payment) => total + payment.amount,
-                0
-              )
+              const variantDisplay = item.productVariant?.attributes?.length
+                ? item.productVariant.attributes
+                    .map((attr: any) => attr.attributeValue?.value)
+                    .filter(Boolean)
+                    .join(" / ")
+                : [item.productVariant?.size, item.productVariant?.color?.name]
+                    .filter(Boolean)
+                    .join(" - ") || "Default Config"
 
               return (
                 <div
@@ -195,26 +348,61 @@ export const RentList = (props: any) => {
                   className="flex justify-start items-center w-full border-b border-gray-200 p-2 gap-2"
                 >
                   <Image
-                    src={`/uploads/products/${item.productVariant.product.images[0]?.url}`}
-                    alt={item.productVariant.product.name}
+                    src={
+                      item.productVariant?.product?.images?.[0]?.url
+                        ? `/uploads/products/${item.productVariant.product.images[0].url}`
+                        : "/placeholder.png"
+                    }
+                    alt={item.productVariant?.product?.name || "Product Image"}
                     width={100}
                     height={100}
                     className="w-24 h-24 object-cover rounded"
                   />
 
                   <div className="flex flex-col justify-between h-full">
-                    <p className="font-bold underline text-slate-600">
-                      {item.productVariant.product.shop.shopName}
-                    </p>
-                    <p>{item.productVariant.product.name}</p>
-                    <p>
-                      {item.productVariant.size} - {item.productVariant.color.name}
-                    </p>
-                    <p className="capitalize">{item.deliveryMethod}</p>
+                    <div>
+                      <p className="font-bold text-[#1b2a80] cursor-pointer">
+                        {item.productVariant?.product?.shop?.shopName || "Shop"}
+                      </p>
+                      <p className="text-lg font-semibold">{item.productVariant?.product?.name}</p>
+                      <p className="text-sm text-gray-500 mt-1">Variant: {variantDisplay}</p>
+                      <div className="flex gap-2 mt-2">
+                        <p className="capitalize text-xs font-semibold text-gray-600 border border-gray-200 px-2 py-1 rounded-md inline-block w-fit bg-gray-50">
+                          Delivery: {item.deliveryMethod}
+                        </p>
+                        <p
+                          className={`capitalize text-xs font-bold px-2 py-1 rounded-md inline-block w-fit ${
+                            item.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : item.status === "accepted"
+                              ? "bg-blue-100 text-blue-800"
+                              : item.status === "canceled"
+                              ? "bg-red-100 text-red-800"
+                              : ["completed", "returned", "returned_damaged"].includes(item.status)
+                              ? "bg-green-100 text-green-800"
+                              : "bg-indigo-100 text-indigo-800"
+                          }`}
+                        >
+                          Status: {item.status.replace("_", " ")}
+                        </p>
+                        {isDueToday && (
+                          <p className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-orange-200">
+                            Due Today
+                          </p>
+                        )}
+                        {isOverdue && (
+                          <p className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-red-200">
+                            Overdue
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex flex-col justify-between h-full ml-4">
-                    <p>Price : {item.productVariant.price}</p>
+                    <p>
+                      Price : ₱{unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </p>
                     <p>Qty : {item.quantity}</p>
                     <p>
                       Rent Range:{" "}
@@ -222,31 +410,21 @@ export const RentList = (props: any) => {
                         month: "short",
                         day: "2-digit",
                         year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
                       }).formatRange(new Date(item.startDate), new Date(item.endDate))}{" "}
-                      - (
-                      {Math.ceil(
-                        (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) /
-                          (1000 * 60 * 60 * 24) +
-                          1
-                      )}{" "}
-                      days)
+                      - ({duration} {duration > 1 ? "days" : "day"})
                     </p>
                   </div>
 
                   <div className="flex flex-col justify-between h-full ml-4">
                     <p>
-                      Total :{" "}
-                      {"\u20B1 " +
-                        (
-                          item.productVariant.price *
-                          Math.ceil(
-                            (new Date(item.endDate).getTime() -
-                              new Date(item.startDate).getTime()) /
-                              (1000 * 60 * 60 * 24) +
-                              1
-                          ) *
-                          item.quantity
-                        ).toLocaleString("en-PH")}
+                      Total Rent : ₱
+                      {rentAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-orange-600 font-medium">
+                      Initial Fee (50%) : ₱
+                      {initialFee.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </p>
                     <p>
                       Penalty :{" "}
@@ -254,7 +432,8 @@ export const RentList = (props: any) => {
                         <span className="text-green-600">Paid</span>
                       ) : (
                         <>
-                          {penalty} ({lapseInDays} {lapseInDays > 1 ? "days" : "day"})
+                          ₱{penalty.toLocaleString("en-US", { minimumFractionDigits: 2 })} (
+                          {lapseInDays} {lapseInDays === 1 ? "day" : "days"})
                         </>
                       )}
                     </p>
@@ -264,25 +443,17 @@ export const RentList = (props: any) => {
                       {item.status === "completed" ? (
                         <span className="text-green-600">Paid</span>
                       ) : (
-                        totalPayment
+                        `₱${totalPayment.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                       )}
                     </p>
 
-                    {item.status == "completed" ? (
-                      <p className="text-green-600">Completed</p>
-                    ) : (
-                      <p>
-                        balance :{" "}
-                        {item.productVariant.price *
-                          Math.ceil(
-                            (new Date(item.endDate).getTime() -
-                              new Date(item.startDate).getTime()) /
-                              (1000 * 60 * 60 * 24) +
-                              1
-                          ) *
-                          item.quantity -
-                          totalPayment +
-                          penalty}
+                    {["completed", "returned", "returned_damaged"].includes(item.status) ? (
+                      <p className="text-green-600 font-bold">Completed</p>
+                    ) : item.status === "canceled" ? (
+                      <p className="text-red-600 font-bold">Canceled</p>
+                    ) : item.status === "pending" ? null : (
+                      <p className="font-bold text-[#1b2a80]">
+                        Balance : ₱{balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </p>
                     )}
                   </div>

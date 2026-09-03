@@ -10,16 +10,22 @@ import {
 } from "@mui/material"
 import { DeleteForever as DeleteForeverIcon, ExpandMore, ExpandLess } from "@mui/icons-material"
 import PurchaseHistorySection from "./PurchaseHistorySection"
+import { Variant, Attribute, AttributeValue, DamagePolicies } from "./EditProductForm"
 
 interface EditProductVariantItemProps {
-  variant: any
+  variant: Variant
   index: number
-  attributes: any[]
+  attributes: Attribute[]
   isOpen: boolean
-  toggleRow: (id: any) => void
-  handleVariantChange: (index: number, field: string, value: string | number) => void
+  toggleRow: (id: number | string) => void
+  handleVariantChange: (index: number, field: keyof Variant, value: string | number) => void
   handleVariantAttributeChange: (index: number, attributeId: number, valueId: number) => void
-  handleRepairCost: (index: number, key: string, severity: string, value: number) => void
+  handleRepairCost: (
+    index: number,
+    key: keyof DamagePolicies,
+    severity: string,
+    value: number
+  ) => void
   removeVariant: (index: number) => void
   minorMax: number
   modMax: number
@@ -41,26 +47,26 @@ const EditProductVariantItem = memo(function EditProductVariantItem({
   majMax,
 }: EditProductVariantItemProps) {
   const minorPolicyIndex = variant.damagePolicies?.findIndex(
-    (p: any) => p.damageSeverity === "minor"
+    (p: DamagePolicies) => p.damageSeverity === "minor"
   )
   const minorPolicy = variant.damagePolicies?.[minorPolicyIndex]
 
   const moderatePolicyIndex = variant.damagePolicies?.findIndex(
-    (p: any) => p.damageSeverity === "moderate"
+    (p: DamagePolicies) => p.damageSeverity === "moderate"
   )
   const moderatePolicy = variant.damagePolicies?.[moderatePolicyIndex]
 
   const majorPolicyIndex = variant.damagePolicies?.findIndex(
-    (p: any) => p.damageSeverity === "major"
+    (p: DamagePolicies) => p.damageSeverity === "major"
   )
   const majorPolicy = variant.damagePolicies?.[majorPolicyIndex]
 
   const totalLossPolicyIndex = variant.damagePolicies?.findIndex(
-    (p: any) => p.damageSeverity === "total_loss"
+    (p: DamagePolicies) => p.damageSeverity === "total_loss"
   )
   const totalLossPolicy = variant.damagePolicies?.[totalLossPolicyIndex]
 
-  const replacementCost = variant.replacementCost
+  const replacementCost = variant.replacementCost || 0
 
   const minorMin = 1
   const modMin = minorPolicy?.damageSeverityPercent ? minorPolicy.damageSeverityPercent + 1 : 2
@@ -106,7 +112,7 @@ const EditProductVariantItem = memo(function EditProductVariantItem({
                     handleVariantAttributeChange(index, attr.id, Number(e.target.value))
                   }
                 >
-                  {attr.values.map((val: any) => (
+                  {attr.values.map((val: AttributeValue) => (
                     <MenuItem key={val.id} value={val.id}>
                       {attr.name === "Color" && val.hexCode ? (
                         <div className="flex items-center gap-2">
@@ -165,14 +171,13 @@ const EditProductVariantItem = memo(function EditProductVariantItem({
           </div>
 
           <PurchaseHistorySection
-            originalMSRP={variant.originalMSRP}
             originalPurchaseDate={
               variant.originalPurchaseDate
                 ? new Date(variant.originalPurchaseDate).toISOString().split("T")[0]
                 : ""
             }
             condition={variant.condition}
-            onChange={(field, value) => handleVariantChange(index, field, value)}
+            onChange={(field, value) => handleVariantChange(index, field as keyof Variant, value)}
           />
 
           <div>

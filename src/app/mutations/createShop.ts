@@ -43,6 +43,16 @@ export default resolver.pipe(
       data: { isShopRegistered: true },
     })
 
+    // Create audit log entry for new shop registration
+    await db.shopAuditLog.create({
+      data: {
+        shopId: shop.id,
+        action: "SHOP_CREATED",
+        details: `Shop registration submitted by user`,
+        adminId: null, // User created this shop, not an admin action
+      },
+    })
+
     // Notify Admins
     const admins = await db.user.findMany({
       where: { isAdmin: true },
@@ -50,7 +60,7 @@ export default resolver.pipe(
 
     await Promise.all(
       admins.map((admin) =>
-        (db as any).notification.create({
+        db.notification.create({
           data: {
             userId: admin.id,
             title: "New Shop Registration",
@@ -62,7 +72,7 @@ export default resolver.pipe(
     )
 
     // Notify the Renter (Shop Owner)
-    await (db as any).notification.create({
+    await db.notification.create({
       data: {
         userId: input.userId,
         title: "Registration Submitted",

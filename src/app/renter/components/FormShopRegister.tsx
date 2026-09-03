@@ -18,14 +18,15 @@ import {
   FormHelperText,
 } from "@mui/material"
 import { useState, useEffect } from "react"
+import { useMutation, useQuery, invalidateQuery } from "@blitzjs/rpc"
 import createShop from "../../mutations/createShop"
 import uploadShopBg from "../../mutations/uploadShopBg"
-import { useMutation, useQuery } from "@blitzjs/rpc"
 import { useRouter } from "next/navigation"
 import getBarangay from "../../queries/getBarangays"
+import getCurrentUser from "../../users/queries/getCurrentUser"
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"
 import StorefrontIcon from "@mui/icons-material/Storefront"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import Image from "next/image"
 
 const FormShopRegister = (props: { currentUser: any }) => {
@@ -33,7 +34,6 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const router = useRouter()
   const [uploadShopBgMutation] = useMutation(uploadShopBg)
   const [createShopMutation] = useMutation(createShop)
-  const [barangays] = useQuery(getBarangay, null)
   const currentUser = props.currentUser
   const [imageProfile, setImageProfile] = useState<string | null>(null)
   const [previewProfile, setPreviewProfile] = useState<string | null>(null)
@@ -43,6 +43,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
   const [permitFile, setPermitFile] = useState<File | null>(null)
   const [previewShopBg, setPreviewShopBg] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [barangays] = useQuery(getBarangay, null)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
 
   const steps = ["SHOP DETAILS", "SHOP DOCUMENTS", "SHOP PROFILE"]
@@ -67,11 +68,23 @@ const FormShopRegister = (props: { currentUser: any }) => {
     documentTax: "",
   })
 
+  const isApprovedShop = currentUser?.shop?.status === "approved" || currentUser?.isShopMode
+
   useEffect(() => {
-    if (currentUser?.isShopRegistered && !currentUser?.isShopMode) {
-      router.push("/renter/shop-register/pending")
+    if (
+      currentUser?.isShopRegistered &&
+      !isApprovedShop &&
+      currentUser?.shop?.status !== "banned"
+    ) {
+      router.push("/renter/my-shop/pending")
     }
-  }, [currentUser, router])
+
+    // If the user lands here and the shop is already approved,
+    // invalidate the user query to update the UI (sidebar/navbar).
+    if (currentUser?.isShopRegistered && isApprovedShop) {
+      invalidateQuery(getCurrentUser, null)
+    }
+  }, [currentUser, isApprovedShop, router])
 
   const handleImageChangeShopBg = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -327,13 +340,16 @@ const FormShopRegister = (props: { currentUser: any }) => {
       await createShopMutation({
         ...formData,
       })
-      router.push("/renter/shop-register/pending")
-      router.refresh()
+
       toast.success("Shop registered successfully! Please wait for admin approval.")
-      setLoading(false)
+
+      // Force a fresh pending-page render so the form doesn't stay mounted on a stale client state.
+      router.replace("/renter/my-shop/pending")
+      router.refresh()
     } catch (error: any) {
       console.error("Error creating shop:", error)
       toast.error(error.message || "Failed to register shop. Please try again.")
+    } finally {
       setLoading(false)
     }
   }
@@ -348,7 +364,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     )
   }
 
-  if (currentUser?.isShopRegistered && currentUser?.isShopMode) {
+  if (currentUser?.isShopRegistered && isApprovedShop) {
     return (
       <div className="w-full">
         <Card elevation={0} className="rounded-xl border border-gray-200">
@@ -374,7 +390,7 @@ const FormShopRegister = (props: { currentUser: any }) => {
     )
   }
 
-  if (currentUser?.isShopRegistered && !currentUser?.isShopMode) {
+  if (currentUser?.isShopRegistered && !isApprovedShop && currentUser?.shop?.status !== "banned") {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
         <CircularProgress />

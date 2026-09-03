@@ -5,7 +5,15 @@ export default async function getProductVariantById({ id }: { id: number }) {
   const productVariant = await db.productVariant.findFirst({
     where: { id },
     include: {
-      color: true,
+      attributes: {
+        include: {
+          attributeValue: {
+            include: {
+              attribute: true,
+            },
+          },
+        },
+      },
       rentItems: {
         include: {
           rent: true,

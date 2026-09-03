@@ -6,7 +6,7 @@ import { DateRangePicker } from "@mui/x-date-pickers-pro/DateRangePicker"
 import dayjs from "dayjs"
 
 export default function BasicDateRangePicker() {
-  const shouldDisableDate = (date) => {
+  const shouldDisableDate = (date: dayjs.Dayjs) => {
     const yesterday = dayjs().subtract(1, "day").endOf("day") // End of yesterday
     return date.isBefore(yesterday) // Disable yesterday and earlier
   }

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation } from "@blitzjs/rpc"
-import { toast } from "sonner"
+import { toast } from "@/src/app/utils/toast"
 import {
   TextField,
   Button,

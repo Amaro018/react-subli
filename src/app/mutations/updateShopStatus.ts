@@ -1,12 +1,13 @@
 import db from "db"
 import { resolver } from "@blitzjs/rpc"
 import { z } from "zod"
+import { Ctx } from "blitz"
 
 // Define schema for the mutation
 const UpdateShopStatus = z.object({
   shopId: z.number(), // ID of the shop
   documentType: z.enum(["DTI", "PERMIT", "TAX_CLEARANCE"]).optional(),
-  status: z.enum(["pending", "approved", "rejected"]),
+  status: z.enum(["pending", "approved", "rejected", "banned"]),
   shopUserId: z.number(),
   note: z.string().nullable().optional(), // <-- Add note here
   documentUpdates: z
@@ -18,7 +19,7 @@ const UpdateShopStatus = z.object({
 export default resolver.pipe(
   resolver.zod(UpdateShopStatus),
   resolver.authorize(), // Ensure user is authorized
-  async ({ shopId, documentType, status, shopUserId, note, documentUpdates }) => {
+  async ({ shopId, documentType, status, shopUserId, note, documentUpdates }, ctx: Ctx) => {
     if (documentType) {
       // Map document types to corresponding fields
       const fieldMapping = {
@@ -41,6 +42,11 @@ export default resolver.pipe(
         include: {
           user: {
             include: { personalInfo: true },
+          },
+          products: {
+            include: {
+              category: true,
+            },
           },
         },
       })
@@ -92,17 +98,59 @@ export default resolver.pipe(
         }
       }
 
+      if (status === "banned") {
+        await Promise.all([
+          db.reportShop.updateMany({
+            where: { shopId: shopId, status: "pending" },
+            data: { status: "resolved" },
+          }),
+          db.product.updateMany({
+            where: { shopId: shopId, status: "active" },
+            data: { status: "suspended" },
+          }),
+        ])
+      }
+
       const updatedShop = await db.shop.update({
         where: { id: shopId },
         data: {
           status: status,
           rejectionReason: status === "rejected" ? note : null,
+          banReason: status === "banned" ? note : currentShop?.banReason,
           ...docUpdates,
         },
         include: {
           user: {
             include: { personalInfo: true },
           },
+          products: {
+            include: {
+              category: true,
+            },
+          },
+        },
+      })
+
+      // Create audit log entry
+      let action = "STATUS_CHANGED"
+      let details = `Status changed to ${status}`
+      if (status === "approved") {
+        action = "APPROVED"
+        details = "Shop application approved"
+      } else if (status === "rejected") {
+        action = "REJECTED"
+        details = `Reason: ${note || "No reason provided"}`
+      } else if (status === "banned") {
+        action = "BANNED"
+        details = `Reason: ${note || "No reason provided"}`
+      }
+
+      await db.shopAuditLog.create({
+        data: {
+          shopId: shopId,
+          action: action,
+          details: details,
+          adminId: ctx.session?.userId,
         },
       })
 
@@ -114,17 +162,30 @@ export default resolver.pipe(
       })
 
       // Notify the user about the shop status change
-      if (status === "approved" || status === "rejected") {
-        await (db as any).notification.create({
+      if (status === "approved" || status === "rejected" || status === "banned") {
+        let title = `Shop Registration ${status === "approved" ? "Approved" : "Rejected"}`
+        let message = ""
+
+        if (status === "approved") {
+          title = "Shop Registration Approved"
+          message = `Congratulations! Your shop "${updatedShop.shopName}" has been approved.`
+        } else if (status === "rejected") {
+          title = "Shop Registration Rejected"
+          message = `Your shop registration for "${
+            updatedShop.shopName
+          }" has been rejected. Reason: ${note || "No reason provided."}`
+        } else if (status === "banned") {
+          title = "Your Shop Has Been Banned"
+          message = `Your shop "${
+            updatedShop.shopName
+          }" has been banned by an administrator. Reason: ${note || "No reason provided."}`
+        }
+
+        await db.notification.create({
           data: {
             userId: shopUserId,
-            title: `Shop Registration ${status === "approved" ? "Approved" : "Rejected"}`,
-            message:
-              status === "approved"
-                ? `Congratulations! Your shop "${updatedShop.shopName}" has been approved.`
-                : `Your shop registration for "${
-                    updatedShop.shopName
-                  }" has been rejected. Reason: ${note || "No reason provided."}`,
+            title,
+            message,
             isRead: false,
           },
         })

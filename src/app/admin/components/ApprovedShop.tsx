@@ -1,36 +1,18 @@
 // d:\Users\Jayzel\react repos\react-subli\src\app\admin\components\ApprovedShop.tsx
 "use client"
 import { useQuery } from "@blitzjs/rpc"
-import getShops from "../../queries/getShops"
-import CloseIcon from "@mui/icons-material/Close"
-import StoreIcon from "@mui/icons-material/Store"
 import React from "react"
-import { Box, Modal, Button, Typography } from "@mui/material"
+import { Button, Typography } from "@mui/material"
 import Link from "next/link"
-
-const style = {
-  position: "absolute" as "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: { xs: "95%", md: "80%" },
-  maxWidth: 1000,
-  bgcolor: "background.paper",
-  border: "none",
-  boxShadow: 24,
-  borderRadius: "12px",
-  maxHeight: "90vh",
-  display: "flex",
-  flexDirection: "column",
-  outline: "none",
-}
+import StorefrontIcon from "@mui/icons-material/Storefront"
+import getShops from "../../queries/getShops"
 
 interface ApprovedShopProps {
   status?: string
 }
 
 export default function ApprovedShop({ status }: ApprovedShopProps) {
-  const [shops] = useQuery(getShops, null)
+  const [shops] = useQuery(getShops, null) as [any[], any]
   const [open, setOpen] = React.useState(false)
   const [selectedShop, setSelectedShop] = React.useState<any>(null)
   const [currentPage, setCurrentPage] = React.useState(1)
@@ -110,12 +92,12 @@ export default function ApprovedShop({ status }: ApprovedShopProps) {
                     {shop.contact}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-center whitespace-nowrap">
-                    <button
-                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium py-2 px-3 rounded transition-colors"
-                      onClick={() => handleOpen(shop)}
+                    <Link
+                      href={`/shops/${shop.slug || shop.id}`}
+                      className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg text-[#1b2a80] bg-white hover:bg-gray-50 transition-colors"
                     >
-                      View Details
-                    </button>
+                      <StorefrontIcon fontSize="small" sx={{ mr: 1 }} /> Visit Shop
+                    </Link>
                   </td>
                 </tr>
               ))
@@ -146,160 +128,6 @@ export default function ApprovedShop({ status }: ApprovedShopProps) {
           </Button>
         </div>
       )}
-
-      <Modal open={open} onClose={handleClose}>
-        <Box sx={style}>
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <h2 className="text-xl font-bold text-gray-800">Shop Details</h2>
-            <button
-              onClick={handleClose}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-
-          <div className="p-4 md:p-6 overflow-y-auto scrollbar-seamless">
-            {selectedShop && (
-              <div className="flex flex-col gap-6">
-                {/* Shop Info */}
-                <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <h3 className="text-md font-bold text-gray-900 mb-6 flex items-center gap-2 border-b pb-4">
-                    <StoreIcon className="text-blue-600" />
-                    Shop Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Shop Name
-                      </p>
-                      <p className="text-base font-medium text-gray-900">{selectedShop.shopName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Owner Name
-                      </p>
-                      <p className="text-base font-medium text-gray-900">
-                        {selectedShop.user?.personalInfo
-                          ? `${selectedShop.user.personalInfo.firstName} ${selectedShop.user.personalInfo.lastName}`
-                          : "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Contact Number
-                      </p>
-                      <p className="text-base font-medium text-gray-900">{selectedShop.contact}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Email Address
-                      </p>
-                      <p className="text-base font-medium text-gray-900">{selectedShop.email}</p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Address
-                      </p>
-                      <p className="text-base font-medium text-gray-900">
-                        {selectedShop.street}, {selectedShop.barangay}, {selectedShop.city},{" "}
-                        {selectedShop.province}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Documents */}
-                <div className="p-6 bg-gray-50 rounded-xl border border-gray-200">
-                  <h3 className="text-md font-bold text-gray-900 mb-4">Legal Documents</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* DTI */}
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="font-bold text-gray-700">DTI Registration</span>
-                        <span
-                          className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                            selectedShop.dtiStatus === "approved"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {selectedShop.dtiStatus}
-                        </span>
-                      </div>
-                      {selectedShop.documentDTI ? (
-                        <Link
-                          href={`/uploads/dti/${selectedShop.documentDTI}` as any}
-                          target="_blank"
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline flex items-center gap-1"
-                        >
-                          View Document
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">Not uploaded</span>
-                      )}
-                    </div>
-
-                    {/* Permit */}
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="font-bold text-gray-700">Business Permit</span>
-                        <span
-                          className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                            selectedShop.permitStatus === "approved"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {selectedShop.permitStatus}
-                        </span>
-                      </div>
-                      {selectedShop.documentPermit ? (
-                        <Link
-                          href={`/uploads/permit/${selectedShop.documentPermit}` as any}
-                          target="_blank"
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline flex items-center gap-1"
-                        >
-                          View Document
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">Not uploaded</span>
-                      )}
-                    </div>
-
-                    {/* Tax */}
-                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="font-bold text-gray-700">Tax Clearance</span>
-                        <span
-                          className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                            selectedShop.taxStatus === "approved"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {selectedShop.taxStatus}
-                        </span>
-                      </div>
-                      {selectedShop.documentTax ? (
-                        <Link
-                          href={`/uploads/tax/${selectedShop.documentTax}` as any}
-                          target="_blank"
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline flex items-center gap-1"
-                        >
-                          View Document
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">Not uploaded</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Box>
-      </Modal>
     </>
   )
 }

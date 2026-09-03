@@ -1,4 +1,4 @@
-import React, { useState, memo } from "react"
+import React, { useState, memo, useMemo } from "react"
 import {
   Paper,
   Typography,
@@ -55,7 +55,7 @@ export type Variant = {
   price: number
   quantity: number
   originalMSRP: number
-  active: boolean
+  active?: boolean
 }
 
 interface ProductVariantsSectionProps {
@@ -95,7 +95,7 @@ const ProductVariantsSection = memo(function ProductVariantsSection({
   const [bulkMSRP, setBulkMSRP] = useState<number | "">("")
   const [bulkFilter, setBulkFilter] = useState<number | "ALL">("ALL")
 
-  const selectedFilterName = React.useMemo(() => {
+  const selectedFilterName = useMemo(() => {
     if (bulkFilter === "ALL") return "All"
     for (const opt of options) {
       if (opt.values.includes(bulkFilter)) {

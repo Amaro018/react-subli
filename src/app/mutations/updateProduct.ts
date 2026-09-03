@@ -16,6 +16,7 @@ export const UpdateProductInput = z.object({
       z.object({
         url: z.string().nonempty("Image URL is required"),
         attributeValueId: z.number().int().nullable().optional(),
+        isThumbnail: z.boolean().optional(),
       })
     )
     .optional(),
@@ -43,131 +44,143 @@ export const UpdateProductInput = z.object({
 export default async function updateProduct(input: z.infer<typeof UpdateProductInput>) {
   const { id, name, deliveryOption, status, categoryid, description, variants, images } = input
 
-  // 0. Get existing product images to find which ones are being removed
-  const existingProduct = await db.product.findUnique({
-    where: { id },
-    include: { images: true },
-  })
-  const existingImageUrls = existingProduct?.images.map((img) => img.url) || []
-  const incomingImageUrls = images?.map((img) => img.url) || []
-  const removedImageUrls = existingImageUrls.filter((url) => !incomingImageUrls.includes(url))
+  // Wrap everything inside a database transaction to ensure atomicity
+  const { product, removedImageUrls } = await db.$transaction(async (tx) => {
+    // 0. Get existing product images to find which ones are being removed
+    const existingProduct = await tx.product.findUnique({
+      where: { id },
+      include: { images: true },
+    })
+    const existingImageUrls = existingProduct?.images.map((img) => img.url) || []
+    const incomingImageUrls = images?.map((img) => img.url) || []
+    const removedImageUrls = existingImageUrls.filter((url) => !incomingImageUrls.includes(url))
 
-  // 1. Find existing variant IDs for this product
-  const existingVariants = await db.productVariant.findMany({
-    where: { productId: id },
-    select: { id: true },
-  })
+    // 1. Find existing variant IDs for this product
+    const existingVariants = await tx.productVariant.findMany({
+      where: { productId: id },
+      select: { id: true },
+    })
 
-  const existingVariantIds = existingVariants.map((v) => v.id)
-  const incomingVariantIds = variants.filter((v) => v.id).map((v) => v.id!) // only keep defined
+    const existingVariantIds = existingVariants.map((v) => v.id)
+    const incomingVariantIds = variants.filter((v) => v.id).map((v) => v.id!) // only keep defined
 
-  // 2. Find variants to delete
-  const toDeleteVariantIds = existingVariantIds.filter((vid) => !incomingVariantIds.includes(vid))
+    // 2. Find variants to delete
+    const toDeleteVariantIds = existingVariantIds.filter((vid) => !incomingVariantIds.includes(vid))
 
-  // 3. Delete them
-  if (toDeleteVariantIds.length > 0) {
-    try {
-      await db.productVariant.deleteMany({
-        where: { id: { in: toDeleteVariantIds } },
-      })
-    } catch (error) {
-      throw new Error(
-        "Cannot completely delete variants that have rental history. Please keep them and set their quantity to 0 instead."
-      )
+    // 3. Delete them
+    if (toDeleteVariantIds.length > 0) {
+      try {
+        await tx.productVariant.deleteMany({
+          where: { id: { in: toDeleteVariantIds } },
+        })
+      } catch (error) {
+        throw new Error(
+          "Cannot completely delete variants that have rental history. Please keep them and set their quantity to 0 instead."
+        )
+      }
     }
-  }
 
-  // 4. Proceed with update + upserts
-  const product = await db.product.update({
-    where: { id },
-    data: {
-      name,
-      deliveryOption,
-      description,
-      status,
-      categoryid,
-      ...(images
-        ? {
-            images: {
-              deleteMany: {}, // Clean up old image references
-              create: images.map((img) => ({
-                url: img.url,
-                ...(img.attributeValueId
-                  ? { attributeValue: { connect: { id: img.attributeValueId } } }
-                  : {}),
-              })),
-            },
-          }
-        : {}),
-      variants: {
-        upsert: variants.map(
-          (v): Prisma.ProductVariantUpsertWithWhereUniqueWithoutProductInput => ({
-            where: { id: v.id ?? 0 }, // 👈 if id is missing, Prisma will create
-            update: {
-              price: v.price,
-              quantity: v.quantity,
-              originalMSRP: v.originalMSRP ?? 0,
-              originalPurchaseDate: v.originalPurchaseDate
-                ? new Date(v.originalPurchaseDate)
-                : new Date(),
-              condition: v.condition ?? "New",
-              attributes: {
-                deleteMany: {}, // Delete old attributes and recreate them to ensure synchronization
-                create:
-                  v.attributes?.map((attr) => ({
-                    attributeValue: { connect: { id: attr.attributeValueId } },
-                  })) || [],
-              },
-              damagePolicies: {
-                upsert: v.damagePolicies.map(
-                  (d): Prisma.DamagePoliciesUpsertWithWhereUniqueWithoutProductVariantInput => ({
-                    where: { id: d.id ?? 0 },
-                    update: {
-                      damageSeverityPercent: d.damageSeverityPercent,
-                      description: d.description,
-                    },
-                    create: {
-                      damageSeverity: d.damageSeverity,
-                      damageSeverityPercent: d.damageSeverityPercent,
-                      description: d.description,
-                    },
-                  })
-                ),
-              },
-            },
-            create: {
-              price: v.price,
-              quantity: v.quantity,
-              originalMSRP: v.originalMSRP ?? 0,
-              originalPurchaseDate: v.originalPurchaseDate
-                ? new Date(v.originalPurchaseDate)
-                : new Date(),
-              condition: v.condition ?? "New",
-              attributes: {
-                create:
-                  v.attributes?.map((attr) => ({
-                    attributeValue: { connect: { id: attr.attributeValueId } },
-                  })) || [],
-              },
-              damagePolicies: {
-                create: v.damagePolicies.map((d) => ({
-                  damageSeverity: d.damageSeverity,
-                  damageSeverityPercent: d.damageSeverityPercent,
-                  description: d.description,
+    // 4. Proceed with update + upserts
+    const updatedProduct = await tx.product.update({
+      where: { id },
+      data: {
+        name,
+        deliveryOption,
+        description,
+        status,
+        categoryid,
+        ...(images
+          ? {
+              images: {
+                deleteMany: {}, // Clean up old image references
+                create: images.map((img) => ({
+                  url: img.url,
+                  ...(img.attributeValueId
+                    ? { attributeValue: { connect: { id: img.attributeValueId } } }
+                    : {}),
+                  isThumbnail: img.isThumbnail,
                 })),
               },
-            },
-          })
-        ),
+            }
+          : {}),
+        variants: {
+          upsert: variants.map(
+            (v): Prisma.ProductVariantUpsertWithWhereUniqueWithoutProductInput => ({
+              where: { id: v.id ?? 0 }, // 👈 if id is missing, Prisma will create
+              update: {
+                price: v.price,
+                quantity: v.quantity,
+                originalMSRP: v.originalMSRP ?? 0,
+                originalPurchaseDate: v.originalPurchaseDate
+                  ? new Date(v.originalPurchaseDate)
+                  : new Date(),
+                condition: v.condition ?? "New",
+                attributes: {
+                  deleteMany: {}, // Delete old attributes and recreate them to ensure synchronization
+                  create:
+                    v.attributes?.map((attr) => ({
+                      attributeValue: { connect: { id: attr.attributeValueId } },
+                    })) || [],
+                },
+                damagePolicies: {
+                  // 👈 properly clear out removed damage policies
+                  deleteMany: {
+                    id: { notIn: v.damagePolicies.filter((d) => d.id).map((d) => d.id!) },
+                  },
+                  upsert: v.damagePolicies.map(
+                    (d): Prisma.DamagePoliciesUpsertWithWhereUniqueWithoutProductVariantInput => ({
+                      where: { id: d.id ?? 0 },
+                      update: {
+                        damageSeverityPercent: d.damageSeverityPercent,
+                        description: d.description,
+                      },
+                      create: {
+                        damageSeverity: d.damageSeverity,
+                        damageSeverityPercent: d.damageSeverityPercent,
+                        description: d.description,
+                      },
+                    })
+                  ),
+                },
+              },
+              create: {
+                price: v.price,
+                quantity: v.quantity,
+                originalMSRP: v.originalMSRP ?? 0,
+                originalPurchaseDate: v.originalPurchaseDate
+                  ? new Date(v.originalPurchaseDate)
+                  : new Date(),
+                condition: v.condition ?? "New",
+                attributes: {
+                  create:
+                    v.attributes?.map((attr) => ({
+                      attributeValue: { connect: { id: attr.attributeValueId } },
+                    })) || [],
+                },
+                damagePolicies: {
+                  create: v.damagePolicies.map((d) => ({
+                    damageSeverity: d.damageSeverity,
+                    damageSeverityPercent: d.damageSeverityPercent,
+                    description: d.description,
+                  })),
+                },
+              },
+            })
+          ),
+        },
       },
-    },
-    include: {
-      category: true,
-      variants: { include: { damagePolicies: true } },
-    },
+      include: {
+        category: true,
+        variants: { include: { damagePolicies: true } },
+      },
+    })
+
+    return { product: updatedProduct, removedImageUrls }
   })
 
-  // 5. Clean up orphaned images from the server
+  // 5. Clean up orphaned images from the server OUTSIDE the transaction
+  // If the transaction fails, we DO NOT get here, which safely prevents
+  // deleting images if the database rollback occurs.
   for (const url of removedImageUrls) {
     // Safety check: Ensure no OTHER product (e.g., a duplicated copy) is still using this image
     const usageCount = await db.product.count({

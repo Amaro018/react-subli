@@ -226,8 +226,8 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
               handleNavigation={handleNavigation}
               items={[
                 { label: "All Shops", href: "/admin/manage-shops" },
-                { label: "Approved Shops", href: "/admin/manage-shops/approved" },
                 { label: "Pending Shops", href: "/admin/manage-shops/pending" },
+                { label: "Approved Shops", href: "/admin/manage-shops/approved" },
                 { label: "Rejected Shops", href: "/admin/manage-shops/rejected" },
                 { label: "Reported Shops", href: "/admin/manage-shops/reported" },
                 { label: "Banned Shops", href: "/admin/manage-shops/banned" },
@@ -246,9 +246,9 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
               pathname={pathname}
               handleNavigation={handleNavigation}
               items={[
-                { label: "All Products", href: "/admin/products" },
-                { label: "Reported Products", href: "/admin/products/reported" },
-                { label: "Banned Products", href: "/admin/products/banned" },
+                { label: "All Products", href: "/admin/manage-products" },
+                { label: "Reported Products", href: "/admin/manage-products/reported" },
+                { label: "Banned Products", href: "/admin/manage-products/banned" },
               ]}
             />
 
@@ -299,22 +299,17 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
         </div>
 
         <div className="p-2 border-t border-white/10">
-          <div
-            className={`relative flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 cursor-pointer ${
+          <LogoutButton
+            className={`w-full flex items-center px-4 py-2 text-gray-100 rounded-md hover:bg-white/10 cursor-pointer transition-colors duration-200 ${
               isCollapsed ? "lg:justify-center" : ""
             }`}
-            onClick={(e) => handleNavigation(e, "/logout")}
+            onLogout={() => setIsOpen(false)}
           >
-            <LogoutIcon className="w-6 h-6" />
-            <div className={`mx-3 w-full ${isCollapsed ? "lg:hidden" : ""}`}>
-              <LogoutButton />
-            </div>
-            <div
-              className={`absolute inset-0 opacity-0 ${isCollapsed ? "lg:block" : "hidden"} hidden`}
-            >
-              <LogoutButton className="w-full h-full" />
-            </div>
-          </div>
+            <LogoutIcon className="w-6 h-6 shrink-0" />
+            <span className={`mx-3 text-sm font-medium ${isCollapsed ? "lg:hidden" : ""}`}>
+              Logout
+            </span>
+          </LogoutButton>
         </div>
       </div>
 

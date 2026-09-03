@@ -45,6 +45,8 @@ export default resolver.pipe(
       }
     }
 
+    const newlyUploadedFiles: string[] = []
+
     const saveFile = async (subfolder: string, fileName: string, fileData: string) => {
       const base64Data = fileData.includes(",") ? fileData.split(",")[1] : fileData
       const buffer = Buffer.from(base64Data || "", "base64")
@@ -52,114 +54,146 @@ export default resolver.pipe(
       const filePath = path.join(publicFolder, "uploads", subfolder, safeFileName)
       await fs.promises.mkdir(path.dirname(filePath), { recursive: true })
       await fs.promises.writeFile(filePath, buffer as any)
+      newlyUploadedFiles.push(filePath)
     }
 
-    const updateData: any = { ...data }
-    delete updateData.dtiFile
-    delete updateData.permitFile
-    delete updateData.taxFile
+    try {
+      const updateData: any = { ...data }
+      delete updateData.dtiFile
+      delete updateData.permitFile
+      delete updateData.taxFile
 
-    const changedDocs: string[] = []
+      const changedDocs: string[] = []
 
-    if (data.documentDTI) {
-      if (data.dtiFile) {
-        const uniqueFileName = `${Date.now()}-${data.documentDTI}`
-        await saveFile("dti", uniqueFileName, data.dtiFile)
-        updateData.documentDTI = uniqueFileName
+      // 3. Process and save incoming files
+      if (data.documentDTI) {
+        if (data.dtiFile) {
+          const uniqueFileName = `${Date.now()}-${data.documentDTI}`
+          await saveFile("dti", uniqueFileName, data.dtiFile)
+          updateData.documentDTI = uniqueFileName
+        }
+        updateData.dtiNotes = ""
+        if (currentShop.dtiStatus === "rejected" || data.documentDTI !== currentShop.documentDTI) {
+          updateData.dtiStatus = data.dtiStatus || "pending"
+          changedDocs.push("DTI")
+        }
       }
-      updateData.dtiNotes = ""
-      if (currentShop.dtiStatus === "rejected" || data.documentDTI !== currentShop.documentDTI) {
-        updateData.dtiStatus = data.dtiStatus || "pending"
-        changedDocs.push("DTI")
+      if (data.documentPermit) {
+        if (data.permitFile) {
+          const uniqueFileName = `${Date.now()}-${data.documentPermit}`
+          await saveFile("permit", uniqueFileName, data.permitFile)
+          updateData.documentPermit = uniqueFileName
+        }
+        updateData.permitNotes = ""
+        if (
+          currentShop.permitStatus === "rejected" ||
+          data.documentPermit !== currentShop.documentPermit
+        ) {
+          updateData.permitStatus = data.permitStatus || "pending"
+          changedDocs.push("Permit")
+        }
       }
-    }
-    if (data.documentPermit) {
-      if (data.permitFile) {
-        const uniqueFileName = `${Date.now()}-${data.documentPermit}`
-        await saveFile("permit", uniqueFileName, data.permitFile)
-        updateData.documentPermit = uniqueFileName
+      if (data.documentTax) {
+        if (data.taxFile) {
+          const uniqueFileName = `${Date.now()}-${data.documentTax}`
+          await saveFile("tax", uniqueFileName, data.taxFile)
+          updateData.documentTax = uniqueFileName
+        }
+        updateData.taxNotes = ""
+        if (currentShop.taxStatus === "rejected" || data.documentTax !== currentShop.taxStatus) {
+          updateData.taxStatus = data.taxStatus || "pending"
+          changedDocs.push("Tax Clearance")
+        }
       }
-      updateData.permitNotes = ""
-      if (
-        currentShop.permitStatus === "rejected" ||
-        data.documentPermit !== currentShop.documentPermit
-      ) {
-        updateData.permitStatus = data.permitStatus || "pending"
-        changedDocs.push("Permit")
-      }
-    }
-    if (data.documentTax) {
-      if (data.taxFile) {
-        const uniqueFileName = `${Date.now()}-${data.documentTax}`
-        await saveFile("tax", uniqueFileName, data.taxFile)
-        updateData.documentTax = uniqueFileName
-      }
-      updateData.taxNotes = ""
-      if (currentShop.taxStatus === "rejected" || data.documentTax !== currentShop.taxStatus) {
-        updateData.taxStatus = data.taxStatus || "pending"
-        changedDocs.push("Tax Clearance")
-      }
-    }
 
-    // 4. Update the shop in the database
-    const shop = await db.shop.update({
-      where: { id: shopId },
-      data: updateData,
-    })
-
-    // 5. Check and delete old files if new ones are provided (Run AFTER DB update)
-    if (
-      data.documentDTI &&
-      currentShop.documentDTI &&
-      data.documentDTI !== currentShop.documentDTI
-    ) {
-      deleteOldFile("dti", currentShop.documentDTI)
-    }
-
-    if (
-      data.documentPermit &&
-      currentShop.documentPermit &&
-      data.documentPermit !== currentShop.documentPermit
-    ) {
-      deleteOldFile("permit", currentShop.documentPermit)
-    }
-
-    if (
-      data.documentTax &&
-      currentShop.documentTax &&
-      data.documentTax !== currentShop.documentTax
-    ) {
-      deleteOldFile("tax", currentShop.documentTax)
-    }
-
-    // 5. Notify Admins
-    if (changedDocs.length > 0) {
-      try {
-        const admins = await db.user.findMany({
-          where: { role: "ADMIN" },
+      // 4. Run database updates and notifications inside an atomic transaction
+      const updatedShop = await db.$transaction(async (tx) => {
+        const shop = await tx.shop.update({
+          where: { id: shopId },
+          data: updateData,
         })
 
-        if (admins.length > 0) {
-          await Promise.all(
-            admins.map((admin) =>
-              db.notification.create({
-                data: {
-                  userId: admin.id,
-                  title: "Document Resubmitted",
-                  message: `Shop "${currentShop.shopName}" has resubmitted their ${changedDocs.join(
-                    ", "
-                  )}.`,
-                  isRead: false,
-                },
-              })
+        // Create audit log entry for document changes
+        if (changedDocs.length > 0) {
+          await tx.shopAuditLog.create({
+            data: {
+              shopId: shopId,
+              action: "DOCUMENTS_RESUBMITTED",
+              details: `Documents resubmitted: ${changedDocs.join(", ")}`,
+              adminId: null, // Shop owner action
+            },
+          })
+        }
+
+        if (changedDocs.length > 0) {
+          const admins = await tx.user.findMany({
+            where: { role: "ADMIN" },
+          })
+
+          if (admins.length > 0) {
+            await Promise.all(
+              admins.map((admin) =>
+                tx.notification.create({
+                  data: {
+                    userId: admin.id,
+                    title: "Document Resubmitted",
+                    message: `Shop "${
+                      currentShop.shopName
+                    }" has resubmitted their ${changedDocs.join(", ")}.`,
+                    isRead: false,
+                  },
+                })
+              )
             )
+          }
+        }
+
+        return shop
+      })
+
+      // 5. Check and delete old files ONLY if the transaction succeeded
+      if (
+        data.documentDTI &&
+        currentShop.documentDTI &&
+        data.documentDTI !== currentShop.documentDTI
+      ) {
+        deleteOldFile("dti", currentShop.documentDTI)
+      }
+
+      if (
+        data.documentPermit &&
+        currentShop.documentPermit &&
+        data.documentPermit !== currentShop.documentPermit
+      ) {
+        deleteOldFile("permit", currentShop.documentPermit)
+      }
+
+      if (
+        data.documentTax &&
+        currentShop.documentTax &&
+        data.documentTax !== currentShop.documentTax
+      ) {
+        deleteOldFile("tax", currentShop.documentTax)
+      }
+
+      return updatedShop
+    } catch (error) {
+      // 6. Cleanup orphaned files if anything fails
+      for (const filePath of newlyUploadedFiles) {
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath)
+          }
+        } catch (cleanupError) {
+          console.error(
+            `Failed to cleanup orphaned file during updateShopDocument error: ${filePath}`,
+            cleanupError
           )
         }
-      } catch (error) {
-        console.error("Failed to notify admins:", error)
       }
-    }
 
-    return shop
+      // Re-throw the original error to be handled by the client
+      throw error
+    }
   }
 )

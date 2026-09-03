@@ -4,7 +4,7 @@ import db from "db"
 export default async function markAllNotificationsAsRead(_ = null, ctx: Ctx) {
   ctx.session.$authorize()
 
-  const notifications = await (db as any).notification.updateMany({
+  const notifications = await db.notification.updateMany({
     where: { userId: ctx.session.userId, isRead: false },
     data: { isRead: true },
   })

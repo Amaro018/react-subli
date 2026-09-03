@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import React, { useEffect, useRef, useState } from "react"
 import { LogoutButton } from "../(auth)/components/LogoutButton"
 import AccountCircle from "@mui/icons-material/AccountCircle"
@@ -82,17 +82,23 @@ export default function Navbar({ currentUser }: NavbarProps) {
     currentUser?.personalInfo?.firstName ||
     (typeof currentUser?.name === "string" ? currentUser.name.split(" ")[0] : "User")
 
-  let shopHref = "/renter/shop-register"
+  let shopHref = "/renter/my-shop"
   let shopLabel = "Create a Shop"
+  const isApprovedShop = currentUser?.shop?.status === "approved" || currentUser?.isShopMode
 
-  if (currentUser?.isShopRegistered) {
-    if (currentUser.shop?.status === "pending") {
-      shopHref = "/renter/shop-register/pending"
+  if (currentUser?.isShopRegistered && currentUser.shop) {
+    if (currentUser.shop.status === "banned") {
+      shopHref = "/renter/my-shop/suspended"
+      shopLabel = "Shop Suspended"
+    } else if (!isApprovedShop) {
+      shopHref = "/renter/my-shop/pending"
       shopLabel = "Shop Pending"
     } else {
-      shopHref = currentUser?.shop?.slug ? `/shop/${currentUser.shop.slug}` : "/shop"
+      shopHref = "/shop"
       shopLabel = "Switch to Shop"
     }
+  } else if (currentUser?.isShopRegistered) {
+    shopLabel = "Shop Pending"
   }
 
   const openNotification = Boolean(anchorEl)
@@ -200,7 +206,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
                     <div className="absolute right-0 z-50 mt-2 w-48 rounded-md bg-white text-gray-800 shadow-lg">
                       <div className="flex flex-col">
                         <Link
-                          href="/renter/renter-profile"
+                          href="/renter/my-profile"
                           className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => setAccountOpen(false)}
                         >
@@ -235,13 +241,16 @@ export default function Navbar({ currentUser }: NavbarProps) {
                           {shopLabel}
                         </Link>
 
-                        <div className="flex items-center px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer">
+                        <LogoutButton
+                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+                          onLogout={() => {
+                            setIsLoggingOut(true)
+                            setAccountOpen(false)
+                          }}
+                        >
                           <ExitToAppIcon className="mr-3 text-gray-500" fontSize="small" />
-                          <LogoutButton
-                            className="w-full text-left"
-                            onLogout={() => setIsLoggingOut(true)}
-                          />
-                        </div>
+                          <span>Logout</span>
+                        </LogoutButton>
                       </div>
                     </div>
                   )}
@@ -418,7 +427,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
               ) : (
                 <>
                   <Link
-                    href="/renter/renter-profile"
+                    href="/renter/my-profile"
                     className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
                     onClick={() => setUserOpen(false)}
                   >
@@ -453,16 +462,16 @@ export default function Navbar({ currentUser }: NavbarProps) {
                     {shopLabel}
                   </Link>
 
-                  <div
-                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors cursor-pointer"
-                    onClick={() => setUserOpen(false)}
+                  <LogoutButton
+                    className="w-full flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors cursor-pointer text-left"
+                    onLogout={() => {
+                      setIsLoggingOut(true)
+                      setUserOpen(false)
+                    }}
                   >
                     <ExitToAppIcon className="mr-3 text-gray-500" fontSize="small" />
-                    <LogoutButton
-                      className="w-full text-left"
-                      onLogout={() => setIsLoggingOut(true)}
-                    />
-                  </div>
+                    <span>Logout</span>
+                  </LogoutButton>
                 </>
               )}
             </div>

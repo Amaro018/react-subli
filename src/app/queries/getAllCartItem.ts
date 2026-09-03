@@ -30,6 +30,8 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx) => {
               },
             },
           },
+          rentItems: true,
+          damagePolicies: true,
         },
       },
     },

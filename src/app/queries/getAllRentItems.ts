@@ -1,12 +1,29 @@
 import { resolver } from "@blitzjs/rpc"
 import db from "db"
 
-export default async function getAllRentItems() {
+export default resolver.pipe(async () => {
+  // Automatically flag items as overdue if they pass their end date and haven't been returned
+  await db.rentItem.updateMany({
+    where: {
+      status: { in: ["rendering", "on_hand"] },
+      endDate: { lt: new Date() },
+    },
+    data: { status: "overdue" },
+  })
+
   const rentItems = await db.rentItem.findMany({
     include: {
       productVariant: {
         include: {
-          color: true,
+          attributes: {
+            include: {
+              attributeValue: {
+                include: {
+                  attribute: true,
+                },
+              },
+            },
+          },
           product: {
             include: {
               variants: true,
@@ -15,12 +32,11 @@ export default async function getAllRentItems() {
               shop: true,
             },
           },
+          damagePolicies: true,
         },
       },
     },
   })
 
-  if (!rentItems) throw new Error("ProductVariant not found")
-
   return rentItems
-}
+})

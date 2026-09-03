@@ -1,6 +1,6 @@
 import React, { memo } from "react"
 import { Box, Typography, Grid, IconButton, TextField, MenuItem, Button } from "@mui/material"
-import { CloudUpload, DeleteOutline } from "@mui/icons-material"
+import { CloudUpload, DeleteOutline, Star } from "@mui/icons-material"
 import Image from "next/image"
 
 export type FileWithPreview = {
@@ -16,6 +16,8 @@ interface ProductImageUploaderProps {
   onRemoveAllFiles: () => void
   onFileAttributeChange: (index: number, attributeValueId: number | null) => void
   selectableAttributeValues: { id: number; label: string }[]
+  thumbnailIndex: number | null
+  onSetThumbnail: (index: number) => void
 }
 
 const ProductImageUploader = memo(function ProductImageUploader({
@@ -25,6 +27,8 @@ const ProductImageUploader = memo(function ProductImageUploader({
   onRemoveAllFiles,
   onFileAttributeChange,
   selectableAttributeValues,
+  thumbnailIndex,
+  onSetThumbnail,
 }: ProductImageUploaderProps) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -98,10 +102,27 @@ const ProductImageUploader = memo(function ProductImageUploader({
                             src={fileObj.preview}
                             alt="preview"
                             fill
+                            sizes="(max-width: 600px) 50vw, (max-width: 900px) 33vw, 20vw"
                             unoptimized
                             className="absolute top-0 left-0 w-full h-full object-cover"
                           />
                         )}
+                        <IconButton
+                          size="small"
+                          onClick={() => onSetThumbnail(index)}
+                          sx={{
+                            position: "absolute",
+                            top: 4,
+                            left: 4,
+                            bgcolor: "rgba(255,255,255,0.9)",
+                            color: thumbnailIndex === index ? "#facc15" : "#9ca3af", // yellow-400 or gray-400
+                            "&:hover": { bgcolor: "white" },
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                          }}
+                          title="Set as thumbnail"
+                        >
+                          <Star fontSize="small" />
+                        </IconButton>
                         <IconButton
                           size="small"
                           color="error"
