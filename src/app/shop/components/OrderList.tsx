@@ -1,18 +1,11 @@
 "use client"
-import React, { useState, useEffect, useMemo, useCallback, memo } from "react"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getRentItemsByShop from "../../queries/getRentItemsByShop"
 import {
-  Chip,
-  Box,
-  FormControl,
   MenuItem,
-  Step,
-  StepLabel,
-  Stepper,
   TextField,
   Typography,
-  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -22,25 +15,18 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
-  FormLabel,
-  InputAdornment,
   Table,
   TableHead,
   TableRow,
   TableCell,
   TableBody,
-  Checkbox,
   Alert,
 } from "@mui/material"
 
-import Image from "next/image"
 import updateRentStatus from "../../mutations/updateRentStatus"
-import updateReturnStatus from "../../mutations/updateReturnStatus"
-
 import getCurrentUser from "./../../users/queries/getCurrentUser"
 import { toast } from "@/src/app/utils/toast"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { calculateCurrentValue } from "./utils"
 import RentItemRow, { RentItemData } from "./RentItemRow"
 import ReturnItemsModal from "./ReturnItemsModal"
 import PaymentModal from "./PaymentModal"
@@ -97,43 +83,43 @@ type Charge = {
   quantity: number
 }
 
-// Advanced Resolution Policy Configuration
 export const POLICY_CONFIG = {
-  GROSS_NEGLIGENCE_PENALTY_RATE: 0.2, // 20%
-  LOSS_OF_USE_DAYS: 3, // 3 Days Rent
-  SALVAGE_CREDIT_RATE: 0.15, // 15%
-  UNECONOMICAL_REPAIR_THRESHOLD: 0.7, // 70%
+  GROSS_NEGLIGENCE_PENALTY_RATE: 0.2,
+  LOSS_OF_USE_DAYS: 3,
+  SALVAGE_CREDIT_RATE: 0.15,
+  UNECONOMICAL_REPAIR_THRESHOLD: 0.7,
 }
 
 export const OrderList = () => {
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [confirmMessage, setConfirmMessage] = useState("")
-  const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
-
-  const handleConfirmClose = () => {
-    setConfirmOpen(false)
-  }
-
-  const handleConfirmAccept = async () => {
-    if (confirmAction) {
-      await confirmAction()
-    }
-    setConfirmOpen(false)
-  }
-
-  // RETURN
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const highlightId = searchParams?.get("highlight")
-  const [selectedItem, setSelectedItem] = useState<ExtendedRentItem | null>(null)
 
-  const [loadingAction, setLoadingAction] = useState<null | "accept" | "cancel" | "on_hand">(null)
+  // Global Dialog & Confirmation States
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmMessage, setConfirmMessage] = useState("")
+  const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
 
+  // Handover Confirmation Modal State
+  const [handoverConfirmOpen, setHandoverConfirmOpen] = useState(false)
+
+  // Cancellation State
+  const [cancelOpen, setCancelOpen] = useState(false)
   const [selectedReason, setSelectedReason] = useState("")
   const [customReason, setCustomReason] = useState("")
-  const [cancelOpen, setCancelOpen] = useState(false)
   const [renterId, setRenterId] = useState(0)
+
+  // Inspection, Payment & Details Dialog States
+  const [openComplete, setOpenComplete] = useState(false)
+  const [openReturnRepairReplacement, setOpenReturnRepairReplacement] = useState(false)
+  const [openViewReturnedItems, setOpenViewReturnedItems] = useState(false)
+
+  const [selectedItem, setSelectedItem] = useState<ExtendedRentItem | null>(null)
+  const [loadingAction, setLoadingAction] = useState<
+    null | "accept" | "cancel" | "on_hand" | "payment"
+  >(null)
+  const [statusFilter, setStatusFilter] = useState(searchParams?.get("status") || "ACTIVE")
 
   const reasons = [
     "No stock available – The product is not available at the moment.",
@@ -148,42 +134,10 @@ export const OrderList = () => {
     "Other",
   ]
 
-  const handleConfirm = async () => {
-    const noteMessage = selectedReason === "Other" ? customReason : selectedReason
-    if (!noteMessage) return // Prevent confirm without reason
-
-    console.log(noteMessage)
-
-    try {
-      setLoadingAction("cancel")
-      await updateRentStatusMutation({
-        rentItemId: renterId,
-        action: "cancel",
-        noteMessage: noteMessage,
-      })
-      setCancelOpen(false)
-      await refetch()
-      toast.success("Rental canceled successfully.")
-    } catch (error: unknown) {
-      const err = error as { message?: string }
-      console.error("Failed to update rent status:", err)
-      toast.error(err.message || "Failed to cancel rental.")
-    } finally {
-      setLoadingAction(null)
-    }
-  }
-  // onConfirm(note);
-  // setSelectedReason("");
-  // setCustomReason("");
-
-  const cancelClose = () => {
-    setCancelOpen(false)
-  }
-
+  // Queries & Mutations
   const [currentUser] = useQuery(getCurrentUser, null)
   const shopId = currentUser?.shop?.id
 
-  // Only fetch rent items if shopId exists
   const [rentItems = [], { refetch }] = useQuery(
     getRentItemsByShop,
     shopId ? { shopId } : { shopId: 0 },
@@ -191,8 +145,6 @@ export const OrderList = () => {
   )
 
   const [updateRentStatusMutation] = useMutation(updateRentStatus)
-  const [openComplete, setOpenComplete] = useState(false)
-  const [statusFilter, setStatusFilter] = useState(searchParams?.get("status") || "ACTIVE")
 
   useEffect(() => {
     const status = searchParams?.get("status")
@@ -234,10 +186,12 @@ export const OrderList = () => {
         )
         if (isCompleted) return false
         const endDate = new Date(item.endDate)
+
         const isDueToday =
           endDate.getDate() === today.getDate() &&
           endDate.getMonth() === today.getMonth() &&
           endDate.getFullYear() === today.getFullYear()
+
         return today > endDate && !isDueToday
       })
     }
@@ -266,17 +220,14 @@ export const OrderList = () => {
       )
       const endDate = new Date(item.endDate)
 
-      // Standard status counts (grouping returned_damaged into returned)
       if (item.status === "returned_damaged") {
         counts.returned++
       } else if (counts[item.status] !== undefined) {
         counts[item.status]++
       }
 
-      // ACTIVE count (All except completed and canceled)
       if (!["completed", "canceled"].includes(item.status)) counts.ACTIVE++
 
-      // Dynamic date-based counts
       const isDueToday =
         !isFinal &&
         endDate.getDate() === today.getDate() &&
@@ -324,81 +275,25 @@ export const OrderList = () => {
     }
   }, [highlightId, filteredRentItems, pathname, router, searchParams])
 
-  const handleOpenComplete = useCallback((rentItem: RentItemData) => {
-    setOpenComplete(true)
-    setSelectedItem(rentItem as ExtendedRentItem)
-  }, [])
+  const handleConfirmClose = () => setConfirmOpen(false)
 
-  const handleCloseComplete = () => {
-    setOpenComplete(false)
+  const handleConfirmAccept = async () => {
+    if (confirmAction) {
+      await confirmAction()
+    }
+    setConfirmOpen(false)
   }
 
-  const [openReturnRepairReplacement, setOpenReturnRepairReplacement] = useState(false)
-  const [openViewReturnedItems, setOpenViewReturnedItems] = useState(false)
-
-  const handleHandItems = useCallback(
-    async (rentItem: RentItemData) => {
-      if (!rentItem) return
-
-      if (rentItem.status !== "accepted") {
-        toast.error("Item must be in 'Accepted' status before it can be handed over.")
-        return
-      }
-
-      setConfirmMessage("Confirm that you have handed the item to the renter?")
-      setConfirmAction(() => async () => {
-        try {
-          setLoadingAction("on_hand")
-          await updateRentStatusMutation({
-            rentItemId: rentItem.id,
-            action: "on_hand",
-            noteMessage: "Item handed over to renter.",
-          })
-          toast.success("Item status updated to 'On Hand'.")
-          await refetch()
-        } catch (error: unknown) {
-          const err = error as { message?: string }
-          console.error("Failed to update rent status:", err)
-          toast.error("Failed to update item status.")
-        } finally {
-          setLoadingAction(null)
-        }
-      })
-      setConfirmOpen(true)
-    },
-    [updateRentStatusMutation, refetch]
-  )
-
-  const handleCloseViewReturnedItems = () => {
-    setOpenViewReturnedItems(false)
+  const handleFilterChange = (newStatus: string) => {
+    setStatusFilter(newStatus)
+    const params = new URLSearchParams(searchParams?.toString())
+    params.set("status", newStatus)
+    router.push(`${pathname}?${params.toString()}` as any, { scroll: false })
   }
-
-  const handleCloseReturnRepairReplacement = () => {
-    setOpenReturnRepairReplacement(false)
-  }
-
-  const handleReturnAction = useCallback(
-    (rentItem: RentItemData, action: "view" | "return" | "handover") => {
-      setSelectedItem(rentItem as ExtendedRentItem)
-      switch (action) {
-        case "view":
-          setOpenViewReturnedItems(true)
-          break
-        case "return":
-          setOpenReturnRepairReplacement(true)
-          break
-        case "handover":
-          handleHandItems(rentItem)
-          break
-      }
-    },
-    [handleHandItems]
-  )
 
   const handleAction = useCallback(
     async (rentItem: RentItemData, action: "accept" | "cancel") => {
       if (action === "cancel") {
-        // Open modal first, don't call mutation yet
         setCancelOpen(true)
         setRenterId(rentItem.id)
         return
@@ -430,13 +325,79 @@ export const OrderList = () => {
     [updateRentStatusMutation, refetch]
   )
 
-  const handleFilterChange = (newStatus: string) => {
-    setStatusFilter(newStatus)
-    const params = new URLSearchParams(searchParams?.toString())
-    params.set("status", newStatus)
-    // Use router to update URL so the state remains consistent on refresh
-    router.push(`${pathname}?${params.toString()}` as any, { scroll: false })
+  const handleConfirmCancel = async () => {
+    const noteMessage = selectedReason === "Other" ? customReason : selectedReason
+    if (!noteMessage) return
+
+    try {
+      setLoadingAction("cancel")
+      await updateRentStatusMutation({
+        rentItemId: renterId,
+        action: "cancel",
+        noteMessage: noteMessage,
+      })
+      setCancelOpen(false)
+      setSelectedReason("")
+      setCustomReason("")
+      await refetch()
+      toast.success("Rental canceled successfully.")
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      console.error("Failed to update rent status:", err)
+      toast.error(err.message || "Failed to cancel rental.")
+    } finally {
+      setLoadingAction(null)
+    }
   }
+
+  // Opens PaymentModal first so the shop can record initial/full payment before handover
+  const handleHandover = useCallback((rentItem: RentItemData) => {
+    if (rentItem.status !== "accepted") {
+      toast.error("Item must be in 'Accepted' status before it can be handed over.")
+      return
+    }
+    setSelectedItem(rentItem as ExtendedRentItem)
+    setOpenComplete(true)
+  }, [])
+
+  // Executes status update to "On Hand" after payment is managed
+  const handleConfirmHandover = async () => {
+    if (!selectedItem) return
+
+    try {
+      setLoadingAction("on_hand")
+      await updateRentStatusMutation({
+        rentItemId: selectedItem.id,
+        action: "on_hand",
+        noteMessage: "Item handed over to renter.",
+      })
+
+      toast.success("Item handed over successfully and set to On Hand!")
+      setHandoverConfirmOpen(false)
+      await refetch()
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      console.error("Failed to complete handover:", err)
+      toast.error(err.message || "Failed to process handover.")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const handleInspectReturn = useCallback((rentItem: RentItemData) => {
+    setSelectedItem(rentItem as ExtendedRentItem)
+    setOpenReturnRepairReplacement(true)
+  }, [])
+
+  const handleViewReturnDetails = useCallback((rentItem: RentItemData) => {
+    setSelectedItem(rentItem as ExtendedRentItem)
+    setOpenViewReturnedItems(true)
+  }, [])
+
+  const handleOpenPayments = useCallback((rentItem: RentItemData) => {
+    setSelectedItem(rentItem as ExtendedRentItem)
+    setOpenComplete(true)
+  }, [])
 
   return (
     <>
@@ -484,7 +445,7 @@ export const OrderList = () => {
           </div>
         </div>
 
-        {/* Orders */}
+        {/* Orders List */}
         {filteredRentItems.length === 0 ? (
           <div className="flex flex-col justify-center items-center w-full py-24 bg-white rounded-2xl shadow-sm border border-gray-100 px-4 h-full min-h-[400px]">
             <Typography variant="h6" fontWeight="bold" className="text-gray-900 mb-2">
@@ -501,10 +462,12 @@ export const OrderList = () => {
                 <RentItemRow
                   key={rentItem.id}
                   rentItem={rentItem}
-                  loadingAction={loadingAction}
+                  loadingAction={loadingAction as "accept" | "cancel" | "on_hand" | null}
                   handleAction={handleAction}
-                  handleOpenPayments={handleOpenComplete}
-                  handleReturnAction={handleReturnAction}
+                  handleHandover={handleHandover}
+                  handleInspectReturn={handleInspectReturn}
+                  handleViewReturnDetails={handleViewReturnDetails}
+                  handleOpenPayments={handleOpenPayments}
                   isHighlighted={rentItem.id === Number(highlightId)}
                 />
               ))}
@@ -513,8 +476,38 @@ export const OrderList = () => {
         )}
       </div>
 
-      {/* reason */}
-      <Dialog open={cancelOpen} onClose={cancelClose} fullWidth>
+      {/* Handover Confirmation Dialog */}
+      <Dialog
+        open={handoverConfirmOpen}
+        onClose={() => setHandoverConfirmOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle className="font-bold">Confirm Handover</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Payment recorded successfully! Would you like to set{" "}
+            <strong>{selectedItem?.productVariant.product.name}</strong> status to{" "}
+            <strong>On Hand</strong> now?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions className="p-4">
+          <Button onClick={() => setHandoverConfirmOpen(false)} color="inherit">
+            Not Yet
+          </Button>
+          <Button
+            onClick={handleConfirmHandover}
+            color="success"
+            variant="contained"
+            disabled={loadingAction === "on_hand"}
+          >
+            {loadingAction === "on_hand" ? "Updating..." : "Hand Over Item"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Cancellation Dialog */}
+      <Dialog open={cancelOpen} onClose={() => setCancelOpen(false)} fullWidth>
         <DialogTitle>Cancel Rental</DialogTitle>
         <DialogContent className="scrollbar-seamless">
           <RadioGroup value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)}>
@@ -535,11 +528,11 @@ export const OrderList = () => {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={cancelClose} color="inherit">
+          <Button onClick={() => setCancelOpen(false)} color="inherit">
             Cancel
           </Button>
           <Button
-            onClick={handleConfirm}
+            onClick={handleConfirmCancel}
             color="error"
             variant="contained"
             disabled={!selectedReason || (selectedReason === "Other" && !customReason)}
@@ -549,13 +542,14 @@ export const OrderList = () => {
         </DialogActions>
       </Dialog>
 
+      {/* View Assessment Dialog */}
       <Dialog
         open={openViewReturnedItems}
-        onClose={handleCloseViewReturnedItems}
+        onClose={() => setOpenViewReturnedItems(false)}
         fullWidth
         maxWidth="md"
       >
-        <DialogTitle>Returned Items</DialogTitle>
+        <DialogTitle>Returned Items Assessment</DialogTitle>
         <DialogContent dividers className="scrollbar-seamless">
           <Table>
             <TableHead>
@@ -612,32 +606,39 @@ export const OrderList = () => {
           </Table>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseViewReturnedItems} variant="contained">
+          <Button onClick={() => setOpenViewReturnedItems(false)} variant="contained">
             Close
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* return items */}
+      {/* Return Assessment Modal */}
       {selectedItem && (
         <ReturnItemsModal
           open={openReturnRepairReplacement}
-          onClose={handleCloseReturnRepairReplacement}
+          onClose={() => setOpenReturnRepairReplacement(false)}
           selectedItem={selectedItem}
           refetch={refetch}
         />
       )}
 
-      {/* payments */}
+      {/* Payment Processing Modal */}
       {selectedItem && (
         <PaymentModal
           open={openComplete}
-          onClose={handleCloseComplete}
+          onClose={() => {
+            setOpenComplete(false)
+            // If item was in "accepted" status, prompt to hand over right after closing payment modal
+            if (selectedItem?.status === "accepted") {
+              setHandoverConfirmOpen(true)
+            }
+          }}
           selectedItem={selectedItem}
           refetch={refetch}
         />
       )}
 
+      {/* Generic Action Dialog */}
       <Dialog open={confirmOpen} onClose={handleConfirmClose}>
         <DialogTitle>Confirm Action</DialogTitle>
         <DialogContent>

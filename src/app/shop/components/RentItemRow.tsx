@@ -14,6 +14,7 @@ type Payment = {
   date?: Date | string
   note?: string | null
 }
+
 type Charge = {
   id: number
   type: "damaged" | "late"
@@ -59,8 +60,10 @@ export interface RentItemRowProps {
   rentItem: RentItemData
   loadingAction: "accept" | "cancel" | "on_hand" | null
   handleAction: (rentItem: RentItemData, action: "accept" | "cancel") => void
+  handleHandover: (rentItem: RentItemData) => void
+  handleInspectReturn: (rentItem: RentItemData) => void
+  handleViewReturnDetails: (rentItem: RentItemData) => void
   handleOpenPayments: (rentItem: RentItemData) => void
-  handleReturnAction: (rentItem: RentItemData, action: "view" | "return" | "handover") => void
   isHighlighted?: boolean
 }
 
@@ -68,15 +71,14 @@ const RentItemRow = memo(function RentItemRow({
   rentItem,
   loadingAction,
   handleAction,
+  handleHandover,
+  handleInspectReturn,
+  handleViewReturnDetails,
   handleOpenPayments,
-  handleReturnAction,
   isHighlighted,
 }: RentItemRowProps) {
   const isReturned = ["returned", "returned_damaged", "completed"].includes(rentItem.status)
   const isHandedOver = ["on_hand", "rendering", "overdue"].includes(rentItem.status)
-
-  // Determine if the specific "Handover" action should be disabled
-  const isHandoverDisabled = !isReturned && !isHandedOver && rentItem.status !== "accepted"
 
   const canShowActions = [
     "accepted",
@@ -100,6 +102,7 @@ const RentItemRow = memo(function RentItemRow({
 
   const { baseRent, totalCharges, totalPenalty, totalPaid, grandTotal, remainingBalance } =
     calculateRentTotals(rentItem)
+
   return (
     <div
       id={`order-row-${rentItem.id}`}
@@ -220,7 +223,7 @@ const RentItemRow = memo(function RentItemRow({
         <p className="italic text-gray-600">Delivery: {rentItem.deliveryMethod}</p>
       </div>
 
-      {/* Status + Stepper (occupies 3 columns) */}
+      {/* Status + Stepper */}
       <div className="flex flex-col items-start space-y-3 lg:col-span-3">
         <Stepper
           activeStep={
@@ -284,7 +287,7 @@ const RentItemRow = memo(function RentItemRow({
           </Step>
         </Stepper>
 
-        {/* Current Status */}
+        {/* Current Status Badge */}
         <p
           className={`uppercase px-3 py-1 text-xs rounded font-semibold ${
             rentItem.status === "completed"
@@ -301,7 +304,7 @@ const RentItemRow = memo(function RentItemRow({
           {rentItem.status}
         </p>
 
-        {/* Buttons */}
+        {/* Pending Actions */}
         {rentItem.status === "pending" && (
           <div className="flex gap-2">
             <button
@@ -329,40 +332,67 @@ const RentItemRow = memo(function RentItemRow({
           </div>
         )}
 
+        {/* Guided Actions */}
         {canShowActions && (
-          <div className="space-y-2 space-x-2">
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-              onClick={() => handleOpenPayments(rentItem)}
-            >
-              Payments
-            </button>
-            <button
-              className="px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700 min-w-[120px] inline-flex items-center justify-center"
-              onClick={() =>
-                handleReturnAction(
-                  rentItem,
-                  isReturned ? "view" : isHandedOver ? "return" : "handover"
-                )
-              }
-              disabled={loadingAction === "on_hand" || isHandoverDisabled}
-              style={{
-                opacity: isHandoverDisabled ? 0.6 : 1,
-                cursor: isHandoverDisabled ? "not-allowed" : "pointer",
-              }}
-            >
-              {loadingAction === "on_hand" ? (
-                <CircularProgress size={20} sx={{ color: "white" }} />
-              ) : isReturned ? (
-                "View Returned Items"
-              ) : isHandedOver ? (
-                "Return Items"
-              ) : (
-                "Hand Items"
-              )}
-            </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-2 w-full">
+            {/* Primary Action: Step 1 (Accepted -> Hand Over) */}
+            {rentItem.status === "accepted" && (
+              <button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-all min-w-[130px] inline-flex items-center justify-center text-sm"
+                onClick={() => handleHandover(rentItem)}
+                disabled={loadingAction === "on_hand"}
+              >
+                {loadingAction === "on_hand" ? (
+                  <CircularProgress size={20} sx={{ color: "white" }} />
+                ) : (
+                  "Hand Over Item"
+                )}
+              </button>
+            )}
+
+            {/* Primary Action: Step 2 (On Hand -> Return Inspection) */}
+            {isHandedOver && (
+              <button
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-all min-w-[130px] inline-flex items-center justify-center text-sm"
+                onClick={() => handleInspectReturn(rentItem)}
+              >
+                Process Return
+              </button>
+            )}
+
+            {/* Primary Action: Step 3 (Returned -> Payment / Summary) */}
+            {isReturned && (
+              <>
+                {remainingBalance > 0 ? (
+                  <button
+                    className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-all text-sm"
+                    onClick={() => handleOpenPayments(rentItem)}
+                  >
+                    Settle ₱{remainingBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </button>
+                ) : (
+                  <button
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-all text-sm"
+                    onClick={() => handleViewReturnDetails(rentItem)}
+                  >
+                    View Return Summary
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Auxiliary Action: Payments Log */}
+            {rentItem.status !== "completed" && !(isReturned && remainingBalance > 0) && (
+              <button
+                className="border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-3 py-2 rounded-lg text-sm transition-all"
+                onClick={() => handleOpenPayments(rentItem)}
+              >
+                Payment History
+              </button>
+            )}
           </div>
         )}
+
         {rentItem.status === "canceled" && (
           <p className="text-red-500 font-medium">This order was canceled</p>
         )}
