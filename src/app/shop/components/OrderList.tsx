@@ -21,6 +21,7 @@ import {
   TableCell,
   TableBody,
   Alert,
+  Chip,
 } from "@mui/material"
 
 import updateRentStatus from "../../mutations/updateRentStatus"
@@ -55,6 +56,8 @@ type Payment = {
 }
 
 type ExtendedRentItem = RentItemData & {
+  referenceNumber?: string
+  orderNumber?: string
   charges?: Charge[]
   payments?: Payment[]
   productVariant: RentItemData["productVariant"] & {
@@ -241,40 +244,6 @@ export const OrderList = () => {
     return counts
   }, [rentItems])
 
-  useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout
-    let clearUrlTimeout: NodeJS.Timeout
-
-    if (highlightId && filteredRentItems.length > 0) {
-      const targetId = Number(highlightId)
-      const exists = filteredRentItems.some((item) => item.id === targetId)
-
-      if (exists) {
-        scrollTimeout = setTimeout(() => {
-          const el = document.getElementById(`order-row-${targetId}`)
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" })
-            clearUrlTimeout = setTimeout(() => {
-              const params = new URLSearchParams(searchParams.toString())
-              if (params.has("highlight")) {
-                params.delete("highlight")
-                router.replace(
-                  `${pathname}${params.toString() ? `?${params.toString()}` : ""}` as any,
-                  { scroll: false }
-                )
-              }
-            }, 2000)
-          }
-        }, 100)
-      }
-    }
-
-    return () => {
-      if (scrollTimeout) clearTimeout(scrollTimeout)
-      if (clearUrlTimeout) clearTimeout(clearUrlTimeout)
-    }
-  }, [highlightId, filteredRentItems, pathname, router, searchParams])
-
   const handleConfirmClose = () => setConfirmOpen(false)
 
   const handleConfirmAccept = async () => {
@@ -299,8 +268,9 @@ export const OrderList = () => {
         return
       }
 
+      const refNo = (rentItem as ExtendedRentItem).referenceNumber || `ORD-${rentItem.id}`
       setConfirmMessage(
-        `Are you sure you want to accept this rental request for "${rentItem.productVariant.product.name}"?`
+        `Are you sure you want to accept order #${refNo} for "${rentItem.productVariant.product.name}"?`
       )
       setConfirmAction(() => async () => {
         try {
@@ -350,7 +320,6 @@ export const OrderList = () => {
     }
   }
 
-  // Opens PaymentModal first so the shop can record initial/full payment before handover
   const handleHandover = useCallback((rentItem: RentItemData) => {
     if (rentItem.status !== "accepted") {
       toast.error("Item must be in 'Accepted' status before it can be handed over.")
@@ -360,7 +329,6 @@ export const OrderList = () => {
     setOpenComplete(true)
   }, [])
 
-  // Executes status update to "On Hand" after payment is managed
   const handleConfirmHandover = async () => {
     if (!selectedItem) return
 
@@ -398,6 +366,11 @@ export const OrderList = () => {
     setSelectedItem(rentItem as ExtendedRentItem)
     setOpenComplete(true)
   }, [])
+
+  // Helper function to format Order Reference Code
+  const getOrderRef = (item: ExtendedRentItem) => {
+    return item.referenceNumber || item.orderNumber || `ORD-${String(item.id).padStart(5, "0")}`
+  }
 
   return (
     <>
@@ -459,17 +432,38 @@ export const OrderList = () => {
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="flex flex-col divide-y divide-gray-100 px-4 sm:px-6">
               {filteredRentItems.map((rentItem) => (
-                <RentItemRow
-                  key={rentItem.id}
-                  rentItem={rentItem}
-                  loadingAction={loadingAction as "accept" | "cancel" | "on_hand" | null}
-                  handleAction={handleAction}
-                  handleHandover={handleHandover}
-                  handleInspectReturn={handleInspectReturn}
-                  handleViewReturnDetails={handleViewReturnDetails}
-                  handleOpenPayments={handleOpenPayments}
-                  isHighlighted={rentItem.id === Number(highlightId)}
-                />
+                <div key={rentItem.id} id={`order-row-${rentItem.id}`} className="py-4">
+                  {/* Order Reference Header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Typography
+                        variant="caption"
+                        className="font-semibold text-gray-400 uppercase tracking-wider"
+                      >
+                        Ref No:
+                      </Typography>
+                      <Chip
+                        label={`#${getOrderRef(rentItem)}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        className="font-mono font-bold text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Render row details */}
+                  <RentItemRow
+                    rentItem={rentItem}
+                    loadingAction={loadingAction as "accept" | "cancel" | "on_hand" | null}
+                    handleAction={handleAction}
+                    handleHandover={handleHandover}
+                    handleInspectReturn={handleInspectReturn}
+                    handleViewReturnDetails={handleViewReturnDetails}
+                    handleOpenPayments={handleOpenPayments}
+                    isHighlighted={rentItem.id === Number(highlightId)}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -486,7 +480,8 @@ export const OrderList = () => {
         <DialogTitle className="font-bold">Confirm Handover</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Payment recorded successfully! Would you like to set{" "}
+            Payment recorded for order{" "}
+            <strong>#{selectedItem ? getOrderRef(selectedItem) : ""}</strong>! Would you like to set{" "}
             <strong>{selectedItem?.productVariant.product.name}</strong> status to{" "}
             <strong>On Hand</strong> now?
           </DialogContentText>
@@ -549,7 +544,9 @@ export const OrderList = () => {
         fullWidth
         maxWidth="md"
       >
-        <DialogTitle>Returned Items Assessment</DialogTitle>
+        <DialogTitle>
+          Returned Assessment - #{selectedItem ? getOrderRef(selectedItem) : ""}
+        </DialogTitle>
         <DialogContent dividers className="scrollbar-seamless">
           <Table>
             <TableHead>
@@ -628,7 +625,6 @@ export const OrderList = () => {
           open={openComplete}
           onClose={() => {
             setOpenComplete(false)
-            // If item was in "accepted" status, prompt to hand over right after closing payment modal
             if (selectedItem?.status === "accepted") {
               setHandoverConfirmOpen(true)
             }
