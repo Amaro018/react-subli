@@ -11,9 +11,14 @@ import {
   Alert,
   TextField,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material"
-import { useQuery } from "@blitzjs/rpc"
+import { useQuery, useMutation } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
+import cancelRentItem from "../../mutations/cancelRentItem" // Ensure path matches your mutation file location
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
@@ -26,6 +31,16 @@ export const RentList = (props: any) => {
   const pathname = usePathname()
   const currentStatus = searchParams.get("status") || "all"
   const sortBy = searchParams.get("sortBy") || "urgency"
+
+  // Cancel Action State
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
+  const [isCanceling, setIsCanceling] = useState(false)
+
+  const ON_HAND_STATUSES = ["delivered", "picked_up", "in_use"]
+
+  const [cancelRentItemMutation] = useMutation(cancelRentItem)
+  const [userRents, { refetch }] = useQuery(getAllRentOfUser, { id: userId })
 
   const calculateItemFinancials = (item: any) => {
     const startDate = new Date(item.startDate)
@@ -65,9 +80,7 @@ export const RentList = (props: any) => {
     }
   }
 
-  const [userRents] = useQuery(getAllRentOfUser, { id: userId })
-
-  const [currentPage, setCurrentPage] = useState(1) // Current page
+  const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 3
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
@@ -78,7 +91,7 @@ export const RentList = (props: any) => {
       params.set("status", newValue)
     }
     router.replace(`${pathname}?${params.toString()}` as any)
-    setCurrentPage(1) // Reset to first page on tab change
+    setCurrentPage(1)
   }
 
   const handleSortChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,7 +101,30 @@ export const RentList = (props: any) => {
     setCurrentPage(1)
   }
 
-  // Helper to standardise Reference Numbers as in OrderList
+  const handleOpenCancelModal = (itemId: number) => {
+    setSelectedItemId(itemId)
+    setCancelModalOpen(true)
+  }
+
+  const handleCloseCancelModal = () => {
+    setSelectedItemId(null)
+    setCancelModalOpen(false)
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!selectedItemId) return
+    try {
+      setIsCanceling(true)
+      await cancelRentItemMutation({ itemId: selectedItemId })
+      await refetch()
+      handleCloseCancelModal()
+    } catch (error) {
+      console.error("Failed to cancel rental request:", error)
+    } finally {
+      setIsCanceling(false)
+    }
+  }
+
   const getOrderRef = (rent: any) => {
     return rent.referenceNumber || rent.orderNumber || `ORD-${String(rent.id).padStart(5, "0")}`
   }
@@ -97,9 +133,14 @@ export const RentList = (props: any) => {
     return <CircularProgress />
   }
 
+  // Counter logic
+  const pendingCount = userRents.filter((rent: any) => {
+    return rent.items.some((item: any) => item.status === "pending")
+  }).length
+
   const toPayCount = userRents.filter((rent: any) => {
     return rent.items.some((item: any) => {
-      if (["completed", "canceled"].includes(item.status)) return false
+      if (["pending", "completed", "canceled"].includes(item.status)) return false
       const { balance } = calculateItemFinancials(item)
       return balance > 0
     })
@@ -107,18 +148,18 @@ export const RentList = (props: any) => {
 
   const toDeliverCount = userRents.filter((rent: any) => {
     return rent.items.some(
-      (item: any) =>
-        item.deliveryMethod === "deliver" &&
-        !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+      (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
     )
   }).length
 
   const toPickupCount = userRents.filter((rent: any) => {
     return rent.items.some(
-      (item: any) =>
-        item.deliveryMethod === "pickup" &&
-        !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+      (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
     )
+  }).length
+
+  const toReturnCount = userRents.filter((rent: any) => {
+    return rent.items.some((item: any) => ON_HAND_STATUSES.includes(item.status))
   }).length
 
   const dueTodayCount = userRents.filter((rent: any) => {
@@ -135,11 +176,14 @@ export const RentList = (props: any) => {
     })
   }).length
 
-  // Filter rents by status
+  // Main filter switch
   const baseFilteredRents =
     currentStatus === "all"
       ? userRents
       : userRents.filter((rent: any) => {
+          if (currentStatus === "pending") {
+            return rent.items.some((item: any) => item.status === "pending")
+          }
           if (currentStatus === "completed") {
             return (
               rent.items.length > 0 &&
@@ -150,28 +194,28 @@ export const RentList = (props: any) => {
           }
           if (currentStatus === "to-pay") {
             return rent.items.some((item: any) => {
-              if (["completed", "canceled"].includes(item.status)) return false
+              if (["pending", "completed", "canceled"].includes(item.status)) return false
               const { balance } = calculateItemFinancials(item)
               return balance > 0
             })
           }
-          if (currentStatus === "to-deliver")
+          if (currentStatus === "to-deliver") {
             return rent.items.some(
-              (item: any) =>
-                item.deliveryMethod === "deliver" &&
-                !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+              (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
             )
-          if (currentStatus === "to-pickup")
+          }
+          if (currentStatus === "to-pickup") {
             return rent.items.some(
-              (item: any) =>
-                item.deliveryMethod === "pickup" &&
-                !["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
+              (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
             )
+          }
+          if (currentStatus === "to-return") {
+            return rent.items.some((item: any) => ON_HAND_STATUSES.includes(item.status))
+          }
 
           return rent.items.some((item: any) => item.status === currentStatus)
         })
 
-  // Sort by priority (Overdue > Due Today > Others)
   const filteredRents = [...baseFilteredRents].sort((a: any, b: any) => {
     if (sortBy === "newest") {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -201,7 +245,6 @@ export const RentList = (props: any) => {
     return getPriority(b) - getPriority(a)
   })
 
-  // Paginate rents
   const totalPages = Math.ceil(filteredRents.length / itemsPerPage)
   const paginatedRents = filteredRents.slice(
     (currentPage - 1) * itemsPerPage,
@@ -210,14 +253,18 @@ export const RentList = (props: any) => {
 
   const getEmptyMessage = () => {
     switch (currentStatus) {
+      case "pending":
+        return "No pending rental requests awaiting approval"
       case "completed":
         return "No completed rentals found"
       case "to-pay":
-        return "No unpaid rentals found"
+        return "No accepted rentals with pending balance found"
       case "to-deliver":
-        return "No rentals to be delivered found"
+        return "No rentals awaiting delivery"
       case "to-pickup":
-        return "No rentals to pickup found"
+        return "No rentals ready for pickup"
+      case "to-return":
+        return "No rentals currently on hand to return"
       default:
         return "No rentals found"
     }
@@ -225,20 +272,28 @@ export const RentList = (props: any) => {
 
   return (
     <div className="w-full">
-      {dueTodayCount > 0 && (
-        <Alert severity="warning" className="mb-4 rounded-xl shadow-sm border border-orange-200">
-          You have <strong>{dueTodayCount}</strong> {dueTodayCount > 1 ? "orders" : "order"} due for
-          return today!
-        </Alert>
-      )}
+      {/* Header Container */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+        <div className="flex-1 w-full flex flex-col gap-2">
+          {pendingCount > 0 && (
+            <Alert
+              severity="info"
+              className="rounded-xl shadow-sm border border-amber-300 bg-amber-50 text-amber-900"
+            >
+              You have <strong>{pendingCount}</strong> {pendingCount > 1 ? "rentals" : "rental"}{" "}
+              pending approval from the shop.
+            </Alert>
+          )}
 
-      {/* Header with Title and Sort */}
-      <div className="flex flex-col sm:flex-row justify-between items-center w-full p-4 mb-6 bg-white rounded-xl shadow-sm border border-gray-200">
-        <div>
-          <p className="text-2xl font-bold text-gray-800">My Rentals</p>
-          <p className="text-sm text-gray-500 mt-1">Track and manage your rental items</p>
+          {dueTodayCount > 0 && (
+            <Alert severity="warning" className="rounded-xl shadow-sm border border-orange-200">
+              You have <strong>{dueTodayCount}</strong> {dueTodayCount > 1 ? "orders" : "order"} due
+              for return today!
+            </Alert>
+          )}
         </div>
-        <div className="flex items-center gap-4 mt-4 sm:mt-0">
+
+        <div className="min-w-[160px] self-end md:self-center">
           <TextField
             select
             label="Sort By"
@@ -247,7 +302,7 @@ export const RentList = (props: any) => {
             onChange={handleSortChange}
             sx={{
               minWidth: 160,
-              "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+              "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#fff" },
             }}
           >
             <MenuItem value="urgency">Urgency (Due Soon)</MenuItem>
@@ -256,42 +311,67 @@ export const RentList = (props: any) => {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-        <Tabs
-          value={currentStatus}
-          onChange={handleTabChange}
-          aria-label="rent status tabs"
-          variant="fullWidth"
-        >
-          <Tab label="All Rentals" value="all" />
-          <Tab
-            label={
-              <Badge badgeContent={toPayCount} color="error">
-                To Pay
-              </Badge>
-            }
-            value="to-pay"
-          />
-          <Tab
-            label={
-              <Badge badgeContent={toDeliverCount} color="error">
-                To Deliver
-              </Badge>
-            }
-            value="to-deliver"
-          />
-          <Tab
-            label={
-              <Badge badgeContent={toPickupCount} color="error">
-                To Pickup
-              </Badge>
-            }
-            value="to-pickup"
-          />
-          <Tab label="Completed" value="completed" />
-        </Tabs>
-      </Box>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-4 pb-1">
+        <Box sx={{ width: "100%" }}>
+          <Tabs
+            value={currentStatus}
+            onChange={handleTabChange}
+            aria-label="rent status tabs"
+            variant="fullWidth"
+            sx={{
+              "& .MuiTab-root": {
+                maxWidth: "none",
+                flexGrow: 1,
+                flexBasis: 0,
+              },
+            }}
+          >
+            <Tab label="All Rentals" value="all" />
+            <Tab
+              label={
+                <Badge badgeContent={pendingCount} color="warning">
+                  Pending
+                </Badge>
+              }
+              value="pending"
+            />
+            <Tab
+              label={
+                <Badge badgeContent={toPayCount} color="error">
+                  To Pay
+                </Badge>
+              }
+              value="to-pay"
+            />
+            <Tab
+              label={
+                <Badge badgeContent={toDeliverCount} color="error">
+                  To Deliver
+                </Badge>
+              }
+              value="to-deliver"
+            />
+            <Tab
+              label={
+                <Badge badgeContent={toPickupCount} color="error">
+                  To Pickup
+                </Badge>
+              }
+              value="to-pickup"
+            />
+            <Tab
+              label={
+                <Badge badgeContent={toReturnCount} color="error">
+                  To Return
+                </Badge>
+              }
+              value="to-return"
+            />
+            <Tab label="Completed" value="completed" />
+          </Tabs>
+        </Box>
+      </div>
 
       {/* Rent List */}
       {paginatedRents.length === 0 && (
@@ -324,6 +404,7 @@ export const RentList = (props: any) => {
 
               const today = new Date()
               const endDate = new Date(item.endDate)
+              const isPending = item.status === "pending"
               const isCompleted = [
                 "completed",
                 "returned",
@@ -351,7 +432,9 @@ export const RentList = (props: any) => {
               return (
                 <div
                   key={item.id}
-                  className="flex justify-start items-center w-full border-b border-gray-200 p-2 gap-2"
+                  className={`flex justify-start items-center w-full border-b p-2 gap-2 transition-all rounded-md my-1 ${
+                    isPending ? "bg-amber-50/70 border-amber-300" : "bg-white border-gray-200"
+                  }`}
                 >
                   <Link href={productId ? `/products/${productId}` : "#"}>
                     <Image
@@ -373,7 +456,6 @@ export const RentList = (props: any) => {
                         {item.productVariant?.product?.shop?.shopName || "Shop"}
                       </p>
 
-                      {/* Product Name as Link */}
                       {productId ? (
                         <Link
                           href={`/products/${productId}`}
@@ -392,10 +474,11 @@ export const RentList = (props: any) => {
                         <p className="capitalize text-xs font-semibold text-gray-600 border border-gray-200 px-2 py-1 rounded-md inline-block w-fit bg-gray-50">
                           Delivery: {item.deliveryMethod}
                         </p>
+
                         <p
-                          className={`capitalize text-xs font-bold px-2 py-1 rounded-md inline-block w-fit ${
-                            item.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
+                          className={`capitalize text-xs font-bold px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 w-fit ${
+                            isPending
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
                               : item.status === "accepted"
                               ? "bg-blue-100 text-blue-800"
                               : item.status === "canceled"
@@ -405,8 +488,15 @@ export const RentList = (props: any) => {
                               : "bg-indigo-100 text-indigo-800"
                           }`}
                         >
+                          {isPending && (
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                            </span>
+                          )}
                           Status: {item.status.replace("_", " ")}
                         </p>
+
                         {isDueToday && (
                           <p className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-orange-200">
                             Due Today
@@ -473,7 +563,22 @@ export const RentList = (props: any) => {
                       <p className="text-green-600 font-bold">Completed</p>
                     ) : item.status === "canceled" ? (
                       <p className="text-red-600 font-bold">Canceled</p>
-                    ) : item.status === "pending" ? null : (
+                    ) : isPending ? (
+                      <div className="flex flex-col gap-1 items-start">
+                        <p className="text-amber-700 font-semibold text-xs bg-amber-100/80 px-2 py-1 rounded w-fit">
+                          Awaiting Shop Approval
+                        </p>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={() => handleOpenCancelModal(item.id)}
+                          sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.2 }}
+                        >
+                          Cancel Request
+                        </Button>
+                      </div>
+                    ) : (
                       <p className="font-bold text-[#1b2a80]">
                         Balance : ₱{balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </p>
@@ -503,6 +608,30 @@ export const RentList = (props: any) => {
           </Button>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <Dialog open={cancelModalOpen} onClose={handleCloseCancelModal}>
+        <DialogTitle>Cancel Rental Request</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to cancel this pending rental request? This action cannot be
+            undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCancelModal} disabled={isCanceling}>
+            Keep Request
+          </Button>
+          <Button
+            onClick={handleConfirmCancel}
+            color="error"
+            variant="contained"
+            disabled={isCanceling}
+          >
+            {isCanceling ? "Canceling..." : "Confirm Cancel"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }
