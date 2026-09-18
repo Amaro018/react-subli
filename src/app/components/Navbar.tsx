@@ -215,7 +215,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
                         </Link>
 
                         <Link
-                          href="/renter/orders"
+                          href="/renter/my-rent-orders"
                           className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => setAccountOpen(false)}
                         >
@@ -436,7 +436,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/renter/orders"
+                    href="/renter/my-rent-orders"
                     className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
                     onClick={() => setUserOpen(false)}
                   >

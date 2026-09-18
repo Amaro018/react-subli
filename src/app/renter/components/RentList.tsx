@@ -15,6 +15,7 @@ import {
 import { useQuery } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
 import Image from "next/image"
+import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 
 export const RentList = (props: any) => {
@@ -87,6 +88,15 @@ export const RentList = (props: any) => {
     setCurrentPage(1)
   }
 
+  // Helper to standardise Reference Numbers as in OrderList
+  const getOrderRef = (rent: any) => {
+    return rent.referenceNumber || rent.orderNumber || `ORD-${String(rent.id).padStart(5, "0")}`
+  }
+
+  if (!userRents) {
+    return <CircularProgress />
+  }
+
   const toPayCount = userRents.filter((rent: any) => {
     return rent.items.some((item: any) => {
       if (["completed", "canceled"].includes(item.status)) return false
@@ -130,7 +140,6 @@ export const RentList = (props: any) => {
     currentStatus === "all"
       ? userRents
       : userRents.filter((rent: any) => {
-          // Map URL status to DB status if needed
           if (currentStatus === "completed") {
             return (
               rent.items.length > 0 &&
@@ -168,7 +177,6 @@ export const RentList = (props: any) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     }
 
-    // Default to Urgency priority
     const getPriority = (rent: any) => {
       const today = new Date()
       let priority = 0
@@ -185,7 +193,7 @@ export const RentList = (props: any) => {
           endDate.getFullYear() === today.getFullYear()
         const isOverdue = today > endDate && !isDueToday
 
-        if (isOverdue) return 2 // Highest priority
+        if (isOverdue) return 2
         if (isDueToday) priority = Math.max(priority, 1)
       }
       return priority
@@ -199,10 +207,6 @@ export const RentList = (props: any) => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
-
-  if (!userRents) {
-    return <CircularProgress />
-  }
 
   const getEmptyMessage = () => {
     switch (currentStatus) {
@@ -290,17 +294,17 @@ export const RentList = (props: any) => {
       </Box>
 
       {/* Rent List */}
-      {paginatedRents.length === 0 && <p className="text-center">{getEmptyMessage()}</p>}
+      {paginatedRents.length === 0 && (
+        <p className="text-center my-8 text-gray-500">{getEmptyMessage()}</p>
+      )}
       {paginatedRents.map((rent: any) => (
         <div
-          className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-2 w-full"
+          className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-4 w-full"
           key={rent.id}
         >
           <div className="flex flex-col w-full">
             <div className="flex justify-between items-center w-full border-b border-gray-200 p-2">
-              <p className="font-semibold text-gray-700">
-                Order Reference: #{rent.id.toString().padStart(6, "0")}
-              </p>
+              <p className="font-semibold text-gray-700">Order Reference: #{getOrderRef(rent)}</p>
               <p className="text-sm text-gray-500">
                 {rent.items.length > 1 ? "Items :" : "Item :"} {rent.items.length}
               </p>
@@ -342,29 +346,47 @@ export const RentList = (props: any) => {
                     .filter(Boolean)
                     .join(" - ") || "Default Config"
 
+              const productId = item.productVariant?.product?.id
+
               return (
                 <div
                   key={item.id}
                   className="flex justify-start items-center w-full border-b border-gray-200 p-2 gap-2"
                 >
-                  <Image
-                    src={
-                      item.productVariant?.product?.images?.[0]?.url
-                        ? `/uploads/products/${item.productVariant.product.images[0].url}`
-                        : "/placeholder.png"
-                    }
-                    alt={item.productVariant?.product?.name || "Product Image"}
-                    width={100}
-                    height={100}
-                    className="w-24 h-24 object-cover rounded"
-                  />
+                  <Link href={productId ? `/products/${productId}` : "#"}>
+                    <Image
+                      src={
+                        item.productVariant?.product?.images?.[0]?.url
+                          ? `/uploads/products/${item.productVariant.product.images[0].url}`
+                          : "/placeholder.png"
+                      }
+                      alt={item.productVariant?.product?.name || "Product Image"}
+                      width={100}
+                      height={100}
+                      className="w-24 h-24 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                    />
+                  </Link>
 
                   <div className="flex flex-col justify-between h-full">
                     <div>
                       <p className="font-bold text-[#1b2a80] cursor-pointer">
                         {item.productVariant?.product?.shop?.shopName || "Shop"}
                       </p>
-                      <p className="text-lg font-semibold">{item.productVariant?.product?.name}</p>
+
+                      {/* Product Name as Link */}
+                      {productId ? (
+                        <Link
+                          href={`/products/${productId}`}
+                          className="text-lg font-semibold hover:text-blue-600 hover:underline text-gray-900 transition-colors"
+                        >
+                          {item.productVariant?.product?.name}
+                        </Link>
+                      ) : (
+                        <p className="text-lg font-semibold">
+                          {item.productVariant?.product?.name}
+                        </p>
+                      )}
+
                       <p className="text-sm text-gray-500 mt-1">Variant: {variantDisplay}</p>
                       <div className="flex gap-2 mt-2">
                         <p className="capitalize text-xs font-semibold text-gray-600 border border-gray-200 px-2 py-1 rounded-md inline-block w-fit bg-gray-50">

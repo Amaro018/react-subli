@@ -688,7 +688,7 @@ export default function ProductBookingForm({
       setStartDate(null)
       setEndDate(null)
       setCheckoutModalOpen(false)
-      router.push("/renter/orders")
+      router.push("/renter/my-rent-orders")
     } catch (error: any) {
       console.error("Failed to checkout:", error)
       if (error.name === "ZodError") {

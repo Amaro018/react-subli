@@ -49,11 +49,15 @@ export const getBadgeCounts = (rents: any[]) => {
   }).length
 
   const toDeliverCount = rents.filter((rent: any) => {
-    return rent.items.some((item: any) => item.deliveryMethod === "deliver")
+    return rent.items.some(
+      (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
+    )
   }).length
 
   const toPickupCount = rents.filter((rent: any) => {
-    return rent.items.some((item: any) => item.deliveryMethod === "pickup")
+    return rent.items.some(
+      (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
+    )
   }).length
 
   const toRateCount = rents.filter((rent: any) => {
@@ -103,11 +107,19 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           title: "My Rentals",
           icon: <ListAltIcon fontSize="small" />,
           items: [
-            { name: "All Rentals", href: "/renter/orders" },
-            { name: "To Pay", href: "/renter/orders?status=to-pay", badge: toPayCount },
-            { name: "To Deliver", href: "/renter/orders?status=to-deliver", badge: toDeliverCount },
-            { name: "To Pickup", href: "/renter/orders?status=to-pickup", badge: toPickupCount },
-            { name: "Completed", href: "/renter/orders?status=completed" },
+            { name: "All Rentals", href: "/renter/my-rent-orders" },
+            { name: "To Pay", href: "/renter/my-rent-orders?status=to-pay", badge: toPayCount },
+            {
+              name: "To Deliver",
+              href: "/renter/my-rent-orders?status=to-deliver",
+              badge: toDeliverCount,
+            },
+            {
+              name: "To Pickup",
+              href: "/renter/my-rent-orders?status=to-pickup",
+              badge: toPickupCount,
+            },
+            { name: "Completed", href: "/renter/my-rent-orders?status=completed" },
           ],
         },
         {
