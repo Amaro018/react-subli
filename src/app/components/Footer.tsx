@@ -18,8 +18,7 @@ const Footer = () => {
         {/* Copyright Section */}
         <div className="text-sm text-gray-500">
           <p>
-            © {currentYear} <span className="font-bold text-[#1b2a80]">Subli</span>. All rights
-            reserved.
+            © 2020 <span className="font-bold text-[#1b2a80]">Subli</span>. All rights reserved.
           </p>
         </div>
 

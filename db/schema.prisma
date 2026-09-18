@@ -268,6 +268,7 @@ model Rent {
   items           RentItem[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+  invoices        Invoice[]
 }
 
 model RentItem {
@@ -289,8 +290,9 @@ model RentItem {
   payments           Payment[]
   reviews            Review[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  InvoiceItem InvoiceItem[]
 }
 
 model Charge {
@@ -307,8 +309,9 @@ model Charge {
   quantity Int    @default(1)
   status   String @default("UNPAID") // "UNPAID", "PAID"
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  InvoiceItem InvoiceItem[]
 
   @@index([rentItemId])
 }
@@ -322,8 +325,11 @@ model Payment {
   penaltyFee Float?
   note       String?
   createdAt  DateTime @default(now())
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
+  invoiceId  Int?
 
   @@index([rentItemId])
+  @@index([invoiceId])
 }
 
 // Review Model
@@ -430,4 +436,48 @@ model ShopAuditLog {
 
   @@index([shopId])
   @@index([createdAt])
+}
+
+model Invoice {
+  id            Int    @id @default(autoincrement())
+  invoiceNumber String @unique // e.g., "INV-2026-10024"
+  rentId        Int
+  rent          Rent   @relation(fields: [rentId], references: [id], onDelete: Cascade)
+
+  subtotal        Float // Sum of rent items
+  securityDeposit Float @default(0)
+  extraCharges    Float @default(0) // Damage or late fees
+  totalAmount     Float // subtotal + securityDeposit + extraCharges
+  amountPaid      Float @default(0) // Cash received
+  balanceDue      Float // totalAmount - amountPaid
+
+  type      String   @default("INITIAL") // "INITIAL", "FINAL", "ADJUSTMENT"
+  status    String   @default("UNPAID") // "UNPAID", "PARTIALLY_PAID", "PAID"
+  dueDate   DateTime
+  issuedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@index([rentId])
+}
+
+model InvoiceItem {
+  id        Int     @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  description String // e.g. "Crystal Clear Span Tent (3 Days)"
+  quantity    Int    @default(1)
+  unitPrice   Float
+  amount      Float // quantity * unitPrice
+
+  rentItemId Int?
+  rentItem   RentItem? @relation(fields: [rentItemId], references: [id], onDelete: SetNull)
+
+  chargeId Int?
+  charge   Charge? @relation(fields: [chargeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
 }

@@ -306,7 +306,7 @@ export default function ProductsList() {
                     className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col"
                   >
                     <Link
-                      href={`/products/${product.id}`}
+                      href={`/products/${product.slug || product.id}`}
                       className="block relative w-full h-[200px] overflow-hidden rounded-t-xl bg-gray-50"
                     >
                       {thumbnail && (
@@ -321,7 +321,7 @@ export default function ProductsList() {
                     </Link>
                     <div className="p-4 flex flex-col flex-grow">
                       <Link
-                        href={`/products/${product.id}`}
+                        href={`/products/${product.slug || product.id}`}
                         className="hover:text-blue-600 transition-colors mb-1"
                       >
                         <Typography
