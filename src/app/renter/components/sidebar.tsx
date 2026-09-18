@@ -26,45 +26,84 @@ interface SidebarProps {
 }
 
 export const getBadgeCounts = (rents: any[]) => {
+  if (!Array.isArray(rents) || rents.length === 0) {
+    return {
+      pendingCount: 0,
+      toPayCount: 0,
+      toDeliverCount: 0,
+      toPickupCount: 0,
+      toReturnCount: 0,
+      toRateCount: 0,
+    }
+  }
+
+  const pendingCount = rents.filter((rent: any) => {
+    return rent?.items?.some((item: any) => item.status === "pending")
+  }).length
+
   const toPayCount = rents.filter((rent: any) => {
+    if (!rent?.items || rent.items.length === 0) return false
+
     return rent.items.some((item: any) => {
-      if (item.status === "completed") return false
-      const totalPayment = item.payments.reduce(
-        (total: number, payment: any) => total + payment.amount,
+      if (item.status === "completed" || item.status === "canceled") return false
+
+      const payments = item.payments || []
+      const totalPayment = payments.reduce(
+        (total: number, payment: any) => total + (payment.amount || 0),
         0
       )
-      const startDate = new Date(item.startDate)
-      const endDate = new Date(item.endDate)
-      const today = new Date()
-      const duration =
-        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-      const rentalCost = item.productVariant.price * duration * item.quantity
-      const lapseInDays =
-        today > endDate
-          ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
-          : 0
-      const penalty = item.price * lapseInDays * item.quantity
-      return totalPayment < rentalCost + penalty
+
+      const startDate = new Date(item.startDate).getTime()
+      const endDate = new Date(item.endDate).getTime()
+      const today = new Date().getTime()
+
+      const duration = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1)
+
+      const variantPrice = item.productVariant?.price || item.price || 0
+      const rentalCost = variantPrice * duration * (item.quantity || 1)
+
+      const lapseInDays = today > endDate ? Math.ceil((today - endDate) / (1000 * 60 * 60 * 24)) : 0
+
+      const penalty = (item.price || 0) * lapseInDays * (item.quantity || 1)
+      const totalAmountDue = rentalCost + penalty
+
+      return totalPayment < totalAmountDue && totalAmountDue > 0
     })
   }).length
 
   const toDeliverCount = rents.filter((rent: any) => {
-    return rent.items.some(
+    return rent?.items?.some(
       (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
     )
   }).length
 
   const toPickupCount = rents.filter((rent: any) => {
-    return rent.items.some(
+    return rent?.items?.some(
       (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
     )
   }).length
 
-  const toRateCount = rents.filter((rent: any) => {
-    return rent.items.some((item: any) => item.status === "completed" && !item.reviews?.length)
+  const toReturnCount = rents.filter((rent: any) => {
+    return rent?.items?.some(
+      (item: any) =>
+        item.status === "to-return" || item.status === "in_use" || item.status === "active"
+    )
   }).length
 
-  return { toPayCount, toDeliverCount, toPickupCount, toRateCount }
+  const toRateCount = rents.filter((rent: any) => {
+    return rent?.items?.some(
+      (item: any) => item.status === "completed" && (!item.reviews || item.reviews.length === 0)
+    )
+  }).length
+
+  return {
+    pendingCount,
+    toPayCount,
+    toDeliverCount,
+    toPickupCount,
+    toReturnCount,
+    toRateCount,
+  }
 }
 
 export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
@@ -77,7 +116,6 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isCollapsed, setIsCollapsed] = useState(false)
-  // State to track which dropdown is open
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({})
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed)
@@ -86,10 +124,8 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
     if (onMobileClose) onMobileClose()
   }
 
-  const { toPayCount, toDeliverCount, toPickupCount, toRateCount } = useMemo(
-    () => getBadgeCounts(userRents || []),
-    [userRents]
-  )
+  const { pendingCount, toPayCount, toDeliverCount, toPickupCount, toReturnCount, toRateCount } =
+    useMemo(() => getBadgeCounts(userRents || []), [userRents])
 
   const menuItems = useMemo(
     () =>
@@ -108,7 +144,16 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           icon: <ListAltIcon fontSize="small" />,
           items: [
             { name: "All Rentals", href: "/renter/my-rent-orders" },
-            { name: "To Pay", href: "/renter/my-rent-orders?status=to-pay", badge: toPayCount },
+            {
+              name: "Pending",
+              href: "/renter/my-rent-orders?status=pending",
+              badge: pendingCount,
+            },
+            {
+              name: "To Pay",
+              href: "/renter/my-rent-orders?status=to-pay",
+              badge: toPayCount,
+            },
             {
               name: "To Deliver",
               href: "/renter/my-rent-orders?status=to-deliver",
@@ -119,6 +164,11 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
               href: "/renter/my-rent-orders?status=to-pickup",
               badge: toPickupCount,
             },
+            {
+              name: "To Return",
+              href: "/renter/my-rent-orders?status=to-return",
+              badge: toReturnCount,
+            },
             { name: "Completed", href: "/renter/my-rent-orders?status=completed" },
           ],
         },
@@ -127,7 +177,11 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           icon: <RateReviewIcon fontSize="small" />,
           items: [
             { name: "All Reviews", href: "/renter/reviews" },
-            { name: "To Rate", href: "/renter/reviews?status=to-rate", badge: toRateCount },
+            {
+              name: "To Rate",
+              href: "/renter/reviews?status=to-rate",
+              badge: toRateCount,
+            },
             { name: "Reviewed", href: "/renter/reviews?status=reviewed" },
           ],
         },
@@ -151,7 +205,6 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
               }
           : currentUser?.isShopRegistered
           ? {
-              // Fallback for when shop is not loaded yet but we know it's registered
               title: "Shop Pending",
               icon: <StorefrontIcon fontSize="small" />,
               href: "/renter/my-shop/pending",
@@ -162,7 +215,15 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
               href: "/renter/my-shop",
             },
       ].filter(Boolean),
-    [currentUser, toPayCount, toDeliverCount, toPickupCount, toRateCount] // currentUser.shop is implicitly included
+    [
+      currentUser,
+      pendingCount,
+      toPayCount,
+      toDeliverCount,
+      toPickupCount,
+      toReturnCount,
+      toRateCount,
+    ]
   )
 
   useEffect(() => {
@@ -183,7 +244,7 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
   }, [pathname, searchParams, menuItems])
 
   const toggleDropdown = (title: string) => {
-    if (isCollapsed) setIsCollapsed(false) // Expand sidebar if a dropdown is clicked
+    if (isCollapsed) setIsCollapsed(false)
     setOpenDropdowns((prev) => ({ ...prev, [title]: !prev[title] }))
   }
 
@@ -191,7 +252,7 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
     <aside
       className={`flex flex-col bg-white h-full shadow-sm transition-all duration-300 ease-in-out ${
         isCollapsed ? "w-[80px]" : "w-[280px]"
-      } rounded-none overflow-hidden`} // Changed md:rounded-xl to rounded-none
+      } rounded-none overflow-hidden`}
     >
       {/* Header: Identity Section */}
       <div
