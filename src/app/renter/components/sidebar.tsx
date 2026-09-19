@@ -45,7 +45,7 @@ export const getBadgeCounts = (rents: any[]) => {
     if (!rent?.items || rent.items.length === 0) return false
 
     return rent.items.some((item: any) => {
-      if (item.status === "completed" || item.status === "canceled") return false
+      if (["pending", "completed", "canceled"].includes(item.status)) return false
 
       const payments = item.payments || []
       const totalPayment = payments.reduce(

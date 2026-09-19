@@ -140,7 +140,9 @@ export const RentList = (props: any) => {
 
   const toPayCount = userRents.filter((rent: any) => {
     return rent.items.some((item: any) => {
-      if (["pending", "completed", "canceled"].includes(item.status)) return false
+      if (["pending", "completed", "canceled"].includes(item.status)) {
+        return false
+      }
       const { balance } = calculateItemFinancials(item)
       return balance > 0
     })
@@ -194,7 +196,9 @@ export const RentList = (props: any) => {
           }
           if (currentStatus === "to-pay") {
             return rent.items.some((item: any) => {
-              if (["pending", "completed", "canceled"].includes(item.status)) return false
+              if (["pending", "completed", "canceled"].includes(item.status)) {
+                return false
+              }
               const { balance } = calculateItemFinancials(item)
               return balance > 0
             })
