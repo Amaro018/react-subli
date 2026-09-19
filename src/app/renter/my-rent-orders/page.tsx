@@ -15,7 +15,7 @@ export default async function Page() {
       {/* Header */}
       <div className="flex items-center justify-between border-b pb-4">
         <h1 className="text-xl font-medium text-gray-800">My Rentals</h1>
-        <span className="text-sm text-gray-500">Manage your rental orders</span>
+        <span className="text-sm text-gray-500">Track and manage your rent orders</span>
       </div>
 
       {/* Main Order List */}

@@ -26,22 +26,34 @@ type Charge = {
 
 export interface RentItemData {
   id: number
+  rentId: number
+  shopId?: number | null
   status: string
   quantity: number
   price: number
   startDate: Date | string
   endDate: Date | string
   deliveryMethod: string
+  returnedDamagedQty?: number | null
   productVariant: {
-    attributes: { attributeValue: { value: string } }[]
+    id: number
+    quantity: number
+    price: number
+    attributes?: { attributeValue?: { value: string } | null }[] | null
+    variantAttributeValues?: { attributeValue?: { value: string } | null }[] | null
     product: {
+      id: number
       name: string
       status: string
+      shopId: number
       images?: { isThumbnail: boolean | null; url: string }[]
     }
   }
   rent: {
-    user: {
+    id: number
+    userId: number
+    deliveryAddress: string
+    user?: {
       email: string
       personalInfo?: {
         firstName: string
@@ -49,8 +61,7 @@ export interface RentItemData {
         lastName: string
         phoneNumber?: string | null
       } | null
-    }
-    deliveryAddress: string
+    } | null
   }
   payments?: Payment[]
   charges?: Charge[]
@@ -90,18 +101,36 @@ const RentItemRow = memo(function RentItemRow({
     "completed",
   ].includes(rentItem.status)
 
-  const variantDisplay = rentItem.productVariant.attributes
-    .map((attr: { attributeValue: { value: string } }) => attr.attributeValue.value)
+  // Extract attributes safely handling both attributes and variantAttributeValues schemas
+  const rawAttributes =
+    rentItem.productVariant?.attributes || rentItem.productVariant?.variantAttributeValues || []
+  const variantDisplay = rawAttributes
+    .map((attr) => attr?.attributeValue?.value)
+    .filter(Boolean)
     .join(" / ")
 
   const isProductArchived = rentItem?.productVariant?.product?.status === "deleted"
   const thumbnail =
-    rentItem.productVariant.product.images?.find(
+    rentItem.productVariant?.product?.images?.find(
       (img: { isThumbnail: boolean | null; url: string }) => img.isThumbnail
-    ) || rentItem.productVariant.product.images?.[0]
+    ) || rentItem.productVariant?.product?.images?.[0]
 
   const { baseRent, totalCharges, totalPenalty, totalPaid, grandTotal, remainingBalance } =
     calculateRentTotals(rentItem)
+
+  const user = rentItem.rent?.user
+  const personalInfo = user?.personalInfo
+  const renterName = personalInfo
+    ? `${personalInfo.firstName || ""} ${personalInfo.middleName || ""} ${
+        personalInfo.lastName || ""
+      }`.trim()
+    : user?.email || "N/A"
+
+  const imageSrc = thumbnail?.url
+    ? thumbnail.url.startsWith("http") || thumbnail.url.startsWith("/")
+      ? thumbnail.url
+      : `/uploads/products/${thumbnail.url}`
+    : "/placeholder.png"
 
   return (
     <div
@@ -113,8 +142,8 @@ const RentItemRow = memo(function RentItemRow({
       {/* Product Image */}
       <div className="flex justify-center items-center lg:col-span-2">
         <Image
-          src={thumbnail ? `/uploads/products/${thumbnail.url}` : "/placeholder.png"}
-          alt={rentItem.productVariant.product.name}
+          src={imageSrc}
+          alt={rentItem.productVariant?.product?.name || "Product"}
           width={100}
           height={100}
           className="w-24 h-24 object-cover rounded-md shadow"
@@ -124,7 +153,9 @@ const RentItemRow = memo(function RentItemRow({
       {/* Product Details */}
       <div className="space-y-1 text-sm lg:col-span-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="font-semibold text-lg">{rentItem.productVariant.product.name}</p>
+          <p className="font-semibold text-lg">
+            {rentItem.productVariant?.product?.name || "Unnamed Product"}
+          </p>
           {isProductArchived && (
             <Chip
               label="Archived Product"
@@ -213,13 +244,10 @@ const RentItemRow = memo(function RentItemRow({
 
       {/* Renter Details */}
       <div className="space-y-1 text-sm lg:col-span-3">
-        <p className="font-semibold">
-          {rentItem.rent.user.personalInfo?.firstName} {rentItem.rent.user.personalInfo?.middleName}{" "}
-          {rentItem.rent.user.personalInfo?.lastName}
-        </p>
-        <p>{rentItem.rent.user.email}</p>
-        <p>{rentItem.rent.user.personalInfo?.phoneNumber}</p>
-        <p>{rentItem.rent.deliveryAddress}</p>
+        <p className="font-semibold">{renterName}</p>
+        <p>{user?.email || "No email"}</p>
+        <p>{personalInfo?.phoneNumber || "No phone"}</p>
+        <p>{rentItem.rent?.deliveryAddress || "N/A"}</p>
         <p className="italic text-gray-600">Delivery: {rentItem.deliveryMethod}</p>
       </div>
 
