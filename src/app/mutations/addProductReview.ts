@@ -5,20 +5,20 @@ import z from "zod"
 // Define the input validation schema
 const CreateReview = z.object({
   productId: z.number(),
-  rentItemId: z.number(), // Add rentItemId
-  rating: z.number().min(1).max(5), // Rating must be between 1 and 5
+  rentItemId: z.number(),
+  rating: z.number().min(1).max(5),
   anonymous: z.boolean().optional(),
   comment: z.string().optional(),
 })
 
 // Define the mutation
 const createReview = resolver.pipe(
-  resolver.zod(CreateReview), // Validate input
-  resolver.authorize(), // Ensure the user is authorized
+  resolver.zod(CreateReview),
+  resolver.authorize(),
   async (input, ctx) => {
     const userId = ctx.session.userId
 
-    // Verify the RentItem actually exists, matches the product, and belongs to the current user
+    // Verify the RentItem exists, matches the product, and belongs to the current user
     const rentItem = await db.rentItem.findFirst({
       where: {
         id: input.rentItemId,
@@ -41,29 +41,19 @@ const createReview = resolver.pipe(
       throw new Error("This RentItem has already been reviewed.")
     }
 
-    // Run both database operations atomically in a transaction
-    const review = await db.$transaction(async (tx) => {
-      const newReview = await tx.review.create({
-        data: {
-          productId: input.productId,
-          rentItemId: input.rentItemId,
-          userId: userId, // Securely use the session user
-          rating: input.rating,
-          isAnonymous: input.anonymous ?? false,
-          comment: input.comment || null,
-        },
-      })
-
-      // Update the RentItem's `isReviewed` field to true
-      await tx.rentItem.update({
-        where: { id: input.rentItemId },
-        data: { isReviewed: true },
-      })
-
-      return newReview
+    // Create the review record
+    const newReview = await db.review.create({
+      data: {
+        productId: input.productId,
+        rentItemId: input.rentItemId,
+        userId: userId,
+        rating: input.rating,
+        isAnonymous: input.anonymous ?? false,
+        comment: input.comment || null,
+      },
     })
 
-    return review
+    return newReview
   }
 )
 

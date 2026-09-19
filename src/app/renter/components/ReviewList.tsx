@@ -16,18 +16,17 @@ import {
 import { useMutation, useQuery } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
 import Image from "next/image"
+import Link from "next/link"
 import addProductReview from "../../mutations/addProductReview"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { toast } from "@/src/app/utils/toast"
 
 export const ReviewList = (props: any): React.ReactElement | null => {
-  const currentUser = props.currentUser
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const currentStatus = searchParams.get("status") || "all"
 
-  // Query now returns a flattened array of RentItems
   const [rentItems, { refetch }] = useQuery(getAllRentOfUser, undefined)
   const [addReview] = useMutation(addProductReview)
 
@@ -44,7 +43,7 @@ export const ReviewList = (props: any): React.ReactElement | null => {
     borderRadius: "10px",
   }
 
-  const [review, setReview] = useState<number>(0)
+  const [review, setReview] = useState<number>(5)
   const [openReview, setOpenReview] = useState<boolean>(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [comment, setComment] = useState<string>("")
@@ -64,69 +63,93 @@ export const ReviewList = (props: any): React.ReactElement | null => {
     setCurrentPage(1)
   }
 
+  const getOrderRef = (item: any) => {
+    const rent = item.rent || {}
+    const rawId = rent.id ?? item.rentId
+    return rent.referenceNumber || rent.orderNumber || `ORD-${String(rawId || 0).padStart(5, "0")}`
+  }
+
   if (!rentItems) {
     return <CircularProgress />
   }
 
-  // Filter flattened rent items according to tab status
+  // Check if item has reviews array with items
+  const isItemReviewed = (item: any) => {
+    return Boolean(item.reviews && item.reviews.length > 0)
+  }
+
   const filteredItems = rentItems.filter((item: any) => {
+    const hasBeenReviewed = isItemReviewed(item)
+
     if (currentStatus === "all") {
       return item.status === "completed"
     }
     if (currentStatus === "to-rate") {
-      return item.status === "completed" && !item.isReviewed
+      return item.status === "completed" && !hasBeenReviewed
     }
     if (currentStatus === "reviewed") {
-      return item.isReviewed
+      return hasBeenReviewed
     }
     return false
   })
 
-  // Count items needing review
   const toRateCount = rentItems.filter(
-    (item: any) => item.status === "completed" && !item.isReviewed
+    (item: any) => item.status === "completed" && !isItemReviewed(item)
   ).length
 
-  // Paginate items
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
   const paginatedItems = filteredItems.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
 
+  const handleOpenReviewModal = (item: any, initialRating: number = 5) => {
+    setSelectedItem(item)
+    setReview(initialRating)
+    setOpenReview(true)
+  }
+
   const handleCloseReview = () => {
     setOpenReview(false)
-    setReview(0)
+    setReview(5)
     setComment("")
     setAnonymous(false)
     setSelectedItem(null)
   }
 
-  const handleReviewChange = (_event: React.SyntheticEvent, rating: number | null, item: any) => {
-    setReview(rating || 0)
-    setSelectedItem(item)
-    setOpenReview(true)
-  }
-
   const handleReviewSubmit = async () => {
     const productId = selectedItem?.productVariant?.product?.id
 
-    if (selectedItem && review !== 0) {
-      try {
-        await addReview({
-          productId: productId,
-          rentItemId: selectedItem.id,
-          rating: review,
-          anonymous: anonymous,
-          comment: comment,
-        })
-        handleCloseReview()
-        await refetch()
-        toast.success("Review submitted successfully!")
-      } catch (error) {
-        console.error("Error submitting review:", error)
-        toast.error("Failed to submit review")
-      }
+    if (!selectedItem) {
+      toast.error("No item selected.")
+      return
+    }
+
+    if (!review || review === 0) {
+      toast.error("Please select a star rating.")
+      return
+    }
+
+    if (!productId) {
+      console.error("Missing productId in selectedItem:", selectedItem)
+      toast.error("Product information missing. Cannot submit review.")
+      return
+    }
+
+    try {
+      await addReview({
+        productId: productId,
+        rentItemId: selectedItem.id,
+        rating: review,
+        anonymous: anonymous,
+        comment: comment,
+      })
+      handleCloseReview()
+      await refetch()
+      toast.success("Review submitted successfully!")
+    } catch (error: any) {
+      console.error("Error submitting review:", error)
+      toast.error(error?.message || "Failed to submit review")
     }
   }
 
@@ -143,7 +166,6 @@ export const ReviewList = (props: any): React.ReactElement | null => {
     }
   }
 
-  // Helper to format attributes (e.g., Color / Size)
   const getAttributesDisplay = (attributes: any[]) => {
     if (!attributes || attributes.length === 0) return null
     return attributes
@@ -180,10 +202,13 @@ export const ReviewList = (props: any): React.ReactElement | null => {
 
       {paginatedItems.map((item: any) => {
         const product = item.productVariant?.product
+        const productId = product?.id
         const thumbnail = product?.images?.[0]?.url
           ? `/uploads/products/${product.images[0].url}`
           : "/placeholder.png"
         const variantAttributes = getAttributesDisplay(item.productVariant?.attributes)
+        const reviewed = isItemReviewed(item)
+        const existingRating = item.reviews?.[0]?.rating || 0
 
         return (
           <div
@@ -192,7 +217,7 @@ export const ReviewList = (props: any): React.ReactElement | null => {
           >
             <div className="flex flex-col w-full gap-2">
               <div className="flex justify-between items-center w-full border-b border-gray-200 pb-2">
-                <p className="text-sm text-gray-500">Order ID: #{item.rent?.id ?? item.rentId}</p>
+                <p className="font-semibold text-gray-700 text-sm">REF NO: #{getOrderRef(item)}</p>
                 <p className="font-bold text-xs bg-gray-200 px-3 py-1 rounded-full uppercase">
                   {item.status}
                 </p>
@@ -200,34 +225,40 @@ export const ReviewList = (props: any): React.ReactElement | null => {
 
               <div className="flex justify-between items-center w-full pt-2">
                 <div className="flex gap-4 items-center">
-                  <Image
-                    src={thumbnail}
-                    alt={product?.name || "Product image"}
-                    width={96}
-                    height={96}
-                    className="w-24 h-24 object-cover rounded"
-                  />
+                  <Link href={productId ? `/products/${productId}` : "#"}>
+                    <Image
+                      src={thumbnail}
+                      alt={product?.name || "Product image"}
+                      width={96}
+                      height={96}
+                      className="w-24 h-24 object-cover rounded hover:opacity-90 transition-opacity cursor-pointer"
+                    />
+                  </Link>
 
                   <div className="flex flex-col justify-center gap-1">
-                    <p className="font-bold underline text-slate-600">
-                      {product?.shop?.shopName || "Shop"}
-                    </p>
-                    <p className="font-medium text-gray-900">{product?.name}</p>
+                    <p className="font-bold text-[#1b2a80]">{product?.shop?.shopName || "Shop"}</p>
+
+                    {productId ? (
+                      <Link
+                        href={`/products/${productId}`}
+                        className="text-lg font-semibold hover:text-blue-600 hover:underline text-gray-900 transition-colors"
+                      >
+                        {product?.name}
+                      </Link>
+                    ) : (
+                      <p className="font-medium text-gray-900">{product?.name}</p>
+                    )}
+
                     {variantAttributes && (
                       <p className="text-sm text-gray-500">{variantAttributes}</p>
                     )}
                   </div>
                 </div>
 
-                {item.isReviewed ? (
+                {reviewed ? (
                   <div className="flex flex-col justify-center min-w-[200px] border-l border-gray-200 pl-4">
                     <p className="text-sm font-semibold mb-1">Your Review</p>
-                    <Rating
-                      name={`item-review-${item.id}`}
-                      value={item.reviews[0]?.rating || 0}
-                      precision={0.25}
-                      readOnly
-                    />
+                    <Rating name={`item-review-${item.id}`} value={existingRating} readOnly />
                     {item.reviews[0]?.comment && (
                       <p className="text-sm text-gray-500 italic mt-1">
                         &quot;{item.reviews[0].comment}&quot;
@@ -235,13 +266,22 @@ export const ReviewList = (props: any): React.ReactElement | null => {
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col justify-center min-w-[200px] border-l border-gray-200 pl-4">
-                    <p className="text-sm font-semibold mb-1">Rate this item</p>
+                  <div className="flex flex-col items-end gap-2 min-w-[200px] border-l border-gray-200 pl-4">
+                    <p className="text-sm font-semibold">Rate & Review</p>
                     <Rating
                       name={`rate-${item.id}`}
-                      precision={0.25}
-                      onChange={(event, newValue) => handleReviewChange(event, newValue, item)}
+                      value={0}
+                      onChange={(_e, newValue) => handleOpenReviewModal(item, newValue || 5)}
                     />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={() => handleOpenReviewModal(item, 5)}
+                      sx={{ textTransform: "none" }}
+                    >
+                      Write Review
+                    </Button>
                   </div>
                 )}
               </div>
@@ -262,8 +302,7 @@ export const ReviewList = (props: any): React.ReactElement | null => {
               <Rating
                 name="modal-rating"
                 value={review}
-                onChange={(_event, newValue) => setReview(newValue || 0)}
-                precision={0.25}
+                onChange={(_event, newValue) => setReview(newValue || 1)}
               />
               <span className="text-slate-600 font-bold text-lg">{review}</span>
             </div>
@@ -272,7 +311,7 @@ export const ReviewList = (props: any): React.ReactElement | null => {
           <Typography id="modal-modal-description" component="div" sx={{ mt: 2 }}>
             <TextField
               id="outlined-multiline-static"
-              label="Write a review"
+              label="Write your review comments here..."
               name="comment"
               multiline
               rows={4}
