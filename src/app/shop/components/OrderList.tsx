@@ -244,6 +244,18 @@ export const OrderList = () => {
     return counts
   }, [rentItems])
 
+  const primaryTabs = useMemo(
+    () => [
+      { value: "ACTIVE", label: "Active Orders", count: statusCounts.ACTIVE },
+      { value: "pending", label: "Pending Approval", count: statusCounts.pending },
+      { value: "due_today", label: "Due Today", count: statusCounts.due_today },
+      { value: "overdue", label: "Overdue", count: statusCounts.overdue },
+      { value: "rendering", label: "On Hand", count: statusCounts.rendering },
+      { value: "ALL", label: "All Orders", count: statusCounts.ALL },
+    ],
+    [statusCounts]
+  )
+
   const handleConfirmClose = () => setConfirmOpen(false)
 
   const handleConfirmAccept = async () => {
@@ -389,14 +401,14 @@ export const OrderList = () => {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-center w-full p-4 mb-6 bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full p-4 mb-4 bg-white rounded-xl shadow-sm border border-gray-200 gap-4">
           <div>
             <p className="text-2xl font-bold text-gray-800">Rent Orders</p>
             <p className="text-sm text-gray-500 mt-1">
               Manage rentals for {currentUser?.shop?.shopName ?? "your shop"}
             </p>
           </div>
-          <div className="flex items-center gap-4 mt-4 sm:mt-0">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
             <TextField
               id="outlined-select-status"
               select
@@ -406,6 +418,7 @@ export const OrderList = () => {
               onChange={(e) => handleFilterChange(e.target.value)}
               sx={{
                 minWidth: 160,
+                width: { xs: "100%", sm: "auto" },
                 "& .MuiOutlinedInput-root": { borderRadius: "8px" },
               }}
             >
@@ -416,6 +429,35 @@ export const OrderList = () => {
               ))}
             </TextField>
           </div>
+        </div>
+
+        {/* Status Navigation Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-200 mb-6 scrollbar-none">
+          {primaryTabs.map((tab) => {
+            const isActive = statusFilter === tab.value
+            return (
+              <button
+                key={tab.value}
+                onClick={() => handleFilterChange(tab.value)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                  isActive
+                    ? "bg-[#1b2a80] text-white shadow-sm"
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                <span>{tab.label}</span>
+                {tab.count > 0 && (
+                  <span
+                    className={`px-2 py-0.5 text-xs rounded-full font-bold ${
+                      isActive ? "bg-white text-[#1b2a80]" : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* Orders List */}
