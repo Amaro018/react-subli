@@ -397,7 +397,7 @@ export const RentList = (props: any) => {
           >
             <div className="flex flex-col w-full">
               <div className="flex justify-between items-center w-full border-b border-gray-200 p-2">
-                <p className="font-semibold text-gray-700">Order Reference: #{getOrderRef(rent)}</p>
+                <p className="font-semibold text-gray-700">REF NO: #{getOrderRef(rent)}</p>
                 <p className="text-sm text-gray-500">
                   {items.length > 1 ? "Items :" : "Item :"} {items.length}
                 </p>
