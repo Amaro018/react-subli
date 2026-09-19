@@ -9,13 +9,17 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
 
   const userRents = await db.rent.findMany({
     where: {
-      userId: userId, // Filter by the user's ID
+      userId: userId,
     },
     include: {
       user: true,
       items: {
         include: {
-          reviews: true,
+          reviews: {
+            where: {
+              userId: userId, // Fetch reviews written by the current user
+            },
+          },
           productVariant: {
             include: {
               attributes: {
@@ -30,16 +34,14 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
               product: {
                 include: {
                   variants: true,
-                  images: true,
+                  images: true, // Needed for thumbnails in ReviewList
                   category: true,
                   shop: true,
                 },
-              }, // Include related product details
+              },
             },
           },
           payments: true,
-
-          // Include payments for each RentItem
         },
       },
     },
@@ -48,5 +50,19 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
     },
   })
 
-  return userRents
+  // Flatten rent items for ReviewList and dynamically assign isReviewed
+  const rentItems = userRents.flatMap((rent) =>
+    rent.items.map((item) => ({
+      ...item,
+      rent: {
+        id: rent.id,
+        userId: rent.userId,
+        deliveryAddress: rent.deliveryAddress,
+        user: rent.user,
+      },
+      isReviewed: item.reviews.length > 0,
+    }))
+  )
+
+  return rentItems
 })
