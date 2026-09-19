@@ -37,7 +37,7 @@ export const RentList = (props: any) => {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [isCanceling, setIsCanceling] = useState(false)
 
-  const ON_HAND_STATUSES = ["delivered", "picked_up", "in_use"]
+  const ON_HAND_STATUSES = ["on_hand", "overdue", "accepted"]
 
   const [cancelRentItemMutation] = useMutation(cancelRentItem)
   const [userRents, { refetch }] = useQuery(getAllRentOfUser, { id: userId })
