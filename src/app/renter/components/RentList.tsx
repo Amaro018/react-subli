@@ -18,7 +18,7 @@ import {
 } from "@mui/material"
 import { useQuery, useMutation } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
-import cancelRentItem from "../../mutations/cancelRentItem" // Ensure path matches your mutation file location
+import cancelRentItem from "../../mutations/cancelRentItem"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
@@ -133,13 +133,18 @@ export const RentList = (props: any) => {
     return <CircularProgress />
   }
 
-  // Counter logic
-  const pendingCount = userRents.filter((rent: any) => {
-    return rent.items.some((item: any) => item.status === "pending")
+  // Normalize structure: standard rents vs flattened rent items
+  const rentsList = Array.isArray(userRents)
+    ? userRents.map((rent: any) => (rent.items ? rent : { ...rent.rent, items: [rent] }))
+    : []
+
+  // Counter logic with optional chaining
+  const pendingCount = rentsList.filter((rent: any) => {
+    return rent.items?.some((item: any) => item.status === "pending")
   }).length
 
-  const toPayCount = userRents.filter((rent: any) => {
-    return rent.items.some((item: any) => {
+  const toPayCount = rentsList.filter((rent: any) => {
+    return rent.items?.some((item: any) => {
       if (["pending", "completed", "canceled"].includes(item.status)) {
         return false
       }
@@ -148,24 +153,24 @@ export const RentList = (props: any) => {
     })
   }).length
 
-  const toDeliverCount = userRents.filter((rent: any) => {
-    return rent.items.some(
+  const toDeliverCount = rentsList.filter((rent: any) => {
+    return rent.items?.some(
       (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
     )
   }).length
 
-  const toPickupCount = userRents.filter((rent: any) => {
-    return rent.items.some(
+  const toPickupCount = rentsList.filter((rent: any) => {
+    return rent.items?.some(
       (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
     )
   }).length
 
-  const toReturnCount = userRents.filter((rent: any) => {
-    return rent.items.some((item: any) => ON_HAND_STATUSES.includes(item.status))
+  const toReturnCount = rentsList.filter((rent: any) => {
+    return rent.items?.some((item: any) => ON_HAND_STATUSES.includes(item.status))
   }).length
 
-  const dueTodayCount = userRents.filter((rent: any) => {
-    return rent.items.some((item: any) => {
+  const dueTodayCount = rentsList.filter((rent: any) => {
+    return rent.items?.some((item: any) => {
       if (["completed", "returned", "returned_damaged", "canceled"].includes(item.status))
         return false
       const endDate = new Date(item.endDate)
@@ -181,21 +186,22 @@ export const RentList = (props: any) => {
   // Main filter switch
   const baseFilteredRents =
     currentStatus === "all"
-      ? userRents
-      : userRents.filter((rent: any) => {
+      ? rentsList
+      : rentsList.filter((rent: any) => {
+          const items = rent.items || []
           if (currentStatus === "pending") {
-            return rent.items.some((item: any) => item.status === "pending")
+            return items.some((item: any) => item.status === "pending")
           }
           if (currentStatus === "completed") {
             return (
-              rent.items.length > 0 &&
-              rent.items.every((item: any) =>
+              items.length > 0 &&
+              items.every((item: any) =>
                 ["completed", "returned", "returned_damaged", "canceled"].includes(item.status)
               )
             )
           }
           if (currentStatus === "to-pay") {
-            return rent.items.some((item: any) => {
+            return items.some((item: any) => {
               if (["pending", "completed", "canceled"].includes(item.status)) {
                 return false
               }
@@ -204,20 +210,20 @@ export const RentList = (props: any) => {
             })
           }
           if (currentStatus === "to-deliver") {
-            return rent.items.some(
+            return items.some(
               (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
             )
           }
           if (currentStatus === "to-pickup") {
-            return rent.items.some(
+            return items.some(
               (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
             )
           }
           if (currentStatus === "to-return") {
-            return rent.items.some((item: any) => ON_HAND_STATUSES.includes(item.status))
+            return items.some((item: any) => ON_HAND_STATUSES.includes(item.status))
           }
 
-          return rent.items.some((item: any) => item.status === currentStatus)
+          return items.some((item: any) => item.status === currentStatus)
         })
 
   const filteredRents = [...baseFilteredRents].sort((a: any, b: any) => {
@@ -228,7 +234,8 @@ export const RentList = (props: any) => {
     const getPriority = (rent: any) => {
       const today = new Date()
       let priority = 0
-      for (const item of rent.items) {
+      const items = rent.items || []
+      for (const item of items) {
         const isCompleted = ["completed", "returned", "returned_damaged", "canceled"].includes(
           item.status
         )
@@ -381,219 +388,224 @@ export const RentList = (props: any) => {
       {paginatedRents.length === 0 && (
         <p className="text-center my-8 text-gray-500">{getEmptyMessage()}</p>
       )}
-      {paginatedRents.map((rent: any) => (
-        <div
-          className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-4 w-full"
-          key={rent.id}
-        >
-          <div className="flex flex-col w-full">
-            <div className="flex justify-between items-center w-full border-b border-gray-200 p-2">
-              <p className="font-semibold text-gray-700">Order Reference: #{getOrderRef(rent)}</p>
-              <p className="text-sm text-gray-500">
-                {rent.items.length > 1 ? "Items :" : "Item :"} {rent.items.length}
-              </p>
-            </div>
+      {paginatedRents.map((rent: any) => {
+        const items = rent.items || []
+        return (
+          <div
+            className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-4 w-full"
+            key={rent.id}
+          >
+            <div className="flex flex-col w-full">
+              <div className="flex justify-between items-center w-full border-b border-gray-200 p-2">
+                <p className="font-semibold text-gray-700">Order Reference: #{getOrderRef(rent)}</p>
+                <p className="text-sm text-gray-500">
+                  {items.length > 1 ? "Items :" : "Item :"} {items.length}
+                </p>
+              </div>
 
-            {rent.items.map((item: any) => {
-              const {
-                duration,
-                rentAmount,
-                initialFee,
-                lapseInDays,
-                penalty,
-                totalPayment,
-                balance,
-                unitPrice,
-              } = calculateItemFinancials(item)
+              {items.map((item: any) => {
+                const {
+                  duration,
+                  rentAmount,
+                  initialFee,
+                  lapseInDays,
+                  penalty,
+                  totalPayment,
+                  balance,
+                  unitPrice,
+                } = calculateItemFinancials(item)
 
-              const today = new Date()
-              const endDate = new Date(item.endDate)
-              const isPending = item.status === "pending"
-              const isCompleted = [
-                "completed",
-                "returned",
-                "returned_damaged",
-                "canceled",
-              ].includes(item.status)
-              const isDueToday =
-                !isCompleted &&
-                endDate.getDate() === today.getDate() &&
-                endDate.getMonth() === today.getMonth() &&
-                endDate.getFullYear() === today.getFullYear()
-              const isOverdue = !isCompleted && today > endDate && !isDueToday
+                const today = new Date()
+                const endDate = new Date(item.endDate)
+                const isPending = item.status === "pending"
+                const isCompleted = [
+                  "completed",
+                  "returned",
+                  "returned_damaged",
+                  "canceled",
+                ].includes(item.status)
+                const isDueToday =
+                  !isCompleted &&
+                  endDate.getDate() === today.getDate() &&
+                  endDate.getMonth() === today.getMonth() &&
+                  endDate.getFullYear() === today.getFullYear()
+                const isOverdue = !isCompleted && today > endDate && !isDueToday
 
-              const variantDisplay = item.productVariant?.attributes?.length
-                ? item.productVariant.attributes
-                    .map((attr: any) => attr.attributeValue?.value)
-                    .filter(Boolean)
-                    .join(" / ")
-                : [item.productVariant?.size, item.productVariant?.color?.name]
-                    .filter(Boolean)
-                    .join(" - ") || "Default Config"
+                const variantDisplay = item.productVariant?.attributes?.length
+                  ? item.productVariant.attributes
+                      .map((attr: any) => attr.attributeValue?.value)
+                      .filter(Boolean)
+                      .join(" / ")
+                  : [item.productVariant?.size, item.productVariant?.color?.name]
+                      .filter(Boolean)
+                      .join(" - ") || "Default Config"
 
-              const productId = item.productVariant?.product?.id
+                const productId = item.productVariant?.product?.id
 
-              return (
-                <div
-                  key={item.id}
-                  className={`flex justify-start items-center w-full border-b p-2 gap-2 transition-all rounded-md my-1 ${
-                    isPending ? "bg-amber-50/70 border-amber-300" : "bg-white border-gray-200"
-                  }`}
-                >
-                  <Link href={productId ? `/products/${productId}` : "#"}>
-                    <Image
-                      src={
-                        item.productVariant?.product?.images?.[0]?.url
-                          ? `/uploads/products/${item.productVariant.product.images[0].url}`
-                          : "/placeholder.png"
-                      }
-                      alt={item.productVariant?.product?.name || "Product Image"}
-                      width={100}
-                      height={100}
-                      className="w-24 h-24 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
-                    />
-                  </Link>
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex justify-start items-center w-full border-b p-2 gap-2 transition-all rounded-md my-1 ${
+                      isPending ? "bg-amber-50/70 border-amber-300" : "bg-white border-gray-200"
+                    }`}
+                  >
+                    <Link href={productId ? `/products/${productId}` : "#"}>
+                      <Image
+                        src={
+                          item.productVariant?.product?.images?.[0]?.url
+                            ? `/uploads/products/${item.productVariant.product.images[0].url}`
+                            : "/placeholder.png"
+                        }
+                        alt={item.productVariant?.product?.name || "Product Image"}
+                        width={100}
+                        height={100}
+                        className="w-24 h-24 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                      />
+                    </Link>
 
-                  <div className="flex flex-col justify-between h-full">
-                    <div>
-                      <p className="font-bold text-[#1b2a80] cursor-pointer">
-                        {item.productVariant?.product?.shop?.shopName || "Shop"}
-                      </p>
-
-                      {productId ? (
-                        <Link
-                          href={`/products/${productId}`}
-                          className="text-lg font-semibold hover:text-blue-600 hover:underline text-gray-900 transition-colors"
-                        >
-                          {item.productVariant?.product?.name}
-                        </Link>
-                      ) : (
-                        <p className="text-lg font-semibold">
-                          {item.productVariant?.product?.name}
-                        </p>
-                      )}
-
-                      <p className="text-sm text-gray-500 mt-1">Variant: {variantDisplay}</p>
-                      <div className="flex gap-2 mt-2">
-                        <p className="capitalize text-xs font-semibold text-gray-600 border border-gray-200 px-2 py-1 rounded-md inline-block w-fit bg-gray-50">
-                          Delivery: {item.deliveryMethod}
+                    <div className="flex flex-col justify-between h-full">
+                      <div>
+                        <p className="font-bold text-[#1b2a80] cursor-pointer">
+                          {item.productVariant?.product?.shop?.shopName || "Shop"}
                         </p>
 
-                        <p
-                          className={`capitalize text-xs font-bold px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 w-fit ${
-                            isPending
-                              ? "bg-amber-100 text-amber-900 border border-amber-300"
-                              : item.status === "accepted"
-                              ? "bg-blue-100 text-blue-800"
-                              : item.status === "canceled"
-                              ? "bg-red-100 text-red-800"
-                              : ["completed", "returned", "returned_damaged"].includes(item.status)
-                              ? "bg-green-100 text-green-800"
-                              : "bg-indigo-100 text-indigo-800"
-                          }`}
-                        >
-                          {isPending && (
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                            </span>
+                        {productId ? (
+                          <Link
+                            href={`/products/${productId}`}
+                            className="text-lg font-semibold hover:text-blue-600 hover:underline text-gray-900 transition-colors"
+                          >
+                            {item.productVariant?.product?.name}
+                          </Link>
+                        ) : (
+                          <p className="text-lg font-semibold">
+                            {item.productVariant?.product?.name}
+                          </p>
+                        )}
+
+                        <p className="text-sm text-gray-500 mt-1">Variant: {variantDisplay}</p>
+                        <div className="flex gap-2 mt-2">
+                          <p className="capitalize text-xs font-semibold text-gray-600 border border-gray-200 px-2 py-1 rounded-md inline-block w-fit bg-gray-50">
+                            Delivery: {item.deliveryMethod}
+                          </p>
+
+                          <p
+                            className={`capitalize text-xs font-bold px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 w-fit ${
+                              isPending
+                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                : item.status === "accepted"
+                                ? "bg-blue-100 text-blue-800"
+                                : item.status === "canceled"
+                                ? "bg-red-100 text-red-800"
+                                : ["completed", "returned", "returned_damaged"].includes(
+                                    item.status
+                                  )
+                                ? "bg-green-100 text-green-800"
+                                : "bg-indigo-100 text-indigo-800"
+                            }`}
+                          >
+                            {isPending && (
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                              </span>
+                            )}
+                            Status: {item.status.replace("_", " ")}
+                          </p>
+
+                          {isDueToday && (
+                            <p className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-orange-200">
+                              Due Today
+                            </p>
                           )}
-                          Status: {item.status.replace("_", " ")}
-                        </p>
-
-                        {isDueToday && (
-                          <p className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-orange-200">
-                            Due Today
-                          </p>
-                        )}
-                        {isOverdue && (
-                          <p className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-red-200">
-                            Overdue
-                          </p>
-                        )}
+                          {isOverdue && (
+                            <p className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-red-200">
+                              Overdue
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col justify-between h-full ml-4">
-                    <p>
-                      Price : ₱{unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </p>
-                    <p>Qty : {item.quantity}</p>
-                    <p>
-                      Rent Range:{" "}
-                      {new Intl.DateTimeFormat("en-US", {
-                        month: "short",
-                        day: "2-digit",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      }).formatRange(new Date(item.startDate), new Date(item.endDate))}{" "}
-                      - ({duration} {duration > 1 ? "days" : "day"})
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col justify-between h-full ml-4">
-                    <p>
-                      Total Rent : ₱
-                      {rentAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-orange-600 font-medium">
-                      Initial Fee (50%) : ₱
-                      {initialFee.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </p>
-                    <p>
-                      Penalty :{" "}
-                      {item.status === "completed" ? (
-                        <span className="text-green-600">Paid</span>
-                      ) : (
-                        <>
-                          ₱{penalty.toLocaleString("en-US", { minimumFractionDigits: 2 })} (
-                          {lapseInDays} {lapseInDays === 1 ? "day" : "days"})
-                        </>
-                      )}
-                    </p>
-
-                    <p>
-                      Amount Paid :{" "}
-                      {item.status === "completed" ? (
-                        <span className="text-green-600">Paid</span>
-                      ) : (
-                        `₱${totalPayment.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                      )}
-                    </p>
-
-                    {["completed", "returned", "returned_damaged"].includes(item.status) ? (
-                      <p className="text-green-600 font-bold">Completed</p>
-                    ) : item.status === "canceled" ? (
-                      <p className="text-red-600 font-bold">Canceled</p>
-                    ) : isPending ? (
-                      <div className="flex flex-col gap-1 items-start">
-                        <p className="text-amber-700 font-semibold text-xs bg-amber-100/80 px-2 py-1 rounded w-fit">
-                          Awaiting Shop Approval
-                        </p>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={() => handleOpenCancelModal(item.id)}
-                          sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.2 }}
-                        >
-                          Cancel Request
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className="font-bold text-[#1b2a80]">
-                        Balance : ₱{balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    <div className="flex flex-col justify-between h-full ml-4">
+                      <p>
+                        Price : ₱{unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </p>
-                    )}
+                      <p>Qty : {item.quantity}</p>
+                      <p>
+                        Rent Range:{" "}
+                        {new Intl.DateTimeFormat("en-US", {
+                          month: "short",
+                          day: "2-digit",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        }).formatRange(new Date(item.startDate), new Date(item.endDate))}{" "}
+                        - ({duration} {duration > 1 ? "days" : "day"})
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full ml-4">
+                      <p>
+                        Total Rent : ₱
+                        {rentAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-orange-600 font-medium">
+                        Initial Fee (50%) : ₱
+                        {initialFee.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </p>
+                      <p>
+                        Penalty :{" "}
+                        {item.status === "completed" ? (
+                          <span className="text-green-600">Paid</span>
+                        ) : (
+                          <>
+                            ₱{penalty.toLocaleString("en-US", { minimumFractionDigits: 2 })} (
+                            {lapseInDays} {lapseInDays === 1 ? "day" : "days"})
+                          </>
+                        )}
+                      </p>
+
+                      <p>
+                        Amount Paid :{" "}
+                        {item.status === "completed" ? (
+                          <span className="text-green-600">Paid</span>
+                        ) : (
+                          `₱${totalPayment.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                        )}
+                      </p>
+
+                      {["completed", "returned", "returned_damaged"].includes(item.status) ? (
+                        <p className="text-green-600 font-bold">Completed</p>
+                      ) : item.status === "canceled" ? (
+                        <p className="text-red-600 font-bold">Canceled</p>
+                      ) : isPending ? (
+                        <div className="flex flex-col gap-1 items-start">
+                          <p className="text-amber-700 font-semibold text-xs bg-amber-100/80 px-2 py-1 rounded w-fit">
+                            Awaiting Shop Approval
+                          </p>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            onClick={() => handleOpenCancelModal(item.id)}
+                            sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.2 }}
+                          >
+                            Cancel Request
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="font-bold text-[#1b2a80]">
+                          Balance : ₱{balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
