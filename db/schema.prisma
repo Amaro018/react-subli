@@ -277,13 +277,16 @@ model RentItem {
   rent             Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
   productVariantId Int
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
-  quantity         Int
-  price            Float
-  status           String // "pending", "accepted", "on_hand", "overdue", "returned", "returned_damaged", "rendering", "completed", "canceled"
-  deliveryMethod   String
-  note             String?
-  startDate        DateTime
-  endDate          DateTime
+
+  shopId Int?
+
+  quantity       Int
+  price          Float
+  status         String // "pending", "accepted", "on_hand", "overdue", "returned", "returned_damaged", "completed", "canceled"
+  deliveryMethod String
+  note           String?
+  startDate      DateTime
+  endDate        DateTime
 
   returnedDamagedQty Int       @default(0)
   charges            Charge[]
