@@ -24,16 +24,18 @@ function OrderList(props: any) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.map((row: any) => (
-            <TableRow key={row.id} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-              <TableCell component="th" scope="row">
-                {row.items[0].productVariant.product.name}
-              </TableCell>
-              <TableCell align="right">{row.items[0].quantity}</TableCell>
-              <TableCell align="right">{row.items[0].productVariant.price}</TableCell>
-              <TableCell align="right">{row.status}</TableCell>
-            </TableRow>
-          ))}
+          {data.flatMap((row: any) =>
+            row.items?.map((item: any) => (
+              <TableRow key={item.id} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+                <TableCell component="th" scope="row">
+                  {item.productVariant?.product?.name || "N/A"}
+                </TableCell>
+                <TableCell align="right">{item.quantity}</TableCell>
+                <TableCell align="right">{item.price || item.productVariant?.price}</TableCell>
+                <TableCell align="right">{item.status}</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </TableContainer>
