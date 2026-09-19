@@ -12,6 +12,7 @@ const CreateRent = z.object({
   items: z.array(
     z.object({
       productVariantId: z.number(),
+      shopId: z.number().optional(), // Added shopId to item schema
       quantity: z.number(),
       price: z.number(),
       status: z.string(),
@@ -28,13 +29,18 @@ export default async function createRent(input: z.infer<typeof CreateRent>) {
   const data = CreateRent.parse(input)
   // Use a transaction to ensure all-or-nothing execution
   const rent = await db.$transaction(async (tx) => {
-    // Step 1: Availability Check for all items within the transaction
+    // Step 1: Availability Check & fetch variant shop details for all items
+    const itemShopMap = new Map<number, number>()
+
     for (const item of data.items) {
       const variant = await tx.productVariant.findUnique({
         where: { id: item.productVariantId },
         include: { product: true },
       })
       if (!variant) throw new Error(`Product variant with id ${item.productVariantId} not found.`)
+
+      // Cache shopId for the current variant
+      itemShopMap.set(item.productVariantId, variant.product.shopId)
 
       const dbRents = await tx.rentItem.findMany({
         where: {
@@ -98,7 +104,7 @@ export default async function createRent(input: z.infer<typeof CreateRent>) {
       }
     }
 
-    // Step 2: Create Rent and RentItems
+    // Step 2: Create Rent and RentItems with shopId populated
     const newRent = await tx.rent.create({
       data: {
         userId: data.userId,
@@ -109,6 +115,7 @@ export default async function createRent(input: z.infer<typeof CreateRent>) {
         items: {
           create: data.items.map((item) => ({
             productVariantId: item.productVariantId,
+            shopId: item.shopId ?? itemShopMap.get(item.productVariantId),
             quantity: item.quantity,
             price: item.price,
             deliveryMethod: String(item.deliveryMethod),
@@ -140,7 +147,7 @@ export default async function createRent(input: z.infer<typeof CreateRent>) {
       },
     })
 
-    // Step 3: After successfully creating rent, delete items from cart if IDs are provided
+    // Step 3: Delete items from cart if IDs are provided
     if (data.cartItemIds && data.cartItemIds.length > 0) {
       await tx.cartItem.deleteMany({
         where: {
