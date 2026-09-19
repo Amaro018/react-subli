@@ -176,13 +176,13 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           title: "My Reviews",
           icon: <RateReviewIcon fontSize="small" />,
           items: [
-            { name: "All Reviews", href: "/renter/reviews" },
+            { name: "All Reviews", href: "/renter/my-reviews" },
             {
               name: "To Rate",
-              href: "/renter/reviews?status=to-rate",
+              href: "/renter/my-reviews?status=to-rate",
               badge: toRateCount,
             },
-            { name: "Reviewed", href: "/renter/reviews?status=reviewed" },
+            { name: "Reviewed", href: "/renter/my-reviews?status=reviewed" },
           ],
         },
         currentUser?.isShopRegistered && currentUser.shop
