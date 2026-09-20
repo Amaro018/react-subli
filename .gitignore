@@ -54,3 +54,4 @@ public/uploads/
 public/uploads-backup
 db/*.sqlite.backup
 db/*-backup.sqlite
+.env
