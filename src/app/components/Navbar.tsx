@@ -1,23 +1,32 @@
 "use client"
 import React, { useEffect, useRef, useState } from "react"
-import { LogoutButton } from "../(auth)/components/LogoutButton"
-import AccountCircle from "@mui/icons-material/AccountCircle"
-import ExpandMore from "@mui/icons-material/ExpandMore"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { LogoutButton } from "../(auth)/components/LogoutButton"
+
+// UI & Icons
+import AccountCircle from "@mui/icons-material/AccountCircle"
+import ExpandMore from "@mui/icons-material/ExpandMore"
 import PersonIcon from "@mui/icons-material/Person"
+import ListAltIcon from "@mui/icons-material/ListAlt"
+import BookmarkIcon from "@mui/icons-material/Bookmark"
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"
+import RateReviewIcon from "@mui/icons-material/RateReview"
+import ContactSupportIcon from "@mui/icons-material/ContactSupport"
+import StorefrontIcon from "@mui/icons-material/Storefront"
+import NotificationsIcon from "@mui/icons-material/Notifications"
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag"
-import StarIcon from "@mui/icons-material/Star"
-import StoreIcon from "@mui/icons-material/Store"
+import ExitToAppIcon from "@mui/icons-material/ExitToApp"
 import Drawer from "@mui/material/Drawer"
 import { Badge, Popover } from "@mui/material"
+
+// RPC & Components
 import { useQuery } from "@blitzjs/rpc"
 import getAllCartItem from "../queries/getAllCartItem"
 import getNotifications from "../queries/getNotifications"
-import NotificationsIcon from "@mui/icons-material/Notifications"
 import NotificationList from "./NotificationList"
-import ExitToAppIcon from "@mui/icons-material/ExitToApp"
 import DrawerCart from "./DrawerCart"
+import { Sidebar } from "../renter/components/sidebar" // Adjust path to match your Sidebar file position
 
 type NavbarProps = {
   currentUser?: any
@@ -32,6 +41,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
   const pathname = usePathname()
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const accountRef = useRef<HTMLDivElement | null>(null)
+
   const [cartItems] = useQuery(getAllCartItem, null, {
     enabled: !!currentUser && !isLoggingOut,
     suspense: false,
@@ -77,7 +87,6 @@ export default function Navbar({ currentUser }: NavbarProps) {
     { name: "Contact", href: "/contact" },
   ]
 
-  // Shop state detection: adjust to your actual user shape if different
   const firstName =
     currentUser?.personalInfo?.firstName ||
     (typeof currentUser?.name === "string" ? currentUser.name.split(" ")[0] : "User")
@@ -107,14 +116,13 @@ export default function Navbar({ currentUser }: NavbarProps) {
   return (
     <header className="w-full bg-[#1b2a80] text-white shadow-md">
       <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        {/* Left: Logo + (mobile) menu icon */}
+        {/* Left Logo */}
         <div className="flex items-center gap-2 lg:gap-4">
           <button
             aria-label="Open menu"
             onClick={() => setMenuOpen(true)}
             className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
           >
-            {/* Hamburger */}
             <svg
               className="h-6 w-6 text-white"
               fill="none"
@@ -138,7 +146,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
           </Link>
         </div>
 
-        {/* Center: desktop nav links */}
+        {/* Desktop Navigation Links */}
         <nav className="hidden gap-8 font-semibold lg:flex items-center">
           {navLinks.map((l) => {
             const isActive = pathname === l.href
@@ -159,7 +167,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
           })}
         </nav>
 
-        {/* Right: auth actions (desktop) and user icon (mobile) */}
+        {/* Actions */}
         <div className="flex items-center gap-2 lg:gap-4">
           <div className="hidden items-center gap-4 font-semibold lg:flex">
             {!currentUser ? (
@@ -189,7 +197,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
               </>
             ) : (
               <>
-                {/* Desktop account dropdown (no logout inside) */}
+                {/* Desktop Account Dropdown */}
                 <div ref={accountRef} className="relative">
                   <button
                     type="button"
@@ -206,39 +214,60 @@ export default function Navbar({ currentUser }: NavbarProps) {
                     <div className="absolute right-0 z-50 mt-2 w-48 rounded-md bg-white text-gray-800 shadow-lg">
                       <div className="flex flex-col">
                         <Link
-                          href="/renter/my-profile"
+                          href="/renter/profile"
                           className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => setAccountOpen(false)}
                         >
                           <PersonIcon className="mr-3 text-gray-500" fontSize="small" />
                           My Profile
                         </Link>
-
                         <Link
-                          href="/renter/my-rent-orders"
+                          href="/renter/rent-orders"
                           className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => setAccountOpen(false)}
                         >
-                          <ShoppingBagIcon className="mr-3 text-gray-500" fontSize="small" />
+                          <ListAltIcon className="mr-3 text-gray-500" fontSize="small" />
                           My Rental Orders
                         </Link>
-
                         <Link
-                          href="/renter/my-reviews"
+                          href="/renter/saved-items"
                           className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => setAccountOpen(false)}
                         >
-                          <StarIcon className="mr-3 text-gray-500" fontSize="small" />
+                          <BookmarkIcon className="mr-3 text-gray-500" fontSize="small" />
+                          My Saved Items
+                        </Link>
+                        <Link
+                          href="/renter/invoices"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <ReceiptLongIcon className="mr-3 text-gray-500" fontSize="small" />
+                          My Invoices
+                        </Link>
+                        <Link
+                          href="/renter/reviews"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <RateReviewIcon className="mr-3 text-gray-500" fontSize="small" />
                           My Reviews
                         </Link>
-
                         <Link
                           href={shopHref as any}
                           className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => setAccountOpen(false)}
                         >
-                          <StoreIcon className="mr-3 text-gray-500" fontSize="small" />
+                          <StorefrontIcon className="mr-3 text-gray-500" fontSize="small" />
                           {shopLabel}
+                        </Link>
+                        <Link
+                          href="/support"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <ContactSupportIcon className="mr-3 text-gray-500" fontSize="small" />
+                          Support
                         </Link>
 
                         <LogoutButton
@@ -256,7 +285,6 @@ export default function Navbar({ currentUser }: NavbarProps) {
                   )}
                 </div>
 
-                {/* Desktop Cart Icon */}
                 <button
                   onClick={() => setCartOpen(true)}
                   className="hover:text-yellow-300 transition-colors"
@@ -265,7 +293,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
                     <ShoppingBagIcon />
                   </Badge>
                 </button>
-                {/* Desktop Notification Icon */}
+
                 <button
                   onClick={handleNotificationClick}
                   className="hover:text-yellow-300 transition-colors"
@@ -283,11 +311,9 @@ export default function Navbar({ currentUser }: NavbarProps) {
             onClick={() => setUserOpen(true)}
             className="lg:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none"
           >
-            {/* Mobile account icon */}
             <AccountCircle style={{ fontSize: 24 }} className="text-white" />
           </button>
 
-          {/* Mobile Cart Icon */}
           {currentUser && (
             <>
               <button
@@ -311,7 +337,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
         </div>
       </div>
 
-      {/* Mobile: Menu Drawer (left) */}
+      {/* Mobile Menu Drawer (left) */}
       {menuOpen && (
         <div className="fixed inset-0 z-40 flex">
           <div
@@ -366,118 +392,37 @@ export default function Navbar({ currentUser }: NavbarProps) {
         </div>
       )}
 
-      {/* Mobile: User Drawer (right) - copied dropdown items here */}
-      {userOpen && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div
-            className="fixed inset-0 bg-black/40"
-            onClick={() => setUserOpen(false)}
-            aria-hidden="true"
-          />
-          <aside className="relative w-64 bg-white p-6 text-gray-800 shadow-lg flex flex-col h-full">
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-xl font-bold text-[#1b2a80]">Account</span>
-              <button
-                aria-label="Close account"
-                onClick={() => setUserOpen(false)}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <svg
-                  className="h-6 w-6 text-gray-500"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              {!currentUser ? (
-                <>
-                  <Link
-                    href="/login"
-                    className={`rounded-lg px-4 py-3 text-base font-medium transition-colors ${
-                      pathname === "/login"
-                        ? "bg-[#1b2a80]/10 text-[#1b2a80]"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80]"
-                    }`}
-                    onClick={() => setUserOpen(false)}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className={`rounded-lg px-4 py-3 text-base font-medium transition-colors ${
-                      pathname === "/signup"
-                        ? "bg-[#1b2a80]/10 text-[#1b2a80]"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80]"
-                    }`}
-                    onClick={() => setUserOpen(false)}
-                  >
-                    Register
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/renter/my-profile"
-                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
-                    onClick={() => setUserOpen(false)}
-                  >
-                    <PersonIcon className="mr-3 text-gray-500" fontSize="small" />
-                    My Profile
-                  </Link>
-
-                  <Link
-                    href="/renter/my-rent-orders"
-                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
-                    onClick={() => setUserOpen(false)}
-                  >
-                    <ShoppingBagIcon className="mr-3 text-gray-500" fontSize="small" />
-                    My Rental Orders
-                  </Link>
-
-                  <Link
-                    href="/renter/my-reviews"
-                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
-                    onClick={() => setUserOpen(false)}
-                  >
-                    <StarIcon className="mr-3 text-gray-500" fontSize="small" />
-                    My Reviews
-                  </Link>
-
-                  <Link
-                    href={shopHref as any}
-                    className="flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors"
-                    onClick={() => setUserOpen(false)}
-                  >
-                    <StoreIcon className="mr-3 text-gray-500" fontSize="small" />
-                    {shopLabel}
-                  </Link>
-
-                  <LogoutButton
-                    className="w-full flex items-center rounded-lg px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[#1b2a80] transition-colors cursor-pointer text-left"
-                    onLogout={() => {
-                      setIsLoggingOut(true)
-                      setUserOpen(false)
-                    }}
-                  >
-                    <ExitToAppIcon className="mr-3 text-gray-500" fontSize="small" />
-                    <span>Logout</span>
-                  </LogoutButton>
-                </>
-              )}
-            </div>
-          </aside>
-        </div>
-      )}
+      {/* Mobile Account Drawer (Right Side with Full Sidebar rendering) */}
+      <Drawer
+        anchor="right"
+        open={userOpen}
+        onClose={() => setUserOpen(false)}
+        sx={{
+          "& .MuiDrawer-paper": { boxSizing: "border-box", width: 280 },
+        }}
+      >
+        {currentUser ? (
+          <Sidebar currentUser={currentUser} onMobileClose={() => setUserOpen(false)} />
+        ) : (
+          <div className="p-6 text-gray-800 flex flex-col gap-3">
+            <span className="text-xl font-bold text-[#1b2a80] mb-4">Account</span>
+            <Link
+              href="/login"
+              className="rounded-lg px-4 py-3 font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => setUserOpen(false)}
+            >
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              className="rounded-lg px-4 py-3 font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => setUserOpen(false)}
+            >
+              Register
+            </Link>
+          </div>
+        )}
+      </Drawer>
 
       <Drawer anchor="right" open={cartOpen} onClose={() => setCartOpen(false)}>
         <DrawerCart />
@@ -488,14 +433,8 @@ export default function Navbar({ currentUser }: NavbarProps) {
         open={openNotification}
         anchorEl={anchorEl}
         onClose={handleNotificationClose}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <NotificationList onClose={handleNotificationClose} />
       </Popover>

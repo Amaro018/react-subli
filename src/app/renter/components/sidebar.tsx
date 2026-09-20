@@ -9,7 +9,7 @@ import getAllRentOfUser from "../../queries/getAllRentOfUser"
 import { LogoutButton } from "../../(auth)/components/LogoutButton"
 
 // Icons
-import PersonIcon from "@mui/icons-material/Person"
+import PersonOutlineIcon from "@mui/icons-material/Person"
 import ListAltIcon from "@mui/icons-material/ListAlt"
 import MenuIcon from "@mui/icons-material/Menu"
 import MenuOpenIcon from "@mui/icons-material/MenuOpen"
@@ -19,6 +19,9 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
 import ExpandLessIcon from "@mui/icons-material/ExpandLess"
 import RateReviewIcon from "@mui/icons-material/RateReview"
 import StorefrontIcon from "@mui/icons-material/Storefront"
+import BookmarkIcon from "@mui/icons-material/Bookmark"
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"
+import ContactSupportIcon from "@mui/icons-material/ContactSupport"
 
 interface SidebarProps {
   currentUser: any
@@ -132,10 +135,10 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
       [
         {
           title: "My Profile",
-          icon: <PersonIcon fontSize="small" />,
+          icon: <PersonOutlineIcon fontSize="small" />,
           items: [
-            { name: "Profile", href: "/renter/my-profile" },
-            { name: "Addresses", href: "/renter/my-address" },
+            { name: "Profile", href: "/renter/profile" },
+            { name: "Addresses", href: "/renter/address" },
             { name: "Change Password", href: "/renter/change-password" },
           ],
         },
@@ -143,46 +146,56 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
           title: "My Rentals",
           icon: <ListAltIcon fontSize="small" />,
           items: [
-            { name: "All Rentals", href: "/renter/my-rent-orders" },
+            { name: "All Rentals", href: "/renter/rent-orders" },
             {
               name: "Pending",
-              href: "/renter/my-rent-orders?status=pending",
+              href: "/renter/rent-orders?status=pending",
               badge: pendingCount,
             },
             {
               name: "To Pay",
-              href: "/renter/my-rent-orders?status=to-pay",
+              href: "/renter/rent-orders?status=to-pay",
               badge: toPayCount,
             },
             {
               name: "To Deliver",
-              href: "/renter/my-rent-orders?status=to-deliver",
+              href: "/renter/rent-orders?status=to-deliver",
               badge: toDeliverCount,
             },
             {
               name: "To Pickup",
-              href: "/renter/my-rent-orders?status=to-pickup",
+              href: "/renter/rent-orders?status=to-pickup",
               badge: toPickupCount,
             },
             {
               name: "To Return",
-              href: "/renter/my-rent-orders?status=to-return",
+              href: "/renter/rent-orders?status=to-return",
               badge: toReturnCount,
             },
-            { name: "Completed", href: "/renter/my-rent-orders?status=completed" },
+            { name: "Completed", href: "/renter/rent-orders?status=completed" },
           ],
+        },
+        {
+          title: "My Saved Items",
+          icon: <BookmarkIcon fontSize="small" />,
+          href: "/renter/saved-items",
+        },
+        {
+          title: "My Invoices",
+          icon: <ReceiptLongIcon fontSize="small" />,
+          href: "/renter/invoices",
         },
         {
           title: "My Reviews",
           icon: <RateReviewIcon fontSize="small" />,
           items: [
-            { name: "All Reviews", href: "/renter/my-reviews" },
+            { name: "All Reviews", href: "/renter/reviews" },
             {
               name: "To Rate",
-              href: "/renter/my-reviews?status=to-rate",
+              href: "/renter/reviews?status=to-rate",
               badge: toRateCount,
             },
-            { name: "Reviewed", href: "/renter/my-reviews?status=reviewed" },
+            { name: "Reviewed", href: "/renter/reviews?status=reviewed" },
           ],
         },
         currentUser?.isShopRegistered && currentUser.shop
@@ -214,6 +227,11 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
               icon: <StorefrontIcon fontSize="small" />,
               href: "/renter/my-shop",
             },
+        {
+          title: "Support",
+          icon: <ContactSupportIcon fontSize="small" />,
+          items: [{ name: "Help Center", href: "/support" }],
+        },
       ].filter(Boolean),
     [
       currentUser,

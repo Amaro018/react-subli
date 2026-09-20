@@ -1,8 +1,8 @@
 import React from "react"
-import { invoke } from "../blitz-server"
-import getCurrentUser from "../users/queries/getCurrentUser"
-import Navbar from "../components/Navbar"
-import Footer from "../components/Footer"
+import { invoke } from "../../blitz-server"
+import getCurrentUser from "../../users/queries/getCurrentUser"
+import Navbar from "../../components/Navbar"
+import Footer from "../../components/Footer"
 import Link from "next/link"
 
 import EmailIcon from "@mui/icons-material/Email"

@@ -1,5 +1,5 @@
-import { invoke } from "./../../blitz-server"
-import getCurrentUser from "./../../users/queries/getCurrentUser"
+import { invoke } from "../../blitz-server"
+import getCurrentUser from "../../users/queries/getCurrentUser"
 import RenterAddress from "../components/RenterAddress"
 
 export default async function Page() {
