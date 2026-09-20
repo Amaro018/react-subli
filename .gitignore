@@ -51,3 +51,6 @@ my-ssh-key-github
 my-ssh-key-github.pub
 
 public/uploads/
+public/uploads-backup
+db/*.sqlite.backup
+db/*-backup.sqlite
