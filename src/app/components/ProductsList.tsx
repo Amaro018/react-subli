@@ -1,9 +1,12 @@
 "use client"
 import React, { useState, useEffect, useRef } from "react"
-import { useQuery } from "@blitzjs/rpc"
+import { useSession } from "@blitzjs/auth"
+import { useQuery, useMutation } from "@blitzjs/rpc"
 import getAllProducts from "../queries/getAllProducts"
 import getCategories from "../queries/getCategories"
 import getBarangays from "../queries/getBarangays"
+import toggleSavedItem from "../mutations/toggleSavedItem" // Adjust path to your mutation
+import getSavedItems from "../queries/getSavedItems" // Adjust path to your query
 import Link from "next/link"
 import Image from "next/image"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
@@ -15,13 +18,19 @@ import {
   Select,
   MenuItem,
   Pagination,
+  IconButton,
 } from "@mui/material"
 import SearchOffIcon from "@mui/icons-material/SearchOff"
 import PaymentsIcon from "@mui/icons-material/Payments"
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder"
+import BookmarkIcon from "@mui/icons-material/Bookmark"
 import FilterSidebar from "./FilterSidebar"
 import TopSearchBar from "./TopSearchBar"
+import { toast } from "@/src/app/utils/toast"
 
 export default function ProductsList() {
+  const session = useSession({ suspense: false })
+
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -32,6 +41,13 @@ export default function ProductsList() {
   const [products] = useQuery(getAllProducts, null)
   const [categories] = useQuery(getCategories, null)
   const [barangays] = useQuery(getBarangays, null)
+
+  // Fetch saved items list for current user
+  const [savedItems = [], { refetch: refetchSavedItems }] = useQuery(getSavedItems, null, {
+    suspense: false,
+    enabled: Boolean(session.userId),
+  })
+  const [toggleSavedMutation] = useMutation(toggleSavedItem)
 
   const activeProducts = products?.filter((p) => p.status === "active") || []
 
@@ -54,10 +70,7 @@ export default function ProductsList() {
     setCurrentPage(1)
   }, [searchQuery, selectedCategories, selectedLocation, minPrice, maxPrice, sortBy])
 
-  // Fetch all available categories from the database
   const availableCategories = categories ? categories.map((c: any) => c.name) : []
-
-  // Fetch all available locations (barangays) from the database
   const availableLocations = barangays ? barangays.map((b: any) => b.name) : []
 
   const handleCategoryToggle = (category: string) => {
@@ -76,7 +89,43 @@ export default function ProductsList() {
     router.replace(`${pathname}?${params.toString()}` as any, { scroll: false })
   }
 
-  // Apply Search and Category Filters
+  // Handle Bookmark / Save Toggle
+  const handleToggleSave = async (e: React.MouseEvent, productId: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    // 1. Handle Guest User
+    if (!session.userId) {
+      toast.error("Please log in to save items to your saved list.")
+
+      const currentUrl = `${pathname}?${searchParams.toString()}`
+      router.push(`/login?next=${encodeURIComponent(currentUrl)}` as any)
+      return
+    }
+
+    // 2. Handle Authenticated User
+    try {
+      const result = await toggleSavedMutation({ productId })
+
+      if (refetchSavedItems) {
+        await refetchSavedItems()
+      }
+
+      if (result?.saved) {
+        toast.success("Item saved to your list!")
+      } else {
+        toast.info("Item removed from your saved list.")
+      }
+    } catch (error) {
+      toast.error("Failed to update saved item. Please try again.")
+    }
+  }
+
+  // Helper check to see if product is saved
+  const isProductSaved = (productId: number) => {
+    return savedItems?.some((item: any) => item.productId === productId || item.id === productId)
+  }
+
   const filteredProducts = activeProducts.filter((p: any) => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase())
     const categoryName = p.category?.name || "Uncategorized"
@@ -96,7 +145,6 @@ export default function ProductsList() {
     return matchesSearch && matchesCategory && matchesPrice && matchesLocation
   })
 
-  // Apply Sorting
   const sortedProducts = [...filteredProducts].sort((a: any, b: any) => {
     const aMinPrice = a.variants?.length ? Math.min(...a.variants.map((v: any) => v.price)) : 0
     const bMinPrice = b.variants?.length ? Math.min(...b.variants.map((v: any) => v.price)) : 0
@@ -111,16 +159,15 @@ export default function ProductsList() {
     if (sortBy === "price_asc") return aMinPrice - bMinPrice
     if (sortBy === "price_desc") return bMinPrice - aMinPrice
     if (sortBy === "rating_desc") return bRating - aRating
-    if (sortBy === "oldest") return a.id - b.id // oldest
-    if (sortBy === "newest") return b.id - a.id // newest
+    if (sortBy === "oldest") return a.id - b.id
+    if (sortBy === "newest") return b.id - a.id
 
-    // Relevance
     if (sortBy === "relevance" && searchQuery) {
       const aStarts = a.name.toLowerCase().startsWith(searchQuery.toLowerCase()) ? 1 : 0
       const bStarts = b.name.toLowerCase().startsWith(searchQuery.toLowerCase()) ? 1 : 0
       if (aStarts !== bStarts) return bStarts - aStarts
     }
-    return b.id - a.id // Fallback to newest
+    return b.id - a.id
   })
 
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage)
@@ -299,12 +346,34 @@ export default function ProductsList() {
                 const average = product.reviews?.length ? sum / product.reviews.length : 0
                 const thumbnail =
                   product.images?.find((img: any) => img.isThumbnail) || product.images?.[0]
+                const saved = isProductSaved(product.id)
 
                 return (
                   <div
                     key={product.id}
-                    className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col"
+                    className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col overflow-hidden"
                   >
+                    {/* Bookmark / Save Button */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <IconButton
+                        onClick={(e) => handleToggleSave(e, product.id)}
+                        sx={{
+                          backgroundColor: "rgba(255, 255, 255, 0.85)",
+                          backdropFilter: "blur(4px)",
+                          "&:hover": {
+                            backgroundColor: "rgba(255, 255, 255, 1)",
+                          },
+                        }}
+                        size="small"
+                      >
+                        {saved ? (
+                          <BookmarkIcon sx={{ color: "#1b2a80" }} fontSize="small" />
+                        ) : (
+                          <BookmarkBorderIcon sx={{ color: "#64748b" }} fontSize="small" />
+                        )}
+                      </IconButton>
+                    </div>
+
                     <Link
                       href={`/products/${product.slug || product.id}`}
                       className="block relative w-full h-[200px] overflow-hidden rounded-t-xl bg-gray-50"

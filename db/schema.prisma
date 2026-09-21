@@ -36,6 +36,7 @@ model User {
   shopReports   ReportShop[]
   addresses     Address[]
   notifications Notification[]
+  SavedItem     SavedItem[]
 }
 
 model Shop {
@@ -152,6 +153,7 @@ model Product {
   cartItems      CartItem[]
   reviews        Review[]
   reports        Report[]
+  SavedItem      SavedItem[]
 }
 
 model DamagePolicies {
@@ -483,4 +485,18 @@ model InvoiceItem {
   charge   Charge? @relation(fields: [chargeId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+}
+
+model SavedItem {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+
+  @@unique([userId, productId])
 }

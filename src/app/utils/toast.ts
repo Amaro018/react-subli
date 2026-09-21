@@ -1,66 +1,25 @@
 import type { ReactNode } from "react"
 import { toast as sonnerToast, type ExternalToast } from "sonner"
 
-type ToastType = "success" | "error" | "info" | "warning" | "message" | "loading"
-
-type ToastMethod = Exclude<ToastType, "message"> | "message"
-
-const dedupeMap = new Map<string, string | number>()
-
-const makeToastKey = (type: ToastType, message: unknown, options?: ExternalToast) => {
-  const explicitId = options?.id
-  const idSeed =
-    explicitId !== undefined ? `id:${String(explicitId)}` : `message:${String(message)}`
-  return `${type}:${idSeed}`
-}
-
-const showDedupedToast = (type: ToastType, message: ReactNode, options?: ExternalToast) => {
-  const key = makeToastKey(type, message, options)
-  const existingId = dedupeMap.get(key)
-
-  if (existingId) {
-    sonnerToast.dismiss(existingId)
-  }
-
-  const method = sonnerToast[type] as (msg: ReactNode, opts?: ExternalToast) => string | number
-
-  const newId = method(message, {
-    ...options,
-    duration: options?.duration ?? 4000,
-  })
-
-  dedupeMap.set(key, newId)
-  return newId
-}
-
-const dismiss = (id?: string | number) => {
-  if (id !== undefined) {
-    dedupeMap.forEach((value, key) => {
-      if (value === id) {
-        dedupeMap.delete(key)
-      }
-    })
-  }
-
-  sonnerToast.dismiss(id)
-}
+const DEFAULT_DURATION = 4000
 
 export const toast = Object.assign(
-  (message: ReactNode, options?: ExternalToast) => showDedupedToast("message", message, options),
+  (message: ReactNode, options?: ExternalToast) =>
+    sonnerToast(message, { duration: DEFAULT_DURATION, ...options }),
   {
     success: (message: ReactNode, options?: ExternalToast) =>
-      showDedupedToast("success", message, options),
+      sonnerToast.success(message, { duration: DEFAULT_DURATION, ...options }),
     error: (message: ReactNode, options?: ExternalToast) =>
-      showDedupedToast("error", message, options),
+      sonnerToast.error(message, { duration: DEFAULT_DURATION, ...options }),
     info: (message: ReactNode, options?: ExternalToast) =>
-      showDedupedToast("info", message, options),
+      sonnerToast.info(message, { duration: DEFAULT_DURATION, ...options }),
     warning: (message: ReactNode, options?: ExternalToast) =>
-      showDedupedToast("warning", message, options),
+      sonnerToast.warning(message, { duration: DEFAULT_DURATION, ...options }),
     loading: (message: ReactNode, options?: ExternalToast) =>
-      showDedupedToast("loading", message, options),
+      sonnerToast.loading(message, { duration: DEFAULT_DURATION, ...options }),
     message: (message: ReactNode, options?: ExternalToast) =>
-      showDedupedToast("message", message, options),
-    dismiss,
+      sonnerToast.message(message, { duration: DEFAULT_DURATION, ...options }),
+    dismiss: (id?: string | number) => sonnerToast.dismiss(id),
   } as const
 )
 
