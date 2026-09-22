@@ -188,7 +188,7 @@ function Row({
         </td>
         <td className="px-4 sm:px-6 py-4 text-center whitespace-nowrap space-x-2">
           <Link
-            href={`/products/${product.id}`}
+            href={`/products/${product.id}` as any}
             target="_blank"
             className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium py-2 px-3 rounded transition-colors"
           >

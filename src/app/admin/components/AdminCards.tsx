@@ -58,14 +58,14 @@ const AdminCards = () => {
         value: stats.totalProducts,
         icon: <InventoryIcon className="w-6 h-6 text-white" />,
         color: "bg-orange-500",
-        href: "/admin/products",
+        href: "/admin/manage-products",
       },
       {
         title: "Reported Products",
         value: stats.reportedProducts,
         icon: <ReportProblemIcon className="w-6 h-6 text-white" />,
         color: "bg-red-600",
-        href: "/admin/products/reported",
+        href: "/admin/manage-products/reported",
       },
       {
         title: "Total Orders",

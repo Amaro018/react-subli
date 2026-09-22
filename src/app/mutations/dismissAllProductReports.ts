@@ -17,7 +17,7 @@ export default resolver.pipe(
         productId: productId,
         status: "pending",
       },
-      data: { status: "resolved", note, resolvedById: adminId },
+      data: { status: "resolved", note },
     })
   }
 )

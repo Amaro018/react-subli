@@ -6,16 +6,16 @@ const UpdateReportStatus = z.object({
   reportId: z.number(),
   status: z.string(),
   note: z.string().optional(),
-  adminId: z.number(),
+  adminId: z.number().optional(),
 })
 
 export default resolver.pipe(
   resolver.zod(UpdateReportStatus),
-  resolver.authorize(),
-  async ({ reportId, status, note, adminId }) => {
+  resolver.authorize("ADMIN"),
+  async ({ reportId, status, note }) => {
     const report = await db.report.update({
       where: { id: reportId },
-      data: { status, note, resolvedById: adminId },
+      data: { status, note },
     })
 
     return report

@@ -11,7 +11,7 @@ const UpdateProductStatus = z.object({
 
 export default resolver.pipe(
   resolver.zod(UpdateProductStatus),
-  resolver.authorize(),
+  resolver.authorize("ADMIN"),
   async ({ productId, status, banReason, adminId }) => {
     const product = await db.product.findUnique({ where: { id: productId } })
 

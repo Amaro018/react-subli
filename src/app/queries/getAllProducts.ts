@@ -1,7 +1,7 @@
-import { resolver } from "@blitzjs/rpc"
 import db from "db"
+import { resolver } from "@blitzjs/rpc"
 
-export default resolver.pipe(async () => {
+export default resolver.pipe(resolver.authorize("ADMIN"), async () => {
   const products = await db.product.findMany({
     include: {
       variants: {

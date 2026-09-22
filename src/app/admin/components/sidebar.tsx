@@ -105,7 +105,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
   const router = useRouter()
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>({
     shops: pathname?.startsWith("/admin/manage-shops") || false,
-    products: pathname?.startsWith("/admin/products") || false,
+    products: pathname?.startsWith("/admin/manage-products") || false,
   })
 
   const toggleSubmenu = (key: string) => {
@@ -238,7 +238,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
             <SidebarDropdown
               title="Products"
               icon={<InventoryIcon className="w-6 h-6" />}
-              basePath="/admin/products"
+              basePath="/admin/manage-products"
               submenuKey="products"
               isOpen={openSubmenus["products"]}
               onToggle={toggleSubmenu}
