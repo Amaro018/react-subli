@@ -36,12 +36,11 @@ const style = {
   overflowY: "auto",
 }
 
-const ReportedProductList = ({ currentUser }: { currentUser: any }) => {
-  const shopId = currentUser?.shop?.id
+const ReportedProductList = () => {
   const [reportedProducts, { isLoading, isError, error }] = useQuery(
     getReportedProductsByShop,
-    { shopId: shopId! },
-    { enabled: !!shopId }
+    null,
+    { suspense: false }
   )
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
@@ -80,7 +79,7 @@ const ReportedProductList = ({ currentUser }: { currentUser: any }) => {
           Reported Products
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Review products that have been reported by users.
+          Review reports for your products and update the listing when action is needed.
         </Typography>
       </div>
 
@@ -158,19 +157,28 @@ const ReportedProductList = ({ currentUser }: { currentUser: any }) => {
                       <strong>Reason:</strong> {report.reason}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Reported by:</strong>{" "}
-                      {report.user.personalInfo?.firstName || "Anonymous"} on{" "}
-                      {new Date(report.createdAt).toLocaleDateString()}
+                      Submitted: {new Date(report.createdAt).toLocaleDateString()}
                     </Typography>
-                    {report.comment && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      <strong>Status:</strong> {report.status}
+                    </Typography>
+                    {report.description && (
                       <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
-                        &quot;{report.comment}&quot;
+                        {report.description}
+                      </Typography>
+                    )}
+                    {report.note && (
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        <strong>Admin note:</strong> {report.note}
                       </Typography>
                     )}
                   </Paper>
                 ))}
               </Box>
               <Box mt={3} display="flex" justifyContent="flex-end">
+                <Button href="/shop/products" variant="outlined" sx={{ mr: 1 }}>
+                  Manage Product
+                </Button>
                 <Button onClick={handleClose}>Close</Button>
               </Box>
             </>
