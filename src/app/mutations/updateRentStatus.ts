@@ -1,5 +1,6 @@
 import db from "db"
 import { z } from "zod"
+import { recalculateInvoiceByRentId } from "@/src/app/(pages)/invoice/utils/recalculateInvoice"
 
 export const UpdateRentStatusSchema = z.object({
   rentItemId: z.number(),
@@ -60,6 +61,8 @@ export default async function updateRentStatus(input: UpdateRentStatusInput) {
       isRead: false,
     },
   })
+
+  await recalculateInvoiceByRentId(rentItem.rentId)
 
   return rentItem
 }

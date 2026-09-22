@@ -1,5 +1,6 @@
 import db from "db"
 import { z } from "zod"
+import { recalculateInvoiceByRentId } from "@/src/app/(pages)/invoice/utils/recalculateInvoice"
 
 // Input validation schema
 const CreateRent = z.object({
@@ -195,5 +196,6 @@ export default async function createRent(input: z.infer<typeof CreateRent>) {
 
     return newRent
   })
+  await recalculateInvoiceByRentId(rent.id)
   return rent
 }

@@ -74,6 +74,7 @@ model Shop {
   banReason       String?
   appeals         SuspensionAppeal[]
   auditLogs       ShopAuditLog[]
+  invoices        Invoice[]
 }
 
 model PersonalInfo {
@@ -448,6 +449,8 @@ model Invoice {
   invoiceNumber String @unique // e.g., "INV-2026-10024"
   rentId        Int
   rent          Rent   @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  shopId        Int?
+  shop          Shop?  @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   subtotal        Float // Sum of rent items
   securityDeposit Float @default(0)
@@ -465,7 +468,9 @@ model Invoice {
   items    InvoiceItem[]
   payments Payment[]
 
+  @@unique([rentId, shopId])
   @@index([rentId])
+  @@index([shopId])
 }
 
 model InvoiceItem {

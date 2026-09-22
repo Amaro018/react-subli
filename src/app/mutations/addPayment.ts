@@ -1,6 +1,7 @@
 import { resolver } from "@blitzjs/rpc"
 import db from "db"
 import z from "zod"
+import { recalculateInvoiceByRentId } from "@/src/app/(pages)/invoice/utils/recalculateInvoice"
 
 const AddPayment = z.object({
   rentItemId: z.number(),
@@ -108,6 +109,12 @@ export default resolver.pipe(
 
       return newPayment
     })
+
+    const rentItem = await db.rentItem.findUnique({
+      where: { id: rentItemId },
+      select: { rentId: true },
+    })
+    if (rentItem) await recalculateInvoiceByRentId(rentItem.rentId)
 
     return payment
   }
