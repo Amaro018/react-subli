@@ -408,16 +408,6 @@ const RentItemRow = memo(function RentItemRow({
                 )}
               </>
             )}
-
-            {/* Auxiliary Action: Payments Log */}
-            {rentItem.status !== "completed" && !(isReturned && remainingBalance > 0) && (
-              <button
-                className="border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-3 py-2 rounded-lg text-sm transition-all"
-                onClick={() => handleOpenPayments(rentItem)}
-              >
-                Payment History
-              </button>
-            )}
           </div>
         )}
 
