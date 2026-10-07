@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { useSession } from "@blitzjs/auth"
 import { useQuery, useMutation } from "@blitzjs/rpc"
-import getAllProducts from "../queries/getAllProducts"
+import getPublicProducts from "../queries/getPublicProducts"
 import getCategories from "../queries/getCategories"
 import getBarangays from "../queries/getBarangays"
 import toggleSavedItem from "../mutations/toggleSavedItem" // Adjust path to your mutation
@@ -38,7 +38,7 @@ export default function ProductsList() {
   const initialCategory = searchParams.get("category")
   const initialSearch = searchParams.get("search") || ""
 
-  const [products] = useQuery(getAllProducts, null)
+  const [products] = useQuery(getPublicProducts, null)
   const [categories] = useQuery(getCategories, null)
   const [barangays] = useQuery(getBarangays, null)
 

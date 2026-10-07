@@ -25,6 +25,16 @@ export default resolver.pipe(async () => {
           rating: true,
         },
       },
+      category: {
+        select: {
+          name: true,
+        },
+      },
+      shop: {
+        select: {
+          barangay: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   })
