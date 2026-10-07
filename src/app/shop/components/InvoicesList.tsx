@@ -5,6 +5,7 @@ import { useQuery } from "@blitzjs/rpc"
 import getShopInvoices from "../../queries/getShopInvoices"
 import InvoiceDetailModal from "../../renter/components/InvoiceDetailModal"
 import {
+  Alert,
   Button,
   Chip,
   Paper,
@@ -45,6 +46,13 @@ export default function InvoicesList() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Alert severity="info">
+        <strong>Payment status:</strong> Unpaid means no payment is recorded; Partially Paid means
+        some payment is recorded and a balance remains; Paid means recorded payments cover the
+        invoice total. Status and outstanding balances update from payments your shop records when
+        received.
+      </Alert>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Paper className="p-4 rounded-xl border border-gray-100">
           <Typography variant="caption" color="text.secondary">

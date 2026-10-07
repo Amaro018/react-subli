@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
   Button,
   Typography,
   Divider,
@@ -87,10 +88,18 @@ export default function InvoiceDetailModal({
                   Payment Status
                 </Typography>
                 <Typography variant="subtitle1" fontWeight="bold" color="primary.main">
-                  {invoice.status}
+                  {invoice.status.replace(/_/g, " ")}
                 </Typography>
               </div>
             </div>
+
+            <Alert severity="info">
+              This status is based on payments recorded by the shop, not your rental order status.
+              Unpaid means no payment is recorded; Partially Paid means some payment is recorded and
+              a balance remains; Paid means the recorded payments cover the invoice total.
+              {audience === "renter" &&
+                " Payments are recorded by the shop when received; you cannot pay through this page."}
+            </Alert>
 
             <Divider />
 
