@@ -19,6 +19,15 @@ export default resolver.pipe(
   async ({ productId, variantId, quantity, deliveryMethod, startDate, endDate }, ctx) => {
     const userId = ctx.session.userId
 
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { emailVerified: true },
+    })
+
+    if (!user?.emailVerified) {
+      throw new Error("Please verify your account email before adding items to your cart.")
+    }
+
     const variant = await db.productVariant.findUnique({
       where: { id: variantId },
       select: { quantity: true }, // Assuming `maxQuantity` exists in your variant model

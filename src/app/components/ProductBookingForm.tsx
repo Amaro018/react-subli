@@ -613,7 +613,9 @@ export default function ProductBookingForm({
       refetch()
     } catch (error) {
       console.error("Error adding to cart:", error)
-      toast.error("Failed to add to cart. Please try again.")
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add to cart. Please try again."
+      )
     }
   }
 
@@ -1170,11 +1172,7 @@ export default function ProductBookingForm({
         <button
           type="button"
           disabled={isOutOfStock}
-          onClick={() =>
-            currentUser?.emailVerified
-              ? handleCartAction()
-              : toast.error("Please verify your email before adding to cart")
-          }
+          onClick={handleCartAction}
           className={`flex-1 bg-white border-2 font-bold py-4 px-6 rounded-xl transition-all duration-200 text-lg ${
             isOutOfStock
               ? "border-gray-300 text-gray-400 opacity-60 cursor-not-allowed"
