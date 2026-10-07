@@ -228,9 +228,9 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
               href: "/renter/my-shop",
             },
         {
-          title: "Support",
+          title: "Help Center",
           icon: <ContactSupportIcon fontSize="small" />,
-          items: [{ name: "Help Center", href: "/support" }],
+          href: "/support",
         },
       ].filter(Boolean),
     [

@@ -448,6 +448,11 @@ export const RentList = (props: any) => {
                       .join(" - ") || "Default Config"
 
                 const productId = item.productVariant?.product?.id
+                const supportParams = new URLSearchParams({
+                  orderRef: String(getOrderRef(rent)),
+                  itemId: String(item.id),
+                  itemName: item.productVariant?.product?.name || "Rental item",
+                })
 
                 return (
                   <div
@@ -605,6 +610,15 @@ export const RentList = (props: any) => {
                           Balance : ₱{balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </p>
                       )}
+                      <Link
+                        href={{
+                          pathname: "/support",
+                          query: Object.fromEntries(supportParams.entries()),
+                        }}
+                        className="text-sm font-semibold text-[#1b2a80] underline underline-offset-2 hover:text-blue-700"
+                      >
+                        Get help with this rental
+                      </Link>
                     </div>
                   </div>
                 )
