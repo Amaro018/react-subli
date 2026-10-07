@@ -1,7 +1,7 @@
 "use client"
 import React, { useRef, useState, useEffect } from "react"
 import { useQuery } from "@blitzjs/rpc"
-import getAllProducts from "../../queries/getAllProducts"
+import getPublicProducts from "../../queries/getPublicProducts"
 import Link from "next/link"
 import Image from "next/image"
 import { IconButton, Typography, Rating } from "@mui/material"
@@ -9,7 +9,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft"
 import ChevronRightIcon from "@mui/icons-material/ChevronRight"
 
 export default function TrendingRentals() {
-  const [products] = useQuery(getAllProducts, null)
+  const [products] = useQuery(getPublicProducts, null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAutoScrolling, setIsAutoScrolling] = useState(true)
 
