@@ -4,7 +4,6 @@ import { useQuery } from "@blitzjs/rpc"
 import React from "react"
 import { Button, Typography } from "@mui/material"
 import Link from "next/link"
-import StorefrontIcon from "@mui/icons-material/Storefront"
 import getShops from "../../queries/getShops"
 
 interface ApprovedShopProps {
@@ -94,9 +93,10 @@ export default function ApprovedShop({ status }: ApprovedShopProps) {
                   <td className="px-4 sm:px-6 py-4 text-center whitespace-nowrap">
                     <Link
                       href={`/shops/${shop.slug || shop.id}`}
-                      className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg text-[#1b2a80] bg-white hover:bg-gray-50 transition-colors"
+                      target="_blank"
+                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium py-2 px-3 rounded transition-colors"
                     >
-                      <StorefrontIcon fontSize="small" sx={{ mr: 1 }} /> Visit Shop
+                      Visit Shop
                     </Link>
                   </td>
                 </tr>
