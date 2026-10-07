@@ -22,6 +22,7 @@ import cancelRentItem from "../../mutations/cancelRentItem"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
+import { toast } from "@/src/app/utils/toast"
 
 export const RentList = (props: any) => {
   const currentUser = props.currentUser
@@ -116,10 +117,16 @@ export const RentList = (props: any) => {
     try {
       setIsCanceling(true)
       await cancelRentItemMutation({ itemId: selectedItemId })
-      await refetch()
       handleCloseCancelModal()
+      toast.success("Rental request canceled.")
+      try {
+        await refetch()
+      } catch {
+        toast.error("The request was canceled, but the rental list could not be refreshed.")
+      }
     } catch (error) {
       console.error("Failed to cancel rental request:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to cancel rental request.")
     } finally {
       setIsCanceling(false)
     }
