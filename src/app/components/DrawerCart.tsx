@@ -172,7 +172,7 @@ export default function DrawerCart(props: any) {
   useEffect(() => {
     if (cartItems && cartItems.length > 0) {
       const initialMethods = cartItems.reduce((acc: Record<number, string>, item) => {
-        acc[item.variantId] = item.deliveryMethod
+        acc[item.id] = item.deliveryMethod
         return acc
       }, {} as Record<number, string>)
       setDeliveryMethods(initialMethods)
@@ -192,7 +192,14 @@ export default function DrawerCart(props: any) {
 
       currentCheckedIds.forEach((itemId) => {
         const item = cartItems.find((i) => i.id === itemId)
-        if (!item || !item.startDate || !item.endDate) return
+        if (!item) {
+          unavailableCheckedItemIds.push(itemId)
+          return
+        }
+        if (!item.startDate || !item.endDate) {
+          unavailableCheckedItemIds.push(item.id)
+          return
+        }
 
         const availableStock = getAvailableStock(
           item,
@@ -270,6 +277,17 @@ export default function DrawerCart(props: any) {
 
     if (checkOutItems.length === 0) {
       toast.error("Please select at least one item to checkout.")
+      return
+    }
+
+    const missingScheduleItem = checkOutItems
+      .map((itemId) => cartItems?.find((item) => item.id === itemId))
+      .find((item) => !item || !item.startDate || !item.endDate)
+
+    if (missingScheduleItem) {
+      toast.error(
+        "A selected cart item needs rental dates. Open its product page to choose a schedule."
+      )
       return
     }
 
@@ -362,7 +380,7 @@ export default function DrawerCart(props: any) {
         price: item.variant.price,
         quantity: item.quantity,
         status: "pending",
-        deliveryMethod: deliveryMethods[item.variantId],
+        deliveryMethod: deliveryMethods[item.id] || item.deliveryMethod,
         startDate: item.startDate,
         endDate: item.endDate,
       }
@@ -425,10 +443,10 @@ export default function DrawerCart(props: any) {
   }
 
   const updateCartItemDetails = async (
-    variantId: number,
+    cartItemId: number,
     updates: { newQuantity?: number; deliveryMethod?: string }
   ) => {
-    const cartItem = cartItems?.find((item) => item.variantId === variantId)
+    const cartItem = cartItems?.find((item) => item.id === cartItemId)
     if (!cartItem) {
       toast.error("Cart item not found.")
       return
@@ -446,28 +464,24 @@ export default function DrawerCart(props: any) {
       }
     }
 
-    // Only update deliveryMethods state if deliveryMethod is provided
-    if (deliveryMethod !== undefined) {
-      setDeliveryMethods((prev) => ({
-        ...prev,
-        [variantId]: deliveryMethod,
-      }))
-    }
-
     try {
       await updateCartItem({
-        variantId,
+        cartItemId,
         quantity: newQuantity !== undefined ? newQuantity : cartItem.quantity,
         deliveryMethod:
           deliveryMethod !== undefined
             ? deliveryMethod
-            : deliveryMethods[variantId] || cartItem.deliveryMethod,
-        startDate: cartItem.startDate || undefined,
-        endDate: cartItem.endDate || undefined,
+            : deliveryMethods[cartItemId] || cartItem.deliveryMethod,
       })
+      if (deliveryMethod !== undefined) {
+        setDeliveryMethods((prev) => ({
+          ...prev,
+          [cartItemId]: deliveryMethod,
+        }))
+      }
       refetch()
     } catch (error) {
-      toast.error("Failed to update cart item. Please try again.")
+      toast.error(error instanceof Error ? error.message : "Failed to update cart item.")
     }
   }
 
@@ -507,9 +521,10 @@ export default function DrawerCart(props: any) {
               const itemSubtotal = item.quantity * item.variant.price * durationInDays
 
               // Compute availability live inside the cart item map
-              let isAvailable = true
+              const hasSchedule = Boolean(item.startDate && item.endDate)
+              let isAvailable = hasSchedule && item.product.status === "active"
               let availableStock = item.variant.quantity
-              if (allRents && item.startDate && item.endDate) {
+              if (allRents && hasSchedule) {
                 availableStock = getAvailableStock(
                   item,
                   availabilityData.intervals[item.variantId] || [],
@@ -533,9 +548,13 @@ export default function DrawerCart(props: any) {
                     <div className="flex items-center gap-2 text-red-400 mb-3 text-sm font-bold">
                       <ErrorOutlineIcon fontSize="small" />
                       <p>
-                        {availableStock > 0
-                          ? `Only ${availableStock} left for these dates. Please reduce quantity.`
-                          : "No longer available for these dates."}
+                        {!hasSchedule
+                          ? "Choose rental dates from the product page before checkout."
+                          : item.product.status !== "active"
+                          ? "This product is no longer available for rent."
+                          : availableStock > 0
+                          ? `Only ${availableStock} left for these dates. Reduce the quantity, or remove this item and add it again with a different schedule.`
+                          : "No longer available for these dates. Remove this item or choose a different schedule on the product page."}
                       </p>
                     </div>
                   )}
@@ -589,9 +608,9 @@ export default function DrawerCart(props: any) {
                           {item.product.deliveryOption === "BOTH" ? (
                             <select
                               className="bg-transparent border-2 border-white rounded-lg p-2 text-white"
-                              value={deliveryMethods[item.variantId] || item.deliveryMethod}
+                              value={deliveryMethods[item.id] || item.deliveryMethod}
                               onChange={(e) =>
-                                updateCartItemDetails(item.variantId, {
+                                updateCartItemDetails(item.id, {
                                   deliveryMethod: e.target.value,
                                 })
                               }
@@ -614,7 +633,7 @@ export default function DrawerCart(props: any) {
                           <button
                             className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
                             onClick={() =>
-                              updateCartItemDetails(item.variantId, {
+                              updateCartItemDetails(item.id, {
                                 newQuantity: item.quantity - 1,
                               })
                             }
@@ -626,7 +645,7 @@ export default function DrawerCart(props: any) {
                             value={item.quantity}
                             className="w-12 text-center text-slate-600"
                             onChange={(e) =>
-                              updateCartItemDetails(item.variantId, {
+                              updateCartItemDetails(item.id, {
                                 newQuantity: parseInt(e.target.value),
                               })
                             }
@@ -634,7 +653,7 @@ export default function DrawerCart(props: any) {
                           <button
                             className="mx-2 text-slate-600 bg-slate-400 px-2 rounded-lg hover:bg-slate-500 shadow-lg"
                             onClick={() =>
-                              updateCartItemDetails(item.variantId, {
+                              updateCartItemDetails(item.id, {
                                 newQuantity: item.quantity + 1,
                               })
                             }
