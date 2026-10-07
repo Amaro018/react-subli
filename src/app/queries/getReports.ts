@@ -17,6 +17,7 @@ export default async function getReports(_ = null, ctx: Ctx) {
           shop: true,
         },
       },
+      shopResponse: true,
       user: {
         select: {
           id: true,

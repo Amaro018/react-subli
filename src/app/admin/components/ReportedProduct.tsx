@@ -262,6 +262,11 @@ function Row({
                             </td>
                             <td className="px-4 py-2">{report.user.email}</td>
                             <td className="px-4 py-2 text-center">
+                              {report.shopResponse ? (
+                                <Tooltip title={report.shopResponse.message} arrow>
+                                  <span className="mr-2 text-xs text-blue-700">Shop replied</span>
+                                </Tooltip>
+                              ) : null}
                               <button
                                 onClick={() => handleDismissReportClick(report)}
                                 className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium py-1 px-3 rounded transition-colors"

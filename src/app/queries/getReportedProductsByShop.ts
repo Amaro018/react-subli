@@ -15,9 +15,7 @@ export default async function getReportedProductsByShop(_: null, ctx: Ctx) {
   const products = await db.product.findMany({
     where: {
       shopId: shop.id,
-      reports: {
-        some: {},
-      },
+      OR: [{ reports: { some: {} } }, { status: "banned" }, { appeals: { some: {} } }],
     },
     include: {
       _count: {
@@ -32,10 +30,28 @@ export default async function getReportedProductsByShop(_: null, ctx: Ctx) {
           note: true,
           createdAt: true,
           updatedAt: true,
+          shopResponse: {
+            select: {
+              message: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
         },
+      },
+      appeals: {
+        select: {
+          id: true,
+          message: true,
+          status: true,
+          adminNote: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: "desc" },
       },
     },
   })

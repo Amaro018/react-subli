@@ -6,6 +6,7 @@ const tabs = [
   { name: "All Products", href: "/admin/manage-products" },
   { name: "Reported Products", href: "/admin/manage-products/reported" },
   { name: "Banned Products", href: "/admin/manage-products/banned" },
+  { name: "Appeals", href: "/admin/manage-products/appeals" },
 ]
 
 export default function ProductTabs() {

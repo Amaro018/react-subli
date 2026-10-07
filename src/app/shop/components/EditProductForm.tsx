@@ -597,6 +597,7 @@ const EditProductForm = (props: EditProductFormProps) => {
                 <Switch
                   color="success"
                   checked={formData.status === "active"}
+                  disabled={formData.status === "banned"}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -611,12 +612,21 @@ const EditProductForm = (props: EditProductFormProps) => {
                   fontWeight="bold"
                   color={formData.status === "active" ? "#166534" : "#475569"}
                 >
-                  {formData.status === "active" ? "Listed (Visible)" : "Unlisted (Hidden)"}
+                  {formData.status === "banned"
+                    ? "Banned (Appeal required to relist)"
+                    : formData.status === "active"
+                    ? "Listed (Visible)"
+                    : "Unlisted (Hidden)"}
                 </Typography>
               }
               sx={{ m: 0 }}
             />
           </Box>
+          {formData.status === "banned" && (
+            <Typography variant="caption" color="error.main">
+              An administrator must approve your appeal before this product can be listed again.
+            </Typography>
+          )}
           <IconButton onClick={props.handleCloseEdit} size="small" sx={{ color: "text.secondary" }}>
             <Close />
           </IconButton>

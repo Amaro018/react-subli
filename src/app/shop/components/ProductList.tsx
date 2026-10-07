@@ -34,7 +34,7 @@ import EditProductForm from "./EditProductForm"
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp"
 import Link from "next/link"
-import updateProductStatus from "../../mutations/updateProductStatus"
+import updateShopProductStatus from "../../mutations/updateShopProductStatus"
 import deleteProduct from "../../mutations/deleteProduct"
 import duplicateProduct from "../../mutations/duplicateProduct"
 import { toast } from "@/src/app/utils/toast"
@@ -319,6 +319,12 @@ function Row({
               size="small"
               sx={{ fontWeight: "bold", bgcolor: "#fee2e2", color: "#991b1b", border: "none" }}
             />
+          ) : product.status === "banned" ? (
+            <Chip
+              label="Banned"
+              size="small"
+              sx={{ fontWeight: "bold", bgcolor: "#fee2e2", color: "#991b1b", border: "none" }}
+            />
           ) : (
             <Chip
               label={product.status === "active" ? "Listed" : "Unlisted"}
@@ -592,7 +598,7 @@ const ProductList = (props: ProductListProps) => {
 
   const [openEdit, setOpenEdit] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<ProductFormData>(emptyProduct)
-  const [updateProductStatusMutation] = useMutation(updateProductStatus)
+  const [updateProductStatusMutation] = useMutation(updateShopProductStatus)
   const [deleteProductMutation] = useMutation(deleteProduct)
   const [duplicateProductMutation] = useMutation(duplicateProduct)
 
@@ -709,7 +715,7 @@ const ProductList = (props: ProductListProps) => {
     setConfirmColor("error")
     setConfirmAction(() => async () => {
       try {
-        await updateProductStatusMutation({ id, status: "deleted" })
+        await updateProductStatusMutation({ productId: id, status: "deleted" })
         toast.success("Product archived successfully!")
         refetch()
       } catch (error: any) {
@@ -726,7 +732,7 @@ const ProductList = (props: ProductListProps) => {
     setConfirmColor("primary")
     setConfirmAction(() => async () => {
       try {
-        await updateProductStatusMutation({ id, status: "inactive" })
+        await updateProductStatusMutation({ productId: id, status: "inactive" })
         toast.success("Product restored and is now Unlisted!")
         refetch()
       } catch (error: any) {
@@ -818,6 +824,7 @@ const ProductList = (props: ProductListProps) => {
             <MenuItem value="all">All Products</MenuItem>
             <MenuItem value="active">Listed Only</MenuItem>
             <MenuItem value="inactive">Unlisted Only</MenuItem>
+            <MenuItem value="banned">Banned</MenuItem>
             <MenuItem value="archived">Archived</MenuItem>
           </TextField>
           <TextField

@@ -249,6 +249,7 @@ export const Sidebar = ({ currentUser, isOpen, setIsOpen, isCollapsed }: Sidebar
                 { label: "All Products", href: "/admin/manage-products" },
                 { label: "Reported Products", href: "/admin/manage-products/reported" },
                 { label: "Banned Products", href: "/admin/manage-products/banned" },
+                { label: "Product Appeals", href: "/admin/manage-products/appeals" },
               ]}
             />
 
