@@ -27,6 +27,8 @@ import getNotifications from "../queries/getNotifications"
 import NotificationList from "./NotificationList"
 import DrawerCart from "./DrawerCart"
 import { Sidebar } from "../renter/components/sidebar" // Adjust path to match your Sidebar file position
+import { CART_UPDATED_EVENT } from "../utils/cartEvents"
+import { toast } from "../utils/toast"
 
 type NavbarProps = {
   currentUser?: any
@@ -42,7 +44,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
   const accountRef = useRef<HTMLDivElement | null>(null)
 
-  const [cartItems] = useQuery(getAllCartItem, null, {
+  const [cartItems, { refetch: refetchCartItems }] = useQuery(getAllCartItem, null, {
     enabled: !!currentUser && !isLoggingOut,
     suspense: false,
   })
@@ -53,6 +55,22 @@ export default function Navbar({ currentUser }: NavbarProps) {
   })
 
   const unreadNotifications = notifications?.filter((n: any) => !n.isRead) || []
+
+  useEffect(() => {
+    if (!currentUser || isLoggingOut) return
+
+    const refreshCart = async () => {
+      try {
+        await refetchCartItems()
+      } catch (error) {
+        console.error("Failed to refresh cart count:", error)
+        toast.error("Unable to refresh your cart count. Please reload the page.")
+      }
+    }
+
+    window.addEventListener(CART_UPDATED_EVENT, refreshCart)
+    return () => window.removeEventListener(CART_UPDATED_EVENT, refreshCart)
+  }, [currentUser, isLoggingOut, refetchCartItems])
 
   const handleNotificationClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget)

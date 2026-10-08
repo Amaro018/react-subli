@@ -32,6 +32,7 @@ import getCurrentUser from "../users/queries/getCurrentUser"
 //the mutation for creating rent
 import createRent from "../mutations/createRent"
 import { toast } from "@/src/app/utils/toast"
+import { notifyCartUpdated } from "../utils/cartEvents"
 
 // Helper function to calculate rental duration in fractional days for accurate pricing
 const getRentalDurationInDays = (
@@ -409,7 +410,8 @@ export default function DrawerCart(props: any) {
       try {
         const rent = await createRentMutation(formData)
         console.log("Checkout successful:", rent)
-        refetch() // Refresh cart items
+        await refetch()
+        notifyCartUpdated()
         toast.success("Checkout successful!")
         setLoading(false)
       } catch (error: any) {
@@ -433,7 +435,8 @@ export default function DrawerCart(props: any) {
       try {
         const item = await deleteItem({ id })
         console.log(item)
-        refetch()
+        await refetch()
+        notifyCartUpdated()
         toast.success("Item deleted successfully!")
       } catch (error) {
         toast.error("Failed to delete item. Please try again.")

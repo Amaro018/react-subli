@@ -19,6 +19,7 @@ import ProductOptionsCard from "./ProductOptionsCard"
 import getBarangays from "../queries/getBarangays"
 import { useRouter } from "next/navigation"
 import BookingCheckoutModal from "./BookingCheckoutModal"
+import { notifyCartUpdated } from "../utils/cartEvents"
 
 const TIME_OPTIONS = [
   { value: "09:00", label: "09:00 AM" },
@@ -609,6 +610,7 @@ export default function ProductBookingForm({
 
     try {
       await invoke(addToCart, formData)
+      notifyCartUpdated()
       toast.success("Item added to cart successfully!")
       refetch()
     } catch (error) {
