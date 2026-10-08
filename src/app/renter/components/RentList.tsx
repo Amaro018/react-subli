@@ -235,6 +235,7 @@ export const RentList = (props: any) => {
   }
 
   const currentTabDescription: Record<string, string> = {
+    all: "Showing all your rental items.",
     pending: "Showing items waiting for shop approval.",
     "to-pay": "Showing only items with an outstanding balance.",
     "to-deliver": "Showing accepted items that are scheduled for delivery.",
@@ -242,6 +243,30 @@ export const RentList = (props: any) => {
     "to-return": "Showing items currently with you that need to be returned.",
     completed: "Showing finished or canceled rental items.",
   }
+
+  const renderTabLabel = (
+    label: string,
+    description: string,
+    count?: number,
+    badgeColor: "warning" | "error" = "error"
+  ) => (
+    <span className="inline-flex items-center gap-1.5">
+      {count === undefined ? (
+        <span>{label}</span>
+      ) : (
+        <Badge badgeContent={count} color={badgeColor}>
+          <span>{label}</span>
+        </Badge>
+      )}
+      <Tooltip title={description} arrow>
+        <InfoOutlinedIcon
+          aria-label={`About ${label}`}
+          className="text-gray-500"
+          sx={{ fontSize: 16 }}
+        />
+      </Tooltip>
+    </span>
+  )
 
   const dueTodayCount = rentsList.filter((rent: any) => {
     return rent.items?.some((item: any) => {
@@ -417,59 +442,43 @@ export const RentList = (props: any) => {
               },
             }}
           >
-            <Tab label="All Rentals" value="all" />
+            <Tab label={renderTabLabel("All Rentals", currentTabDescription.all)} value="all" />
             <Tab
-              label={
-                <Badge badgeContent={pendingCount} color="warning">
-                  Pending
-                </Badge>
-              }
+              label={renderTabLabel(
+                "Pending",
+                currentTabDescription.pending,
+                pendingCount,
+                "warning"
+              )}
               value="pending"
             />
             <Tab
-              label={
-                <span className="inline-flex items-center gap-1">
-                  <Badge badgeContent={toPayCount} color="error">
-                    Balance Due
-                  </Badge>
-                </span>
-              }
+              label={renderTabLabel("Balance Due", currentTabDescription["to-pay"], toPayCount)}
               value="to-pay"
             />
             <Tab
-              label={
-                <Badge badgeContent={toDeliverCount} color="error">
-                  To Deliver
-                </Badge>
-              }
+              label={renderTabLabel(
+                "To Deliver",
+                currentTabDescription["to-deliver"],
+                toDeliverCount
+              )}
               value="to-deliver"
             />
             <Tab
-              label={
-                <Badge badgeContent={toPickupCount} color="error">
-                  To Pickup
-                </Badge>
-              }
+              label={renderTabLabel("To Pickup", currentTabDescription["to-pickup"], toPickupCount)}
               value="to-pickup"
             />
             <Tab
-              label={
-                <Badge badgeContent={toReturnCount} color="error">
-                  To Return
-                </Badge>
-              }
+              label={renderTabLabel("To Return", currentTabDescription["to-return"], toReturnCount)}
               value="to-return"
             />
-            <Tab label="Completed" value="completed" />
+            <Tab
+              label={renderTabLabel("Completed", currentTabDescription.completed)}
+              value="completed"
+            />
           </Tabs>
         </Box>
       </div>
-
-      {currentTabDescription[currentStatus] && (
-        <p className="mt-3 mb-4 text-sm text-gray-600" role="status">
-          {currentTabDescription[currentStatus]}
-        </p>
-      )}
 
       {/* Rent List */}
       {paginatedRents.length === 0 && (
