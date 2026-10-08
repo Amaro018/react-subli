@@ -42,6 +42,7 @@ export default resolver.pipe(resolver.authorize(), async (_, ctx: Ctx) => {
             },
           },
           payments: true,
+          charges: true,
         },
       },
     },

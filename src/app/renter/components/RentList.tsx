@@ -59,14 +59,20 @@ export const RentList = (props: any) => {
     const rentAmount = unitPrice * duration * item.quantity
     const initialFee = rentAmount * 0.5
 
-    const isCompleted = ["completed", "canceled", "returned", "returned_damaged"].includes(
-      item.status
-    )
+    const isReturned = ["returned", "returned_damaged"].includes(item.status)
+    const isClosed = ["completed", "canceled", "returned", "returned_damaged"].includes(item.status)
     const lapseInDays =
-      !isCompleted && today > endDate
+      !isClosed && today > endDate
         ? Math.ceil((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
         : 0
-    const penalty = unitPrice * lapseInDays * item.quantity
+    const recordedCharges =
+      item.charges?.reduce((total: number, charge: any) => total + charge.amount, 0) || 0
+    const recordedPenalties =
+      item.payments?.reduce(
+        (total: number, payment: any) => total + (payment.penaltyFee || 0),
+        0
+      ) || 0
+    const penalty = unitPrice * lapseInDays * item.quantity + recordedCharges + recordedPenalties
 
     const totalPayment =
       item.payments?.reduce((total: number, payment: any) => total + payment.amount, 0) || 0
@@ -78,6 +84,7 @@ export const RentList = (props: any) => {
       initialFee,
       lapseInDays,
       penalty,
+      isReturned,
       totalPayment,
       balance,
       unitPrice,
@@ -224,9 +231,7 @@ export const RentList = (props: any) => {
       case "to-return":
         return items.filter((item: any) => ON_HAND_STATUSES.includes(item.status))
       case "completed":
-        return items.filter((item: any) =>
-          ["completed", "returned", "returned_damaged", "canceled"].includes(item.status)
-        )
+        return items.filter((item: any) => ["completed", "canceled"].includes(item.status))
       case "all":
         return items
       default:
@@ -294,9 +299,7 @@ export const RentList = (props: any) => {
           if (currentStatus === "completed") {
             return (
               items.length > 0 &&
-              items.every((item: any) =>
-                ["completed", "returned", "returned_damaged", "canceled"].includes(item.status)
-              )
+              items.every((item: any) => ["completed", "canceled"].includes(item.status))
             )
           }
           if (currentStatus === "to-pay") {
@@ -513,23 +516,24 @@ export const RentList = (props: any) => {
                     totalPayment,
                     balance,
                     unitPrice,
+                    isReturned,
                   } = calculateItemFinancials(item)
 
                   const today = new Date()
                   const endDate = new Date(item.endDate)
                   const isPending = item.status === "pending"
-                  const isCompleted = [
+                  const isClosed = [
                     "completed",
                     "returned",
                     "returned_damaged",
                     "canceled",
                   ].includes(item.status)
                   const isDueToday =
-                    !isCompleted &&
+                    !isClosed &&
                     endDate.getDate() === today.getDate() &&
                     endDate.getMonth() === today.getMonth() &&
                     endDate.getFullYear() === today.getFullYear()
-                  const isOverdue = !isCompleted && today > endDate && !isDueToday
+                  const isOverdue = !isClosed && today > endDate && !isDueToday
                   const isDeliveryTab = currentStatus === "to-deliver"
                   const isPickupTab = currentStatus === "to-pickup"
                   const isReturnTab = currentStatus === "to-return"
@@ -608,10 +612,10 @@ export const RentList = (props: any) => {
                                 ? "bg-blue-100 text-blue-800"
                                 : item.status === "canceled"
                                 ? "bg-red-100 text-red-800"
-                                : ["completed", "returned", "returned_damaged"].includes(
-                                    item.status
-                                  )
+                                : item.status === "completed" || (isReturned && balance <= 0)
                                 ? "bg-green-100 text-green-800"
+                                : isReturned
+                                ? "border-amber-300 bg-amber-100 text-amber-900"
                                 : "bg-indigo-100 text-indigo-800"
                             }`}
                           >
@@ -621,7 +625,9 @@ export const RentList = (props: any) => {
                                 <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
                               </span>
                             )}
-                            {item.status.replace("_", " ")}
+                            {isReturned && balance > 0
+                              ? `${item.status.replace("_", " ")} · balance due`
+                              : item.status.replace("_", " ")}
                           </span>
                           {isDueToday && (
                             <span className="rounded-md border border-orange-200 bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800">
@@ -757,7 +763,7 @@ export const RentList = (props: any) => {
                               </span>
                             </p>
                             <p className="flex justify-between gap-3">
-                              <span>Penalty</span>
+                              <span>Penalties &amp; fees</span>
                               <span>
                                 {item.status === "completed"
                                   ? "Paid"
@@ -776,7 +782,7 @@ export const RentList = (props: any) => {
                                     })}`}
                               </span>
                             </p>
-                            {["completed", "returned", "returned_damaged"].includes(item.status) ? (
+                            {item.status === "completed" ? (
                               <p className="pt-1 font-bold text-green-600">Completed</p>
                             ) : item.status === "canceled" ? (
                               <p className="pt-1 font-bold text-red-600">Canceled</p>
@@ -795,9 +801,14 @@ export const RentList = (props: any) => {
                                   Cancel Request
                                 </Button>
                               </div>
+                            ) : isReturned && balance <= 0 ? (
+                              <p className="flex justify-between gap-3 border-t border-gray-200 pt-1.5 font-bold text-green-700">
+                                <span>Final balance</span>
+                                <span>₱0.00</span>
+                              </p>
                             ) : (
                               <p className="flex justify-between gap-3 border-t border-gray-200 pt-1.5 font-bold text-[#1b2a80]">
-                                <span>Balance</span>
+                                <span>{isReturned ? "Final balance due" : "Balance"}</span>
                                 <span>
                                   ₱
                                   {balance.toLocaleString("en-US", {
