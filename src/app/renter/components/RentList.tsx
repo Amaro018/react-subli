@@ -143,9 +143,27 @@ export const RentList = (props: any) => {
     return <CircularProgress />
   }
 
-  // Normalize structure: standard rents vs flattened rent items
+  // Normalize full rents and flattened rent items into one entry per order.
   const rentsList = Array.isArray(userRents)
-    ? userRents.map((rent: any) => (rent.items ? rent : { ...rent.rent, items: [rent] }))
+    ? Array.from(
+        userRents
+          .reduce((groupedRents: Map<number, any>, record: any) => {
+            const rent = Array.isArray(record.items) ? record : { ...record.rent, items: [record] }
+            const existingRent = groupedRents.get(rent.id)
+
+            if (existingRent) {
+              const existingItemIds = new Set(existingRent.items.map((item: any) => item.id))
+              existingRent.items.push(
+                ...rent.items.filter((item: any) => !existingItemIds.has(item.id))
+              )
+            } else {
+              groupedRents.set(rent.id, rent)
+            }
+
+            return groupedRents
+          }, new Map<number, any>())
+          .values()
+      )
     : []
 
   // Counter logic with optional chaining
@@ -180,6 +198,50 @@ export const RentList = (props: any) => {
   const toReturnCount = rentsList.filter((rent: any) => {
     return rent.items?.some((item: any) => ON_HAND_STATUSES.includes(item.status))
   }).length
+
+  const getItemsForCurrentTab = (rent: any) => {
+    const items = rent.items || []
+
+    switch (currentStatus) {
+      case "pending":
+        return items.filter((item: any) => item.status === "pending")
+      case "to-pay":
+        return items.filter((item: any) => {
+          if (["pending", "completed", "canceled"].includes(item.status)) return false
+          return calculateItemFinancials(item).balance > 0
+        })
+      case "to-deliver":
+        return items.filter(
+          (item: any) =>
+            normalizeDeliveryMethod(item.deliveryMethod) === "delivery" &&
+            item.status === "accepted"
+        )
+      case "to-pickup":
+        return items.filter(
+          (item: any) =>
+            normalizeDeliveryMethod(item.deliveryMethod) === "pickup" && item.status === "accepted"
+        )
+      case "to-return":
+        return items.filter((item: any) => ON_HAND_STATUSES.includes(item.status))
+      case "completed":
+        return items.filter((item: any) =>
+          ["completed", "returned", "returned_damaged", "canceled"].includes(item.status)
+        )
+      case "all":
+        return items
+      default:
+        return items.filter((item: any) => item.status === currentStatus)
+    }
+  }
+
+  const currentTabDescription: Record<string, string> = {
+    pending: "Showing items waiting for shop approval.",
+    "to-pay": "Showing only items with an outstanding balance.",
+    "to-deliver": "Showing accepted items that are scheduled for delivery.",
+    "to-pickup": "Showing accepted items that are ready for pickup.",
+    "to-return": "Showing items currently with you that need to be returned.",
+    completed: "Showing finished or canceled rental items.",
+  }
 
   const dueTodayCount = rentsList.filter((rent: any) => {
     return rent.items?.some((item: any) => {
@@ -339,18 +401,19 @@ export const RentList = (props: any) => {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-4 pb-1">
+      <div className="border-b border-gray-200">
         <Box sx={{ width: "100%" }}>
           <Tabs
             value={currentStatus}
             onChange={handleTabChange}
             aria-label="rent status tabs"
-            variant="fullWidth"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               "& .MuiTab-root": {
-                maxWidth: "none",
-                flexGrow: 1,
-                flexBasis: 0,
+                minWidth: 112,
+                px: 2,
               },
             }}
           >
@@ -369,19 +432,6 @@ export const RentList = (props: any) => {
                   <Badge badgeContent={toPayCount} color="error">
                     Balance Due
                   </Badge>
-                  <Tooltip
-                    title="Shows rentals with an unpaid balance. Delivery, pickup, and return tabs track rental progress separately, so a rental can appear in both."
-                    arrow
-                    placement="top"
-                  >
-                    <InfoOutlinedIcon
-                      aria-label="About balance due"
-                      sx={{
-                        fontSize: 16,
-                        color: currentStatus === "to-pay" ? "inherit" : "text.secondary",
-                      }}
-                    />
-                  </Tooltip>
                 </span>
               }
               value="to-pay"
@@ -415,119 +465,136 @@ export const RentList = (props: any) => {
         </Box>
       </div>
 
+      {currentTabDescription[currentStatus] && (
+        <p className="mt-3 mb-4 text-sm text-gray-600" role="status">
+          {currentTabDescription[currentStatus]}
+        </p>
+      )}
+
       {/* Rent List */}
       {paginatedRents.length === 0 && (
         <p className="text-center my-8 text-gray-500">{getEmptyMessage()}</p>
       )}
       {paginatedRents.map((rent: any) => {
-        const items = rent.items || []
+        const allItems = rent.items || []
+        const items = getItemsForCurrentTab(rent)
         return (
           <div
-            className="border rounded-lg shadow-md p-4 bg-white flex justify-start gap-16 my-4 w-full"
+            className="mb-4 w-full overflow-hidden rounded-lg border bg-white shadow-sm"
             key={rent.id}
           >
-            <div className="flex flex-col w-full">
-              <div className="flex justify-between items-center w-full border-b border-gray-200 p-2">
+            <div className="flex w-full flex-col">
+              <div className="flex w-full items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
                 <p className="font-semibold text-gray-700">REF NO: #{getOrderRef(rent)}</p>
-                <p className="text-sm text-gray-500">
-                  {items.length > 1 ? "Items :" : "Item :"} {items.length}
+                <p className="shrink-0 text-sm text-gray-500">
+                  {items.length === allItems.length
+                    ? `${items.length > 1 ? "Items" : "Item"}: ${items.length}`
+                    : `Matching items: ${items.length} of ${allItems.length}`}
                 </p>
               </div>
 
-              {items.map((item: any) => {
-                const {
-                  duration,
-                  rentAmount,
-                  initialFee,
-                  lapseInDays,
-                  penalty,
-                  totalPayment,
-                  balance,
-                  unitPrice,
-                } = calculateItemFinancials(item)
+              <div className="divide-y divide-gray-100 px-3 sm:px-4">
+                {items.map((item: any) => {
+                  const {
+                    duration,
+                    rentAmount,
+                    initialFee,
+                    lapseInDays,
+                    penalty,
+                    totalPayment,
+                    balance,
+                    unitPrice,
+                  } = calculateItemFinancials(item)
 
-                const today = new Date()
-                const endDate = new Date(item.endDate)
-                const isPending = item.status === "pending"
-                const isCompleted = [
-                  "completed",
-                  "returned",
-                  "returned_damaged",
-                  "canceled",
-                ].includes(item.status)
-                const isDueToday =
-                  !isCompleted &&
-                  endDate.getDate() === today.getDate() &&
-                  endDate.getMonth() === today.getMonth() &&
-                  endDate.getFullYear() === today.getFullYear()
-                const isOverdue = !isCompleted && today > endDate && !isDueToday
+                  const today = new Date()
+                  const endDate = new Date(item.endDate)
+                  const isPending = item.status === "pending"
+                  const isCompleted = [
+                    "completed",
+                    "returned",
+                    "returned_damaged",
+                    "canceled",
+                  ].includes(item.status)
+                  const isDueToday =
+                    !isCompleted &&
+                    endDate.getDate() === today.getDate() &&
+                    endDate.getMonth() === today.getMonth() &&
+                    endDate.getFullYear() === today.getFullYear()
+                  const isOverdue = !isCompleted && today > endDate && !isDueToday
+                  const isDeliveryTab = currentStatus === "to-deliver"
+                  const isPickupTab = currentStatus === "to-pickup"
+                  const isReturnTab = currentStatus === "to-return"
+                  const isHandoffTab = isDeliveryTab || isPickupTab
+                  const isActionTab = isHandoffTab || isReturnTab
+                  const shop = item.productVariant?.product?.shop
+                  const shopAddress = [
+                    shop?.street,
+                    shop?.barangay,
+                    shop?.city,
+                    shop?.province,
+                    shop?.zipCode,
+                    shop?.country,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")
+                  const formatHandoffDate = (value: Date | string) =>
+                    new Intl.DateTimeFormat("en-PH", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    }).format(new Date(value))
 
-                const variantDisplay = item.productVariant?.attributes?.length
-                  ? item.productVariant.attributes
-                      .map((attr: any) => attr.attributeValue?.value)
-                      .filter(Boolean)
-                      .join(" / ")
-                  : [item.productVariant?.size, item.productVariant?.color?.name]
-                      .filter(Boolean)
-                      .join(" - ") || "Default Config"
+                  const variantDisplay = item.productVariant?.attributes?.length
+                    ? item.productVariant.attributes
+                        .map((attr: any) => attr.attributeValue?.value)
+                        .filter(Boolean)
+                        .join(" / ")
+                    : [item.productVariant?.size, item.productVariant?.color?.name]
+                        .filter(Boolean)
+                        .join(" - ") || "Default Config"
 
-                const productId = item.productVariant?.product?.id
-                const supportParams = new URLSearchParams({
-                  orderRef: String(getOrderRef(rent)),
-                  itemId: String(item.id),
-                  itemName: item.productVariant?.product?.name || "Rental item",
-                })
+                  const productId = item.productVariant?.product?.id
+                  const supportParams = new URLSearchParams({
+                    orderRef: String(getOrderRef(rent)),
+                    itemId: String(item.id),
+                    itemName: item.productVariant?.product?.name || "Rental item",
+                  })
 
-                return (
-                  <div
-                    key={item.id}
-                    className={`flex justify-start items-center w-full border-b p-2 gap-2 transition-all rounded-md my-1 ${
-                      isPending ? "bg-amber-50/70 border-amber-300" : "bg-white border-gray-200"
-                    }`}
-                  >
-                    <Link href={productId ? `/products/${productId}` : "#"}>
-                      <Image
-                        src={
-                          item.productVariant?.product?.images?.[0]?.url
-                            ? `/uploads/products/${item.productVariant.product.images[0].url}`
-                            : "/placeholder.png"
-                        }
-                        alt={item.productVariant?.product?.name || "Product Image"}
-                        width={100}
-                        height={100}
-                        className="w-24 h-24 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
-                      />
-                    </Link>
-
-                    <div className="flex flex-col justify-between h-full">
-                      <div>
-                        <p className="font-bold text-[#1b2a80] cursor-pointer">
-                          {item.productVariant?.product?.shop?.shopName || "Shop"}
-                        </p>
-
-                        {productId ? (
-                          <Link
-                            href={`/products/${productId}`}
-                            className="text-lg font-semibold hover:text-blue-600 hover:underline text-gray-900 transition-colors"
-                          >
-                            {item.productVariant?.product?.name}
-                          </Link>
-                        ) : (
-                          <p className="text-lg font-semibold">
-                            {item.productVariant?.product?.name}
-                          </p>
-                        )}
-
-                        <p className="text-sm text-gray-500 mt-1">Variant: {variantDisplay}</p>
-                        <div className="flex gap-2 mt-2">
-                          <p className="capitalize text-xs font-semibold text-gray-600 border border-gray-200 px-2 py-1 rounded-md inline-block w-fit bg-gray-50">
-                            Delivery: {item.deliveryMethod}
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex w-full flex-col gap-3 border-b py-4 transition-all ${
+                        isPending ? "bg-amber-50/70" : "bg-white"
+                      }`}
+                    >
+                      <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="font-bold text-[#1b2a80] cursor-pointer">
+                            {item.productVariant?.product?.shop?.shopName || "Shop"}
                           </p>
 
-                          <p
-                            className={`capitalize text-xs font-bold px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 w-fit ${
+                          {productId ? (
+                            <Link
+                              href={`/products/${productId}`}
+                              className="text-lg font-semibold hover:text-blue-600 hover:underline text-gray-900 transition-colors"
+                            >
+                              {item.productVariant?.product?.name}
+                            </Link>
+                          ) : (
+                            <p className="text-lg font-semibold">
+                              {item.productVariant?.product?.name || "Rental item"}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-bold capitalize ${
                               isPending
-                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                ? "border-amber-300 bg-amber-100 text-amber-900"
                                 : item.status === "accepted"
                                 ? "bg-blue-100 text-blue-800"
                                 : item.status === "canceled"
@@ -541,112 +608,202 @@ export const RentList = (props: any) => {
                           >
                             {isPending && (
                               <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
                               </span>
                             )}
-                            Status: {item.status.replace("_", " ")}
-                          </p>
-
+                            {item.status.replace("_", " ")}
+                          </span>
                           {isDueToday && (
-                            <p className="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-orange-200">
+                            <span className="rounded-md border border-orange-200 bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800">
                               Due Today
-                            </p>
+                            </span>
                           )}
                           {isOverdue && (
-                            <p className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-md animate-pulse border border-red-200">
+                            <span className="rounded-md border border-red-200 bg-red-100 px-2 py-1 text-xs font-bold text-red-800">
                               Overdue
-                            </p>
+                            </span>
                           )}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col justify-between h-full ml-4">
-                      <p>
-                        Price : ₱{unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </p>
-                      <p>Qty : {item.quantity}</p>
-                      <p>
-                        Rent Range:{" "}
-                        {new Intl.DateTimeFormat("en-US", {
-                          month: "short",
-                          day: "2-digit",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        }).formatRange(new Date(item.startDate), new Date(item.endDate))}{" "}
-                        - ({duration} {duration > 1 ? "days" : "day"})
-                      </p>
-                    </div>
+                      <div className="grid grid-cols-1 gap-4 px-1 sm:grid-cols-[96px_minmax(0,1.3fr)_minmax(0,1.2fr)] lg:grid-cols-[96px_minmax(0,1.2fr)_minmax(0,1.2fr)_minmax(190px,1fr)]">
+                        <Link
+                          className="shrink-0"
+                          href={productId ? `/products/${productId}` : "#"}
+                        >
+                          <Image
+                            src={
+                              item.productVariant?.product?.images?.[0]?.url
+                                ? `/uploads/products/${item.productVariant.product.images[0].url}`
+                                : "/placeholder.png"
+                            }
+                            alt={item.productVariant?.product?.name || "Product Image"}
+                            width={100}
+                            height={100}
+                            className="h-24 w-24 rounded object-cover transition-opacity hover:opacity-90"
+                          />
+                        </Link>
 
-                    <div className="flex flex-col justify-between h-full ml-4">
-                      <p>
-                        Total Rent : ₱
-                        {rentAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-orange-600 font-medium">
-                        Initial Fee (50%) : ₱
-                        {initialFee.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </p>
-                      <p>
-                        Penalty :{" "}
-                        {item.status === "completed" ? (
-                          <span className="text-green-600">Paid</span>
-                        ) : (
-                          <>
-                            ₱{penalty.toLocaleString("en-US", { minimumFractionDigits: 2 })} (
-                            {lapseInDays} {lapseInDays === 1 ? "day" : "days"})
-                          </>
-                        )}
-                      </p>
-
-                      <p>
-                        Amount Paid :{" "}
-                        {item.status === "completed" ? (
-                          <span className="text-green-600">Paid</span>
-                        ) : (
-                          `₱${totalPayment.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                        )}
-                      </p>
-
-                      {["completed", "returned", "returned_damaged"].includes(item.status) ? (
-                        <p className="text-green-600 font-bold">Completed</p>
-                      ) : item.status === "canceled" ? (
-                        <p className="text-red-600 font-bold">Canceled</p>
-                      ) : isPending ? (
-                        <div className="flex flex-col gap-1 items-start">
-                          <p className="text-amber-700 font-semibold text-xs bg-amber-100/80 px-2 py-1 rounded w-fit">
-                            Awaiting Shop Approval
+                        <div className="min-w-0 space-y-2 text-sm">
+                          <p>
+                            <span className="font-semibold text-gray-700">Variant:</span>{" "}
+                            <span className="text-gray-600">{variantDisplay}</span>
                           </p>
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            onClick={() => handleOpenCancelModal(item.id)}
-                            sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.2 }}
+                          <p>
+                            <span className="font-semibold text-gray-700">Method:</span>{" "}
+                            <span className="text-gray-600">
+                              {normalizeDeliveryMethod(item.deliveryMethod) === "delivery"
+                                ? "Delivery"
+                                : "Pickup"}
+                            </span>
+                          </p>
+                          <p>
+                            <span className="font-semibold text-gray-700">Quantity:</span>{" "}
+                            <span className="text-gray-600">{item.quantity}</span>
+                          </p>
+                          <Link
+                            href={{
+                              pathname: "/support",
+                              query: Object.fromEntries(supportParams.entries()),
+                            }}
+                            className="inline-block pt-1 text-sm font-semibold text-[#1b2a80] underline underline-offset-2 hover:text-blue-700"
                           >
-                            Cancel Request
-                          </Button>
+                            Get help with this rental
+                          </Link>
                         </div>
-                      ) : (
-                        <p className="font-bold text-[#1b2a80]">
-                          Balance : ₱{balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                        </p>
-                      )}
-                      <Link
-                        href={{
-                          pathname: "/support",
-                          query: Object.fromEntries(supportParams.entries()),
-                        }}
-                        className="text-sm font-semibold text-[#1b2a80] underline underline-offset-2 hover:text-blue-700"
-                      >
-                        Get help with this rental
-                      </Link>
+
+                        <div className="min-w-0 space-y-2 text-sm">
+                          <p className="font-semibold text-gray-700">
+                            {isReturnTab ? "Return deadline" : "Rental dates"}
+                          </p>
+                          <p className="text-gray-600">
+                            {isHandoffTab
+                              ? formatHandoffDate(item.startDate)
+                              : isReturnTab
+                              ? formatHandoffDate(item.endDate)
+                              : new Intl.DateTimeFormat("en-US", {
+                                  month: "short",
+                                  day: "2-digit",
+                                  year: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                }).formatRange(new Date(item.startDate), new Date(item.endDate))}
+                          </p>
+                          {isActionTab && (
+                            <div className="break-words rounded-md border border-blue-200 bg-blue-50 p-2.5 text-gray-700">
+                              <p className="font-semibold text-[#1b2a80]">
+                                {isDeliveryTab
+                                  ? "Deliver to"
+                                  : isPickupTab
+                                  ? "Pickup location"
+                                  : isDueToday
+                                  ? "Return due today"
+                                  : isOverdue
+                                  ? "Return overdue"
+                                  : "Shop location"}
+                              </p>
+                              <p className="mt-1">
+                                {isDeliveryTab
+                                  ? rent.deliveryAddress || "Delivery address not available."
+                                  : shopAddress ||
+                                    `Contact ${shop?.shopName || "the shop"} to confirm the ${
+                                      isReturnTab ? "return" : "pickup"
+                                    } location.`}
+                              </p>
+                              {isReturnTab ? (
+                                <p className="mt-1 text-xs text-gray-600">
+                                  Confirm with the shop whether to return in person or arrange
+                                  collection.
+                                </p>
+                              ) : (
+                                <p className="mt-1 text-xs text-gray-600">
+                                  Return by {formatHandoffDate(item.endDate)}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            {duration} {duration === 1 ? "day" : "days"} · ₱
+                            {unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}/day
+                          </p>
+                        </div>
+
+                        <div className="rounded-md bg-gray-50 p-3 text-sm">
+                          <p className="mb-2 font-semibold text-gray-700">Rental amounts</p>
+                          <div className="space-y-1.5">
+                            <p className="flex justify-between gap-3">
+                              <span>Total rent</span>
+                              <span className="font-medium">
+                                ₱{rentAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                              </span>
+                            </p>
+                            <p className="flex justify-between gap-3 text-orange-700">
+                              <span>Initial fee (50%)</span>
+                              <span>
+                                ₱
+                                {initialFee.toLocaleString("en-US", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </span>
+                            </p>
+                            <p className="flex justify-between gap-3">
+                              <span>Penalty</span>
+                              <span>
+                                {item.status === "completed"
+                                  ? "Paid"
+                                  : `₱${penalty.toLocaleString("en-US", {
+                                      minimumFractionDigits: 2,
+                                    })} (${lapseInDays} ${lapseInDays === 1 ? "day" : "days"})`}
+                              </span>
+                            </p>
+                            <p className="flex justify-between gap-3">
+                              <span>Amount paid</span>
+                              <span>
+                                {item.status === "completed"
+                                  ? "Paid"
+                                  : `₱${totalPayment.toLocaleString("en-US", {
+                                      minimumFractionDigits: 2,
+                                    })}`}
+                              </span>
+                            </p>
+                            {["completed", "returned", "returned_damaged"].includes(item.status) ? (
+                              <p className="pt-1 font-bold text-green-600">Completed</p>
+                            ) : item.status === "canceled" ? (
+                              <p className="pt-1 font-bold text-red-600">Canceled</p>
+                            ) : isPending ? (
+                              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                                <span className="font-semibold text-amber-700">
+                                  Awaiting approval
+                                </span>
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  onClick={() => handleOpenCancelModal(item.id)}
+                                  sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.2 }}
+                                >
+                                  Cancel Request
+                                </Button>
+                              </div>
+                            ) : (
+                              <p className="flex justify-between gap-3 border-t border-gray-200 pt-1.5 font-bold text-[#1b2a80]">
+                                <span>Balance</span>
+                                <span>
+                                  ₱
+                                  {balance.toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           </div>
         )
