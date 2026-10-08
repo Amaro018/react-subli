@@ -146,6 +146,7 @@ const ProductCarousel = ({ product, selectedColor, selectedVariant }: ProductCar
                 alt={`Product Image ${image.id || index}`}
                 fill
                 sizes="(max-width: 768px) 100vw, 600px"
+                priority={index === 0}
                 className="object-contain group-hover:scale-105 transition-transform duration-700 ease-out"
               />
             </div>
