@@ -22,6 +22,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront"
 import BookmarkIcon from "@mui/icons-material/Bookmark"
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"
 import ContactSupportIcon from "@mui/icons-material/ContactSupport"
+import { normalizeDeliveryMethod } from "../../utils/normalizeDeliveryMethod"
 
 interface SidebarProps {
   currentUser: any
@@ -76,21 +77,20 @@ export const getBadgeCounts = (rents: any[]) => {
 
   const toDeliverCount = rents.filter((rent: any) => {
     return rent?.items?.some(
-      (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
+      (item: any) =>
+        normalizeDeliveryMethod(item.deliveryMethod) === "delivery" && item.status === "accepted"
     )
   }).length
 
   const toPickupCount = rents.filter((rent: any) => {
     return rent?.items?.some(
-      (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
+      (item: any) =>
+        normalizeDeliveryMethod(item.deliveryMethod) === "pickup" && item.status === "accepted"
     )
   }).length
 
   const toReturnCount = rents.filter((rent: any) => {
-    return rent?.items?.some(
-      (item: any) =>
-        item.status === "to-return" || item.status === "in_use" || item.status === "active"
-    )
+    return rent?.items?.some((item: any) => ["on_hand", "overdue"].includes(item.status))
   }).length
 
   const toRateCount = rents.filter((rent: any) => {
@@ -153,7 +153,7 @@ export const Sidebar = ({ currentUser, onMobileClose }: SidebarProps) => {
               badge: pendingCount,
             },
             {
-              name: "To Pay",
+              name: "Balance Due",
               href: "/renter/rent-orders?status=to-pay",
               badge: toPayCount,
             },

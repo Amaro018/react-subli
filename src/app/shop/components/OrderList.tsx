@@ -280,7 +280,9 @@ export const OrderList = () => {
         return
       }
 
-      const refNo = (rentItem as ExtendedRentItem).referenceNumber || `ORD-${rentItem.id}`
+      const refNo =
+        (rentItem as ExtendedRentItem).referenceNumber ||
+        `ORD-${String(rentItem.id).padStart(5, "0")}`
       setConfirmMessage(
         `Are you sure you want to accept order #${refNo} for "${rentItem.productVariant.product.name}"?`
       )

@@ -15,7 +15,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tooltip,
 } from "@mui/material"
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined"
 import { useQuery, useMutation } from "@blitzjs/rpc"
 import getAllRentOfUser from "../../queries/getAllRentOfUser"
 import cancelRentItem from "../../mutations/cancelRentItem"
@@ -23,6 +25,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { toast } from "@/src/app/utils/toast"
+import { normalizeDeliveryMethod } from "../../utils/normalizeDeliveryMethod"
 
 export const RentList = (props: any) => {
   const currentUser = props.currentUser
@@ -38,7 +41,7 @@ export const RentList = (props: any) => {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [isCanceling, setIsCanceling] = useState(false)
 
-  const ON_HAND_STATUSES = ["on_hand", "overdue", "accepted"]
+  const ON_HAND_STATUSES = ["on_hand", "overdue"]
 
   const [cancelRentItemMutation] = useMutation(cancelRentItem)
   const [userRents, { refetch }] = useQuery(getAllRentOfUser, { id: userId })
@@ -162,13 +165,15 @@ export const RentList = (props: any) => {
 
   const toDeliverCount = rentsList.filter((rent: any) => {
     return rent.items?.some(
-      (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
+      (item: any) =>
+        normalizeDeliveryMethod(item.deliveryMethod) === "delivery" && item.status === "accepted"
     )
   }).length
 
   const toPickupCount = rentsList.filter((rent: any) => {
     return rent.items?.some(
-      (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
+      (item: any) =>
+        normalizeDeliveryMethod(item.deliveryMethod) === "pickup" && item.status === "accepted"
     )
   }).length
 
@@ -218,12 +223,16 @@ export const RentList = (props: any) => {
           }
           if (currentStatus === "to-deliver") {
             return items.some(
-              (item: any) => item.deliveryMethod === "deliver" && item.status === "accepted"
+              (item: any) =>
+                normalizeDeliveryMethod(item.deliveryMethod) === "delivery" &&
+                item.status === "accepted"
             )
           }
           if (currentStatus === "to-pickup") {
             return items.some(
-              (item: any) => item.deliveryMethod === "pickup" && item.status === "accepted"
+              (item: any) =>
+                normalizeDeliveryMethod(item.deliveryMethod) === "pickup" &&
+                item.status === "accepted"
             )
           }
           if (currentStatus === "to-return") {
@@ -356,9 +365,24 @@ export const RentList = (props: any) => {
             />
             <Tab
               label={
-                <Badge badgeContent={toPayCount} color="error">
-                  To Pay
-                </Badge>
+                <span className="inline-flex items-center gap-1">
+                  <Badge badgeContent={toPayCount} color="error">
+                    Balance Due
+                  </Badge>
+                  <Tooltip
+                    title="Shows rentals with an unpaid balance. Delivery, pickup, and return tabs track rental progress separately, so a rental can appear in both."
+                    arrow
+                    placement="top"
+                  >
+                    <InfoOutlinedIcon
+                      aria-label="About balance due"
+                      sx={{
+                        fontSize: 16,
+                        color: currentStatus === "to-pay" ? "inherit" : "text.secondary",
+                      }}
+                    />
+                  </Tooltip>
+                </span>
               }
               value="to-pay"
             />
