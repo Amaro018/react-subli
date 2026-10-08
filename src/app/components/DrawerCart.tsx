@@ -33,6 +33,7 @@ import getCurrentUser from "../users/queries/getCurrentUser"
 import createRent from "../mutations/createRent"
 import { toast } from "@/src/app/utils/toast"
 import { notifyCartUpdated } from "../utils/cartEvents"
+import { normalizeDeliveryMethod } from "../utils/normalizeDeliveryMethod"
 
 // Helper function to calculate rental duration in fractional days for accurate pricing
 const getRentalDurationInDays = (
@@ -173,7 +174,7 @@ export default function DrawerCart(props: any) {
   useEffect(() => {
     if (cartItems && cartItems.length > 0) {
       const initialMethods = cartItems.reduce((acc: Record<number, string>, item) => {
-        acc[item.id] = item.deliveryMethod
+        acc[item.id] = normalizeDeliveryMethod(item.deliveryMethod) || item.deliveryMethod
         return acc
       }, {} as Record<number, string>)
       setDeliveryMethods(initialMethods)
@@ -381,7 +382,9 @@ export default function DrawerCart(props: any) {
         price: item.variant.price,
         quantity: item.quantity,
         status: "pending",
-        deliveryMethod: deliveryMethods[item.id] || item.deliveryMethod,
+        deliveryMethod:
+          normalizeDeliveryMethod(deliveryMethods[item.id] || item.deliveryMethod) ||
+          item.deliveryMethod,
         startDate: item.startDate,
         endDate: item.endDate,
       }
@@ -611,7 +614,11 @@ export default function DrawerCart(props: any) {
                           {item.product.deliveryOption === "BOTH" ? (
                             <select
                               className="bg-transparent border-2 border-white rounded-lg p-2 text-white"
-                              value={deliveryMethods[item.id] || item.deliveryMethod}
+                              value={
+                                normalizeDeliveryMethod(
+                                  deliveryMethods[item.id] || item.deliveryMethod
+                                ) || item.deliveryMethod
+                              }
                               onChange={(e) =>
                                 updateCartItemDetails(item.id, {
                                   deliveryMethod: e.target.value,
@@ -621,7 +628,7 @@ export default function DrawerCart(props: any) {
                               <option value="pickup" className="text-slate-600 bg-transparent">
                                 PICKUP
                               </option>
-                              <option value="deliver" className="text-slate-600 bg-transparent">
+                              <option value="delivery" className="text-slate-600 bg-transparent">
                                 DELIVER
                               </option>
                             </select>

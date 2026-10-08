@@ -2,13 +2,18 @@ import { resolver } from "@blitzjs/rpc"
 import db from "db"
 import { z } from "zod"
 import { getAvailableRentalQuantity } from "../utils/rentalAvailability"
+import { normalizeDeliveryMethod } from "../utils/normalizeDeliveryMethod"
 
 export default resolver.pipe(
   resolver.zod(
     z.object({
       cartItemId: z.number().int().positive(),
       quantity: z.number().int().positive(),
-      deliveryMethod: z.enum(["delivery", "pickup"]),
+      deliveryMethod: z.enum(["delivery", "deliver", "pickup"]).transform((value) => {
+        const normalizedValue = normalizeDeliveryMethod(value)
+        if (!normalizedValue) throw new Error("Invalid delivery method.")
+        return normalizedValue
+      }),
     })
   ),
   resolver.authorize(),
