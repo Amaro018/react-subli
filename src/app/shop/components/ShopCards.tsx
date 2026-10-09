@@ -12,6 +12,7 @@ import DashboardRecentOrders from "./DashboardRecentOrders"
 import DashboardPendingOrdersCalendar from "./DashboardPendingOrdersCalendar"
 import DashboardAttentionQueue from "./DashboardAttentionQueue"
 import DashboardInventoryHealth from "./DashboardInventoryHealth"
+import DashboardSalesSummary from "./DashboardSalesSummary"
 import type { DashboardRecentOrder } from "./DashboardRecentOrders"
 import type { InventoryHealthProduct } from "./DashboardInventoryHealth"
 
@@ -117,6 +118,8 @@ export default function ShopCards() {
         items={pendingAndCalendarItems}
         onOrderAccepted={refetchRentItems}
       />
+
+      <DashboardSalesSummary payments={allPayments} />
 
       <div className="grid min-w-0 grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         <DashboardRecentOrders items={recentOrders} />
