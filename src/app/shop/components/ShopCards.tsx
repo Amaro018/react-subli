@@ -6,11 +6,11 @@ import getRentItemsByShop from "../../queries/getRentItemsByShop"
 import getCurrentUser from "./../../users/queries/getCurrentUser"
 import { normalizeDeliveryMethod } from "../../utils/normalizeDeliveryMethod"
 
-import DashboardAlerts from "./DashboardAlerts"
 import DashboardStatCards from "./DashboardStatCards"
 import DashboardIncomeChart from "./DashboardIncomeChart"
 import DashboardRecentOrders from "./DashboardRecentOrders"
 import DashboardPendingOrdersCalendar from "./DashboardPendingOrdersCalendar"
+import DashboardAttentionQueue from "./DashboardAttentionQueue"
 import type { DashboardRecentOrder } from "./DashboardRecentOrders"
 
 type Payment = {
@@ -63,33 +63,6 @@ export default function ShopCards() {
   const recentOrders = rentItemsRaw as unknown as DashboardRecentOrder[]
   const pendingAndCalendarItems = rentItemsRaw as unknown as DashboardRecentOrder[]
 
-  // --- Calculate Alerts Data ---
-  const { dueTodayCount, overdueCount } = React.useMemo(() => {
-    const today = new Date()
-    let due = 0
-    let overdue = 0
-
-    rentItems.forEach((item) => {
-      const isCompleted = ["completed", "returned", "returned_damaged", "canceled"].includes(
-        item.status
-      )
-      if (isCompleted) return
-
-      const endDate = new Date(item.endDate)
-      const isDueToday =
-        endDate.getDate() === today.getDate() &&
-        endDate.getMonth() === today.getMonth() &&
-        endDate.getFullYear() === today.getFullYear()
-
-      const isOverdue = today > endDate && !isDueToday
-
-      if (isDueToday) due++
-      else if (isOverdue) overdue++
-    })
-
-    return { dueTodayCount: due, overdueCount: overdue }
-  }, [rentItems])
-
   const { pickupTodayCount, deliveryTodayCount, returnsTodayCount } = React.useMemo(() => {
     const today = new Date()
     let pickupToday = 0
@@ -132,7 +105,7 @@ export default function ShopCards() {
         returnsTodayCount={returnsTodayCount}
       />
 
-      <DashboardAlerts dueTodayCount={dueTodayCount} overdueCount={overdueCount} />
+      <DashboardAttentionQueue items={pendingAndCalendarItems} />
       <DashboardPendingOrdersCalendar
         items={pendingAndCalendarItems}
         onOrderAccepted={refetchRentItems}
