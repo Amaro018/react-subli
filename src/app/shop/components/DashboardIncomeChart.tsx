@@ -28,6 +28,20 @@ const UNIQUE_MONTHS = [
 
 export default function DashboardIncomeChart({ payments }: DashboardIncomeChartProps) {
   const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear())
+  const chartContainerRef = React.useRef<HTMLDivElement>(null)
+  const [chartWidth, setChartWidth] = React.useState(0)
+
+  React.useEffect(() => {
+    const container = chartContainerRef.current
+    if (!container) return
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      setChartWidth(Math.floor(entry.contentRect.width))
+    })
+    resizeObserver.observe(container)
+
+    return () => resizeObserver.disconnect()
+  }, [])
 
   const uniqueYears = React.useMemo(() => {
     const years = payments.map((p) => new Date(p.createdAt).getFullYear())
@@ -57,7 +71,7 @@ export default function DashboardIncomeChart({ payments }: DashboardIncomeChartP
   }, [payments, selectedYear])
 
   return (
-    <div className="w-full bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+    <div className="flex h-[440px] w-full min-w-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold text-gray-800">Monthly Income</h3>
         <div className="flex items-center gap-2">
@@ -77,16 +91,18 @@ export default function DashboardIncomeChart({ payments }: DashboardIncomeChartP
           </select>
         </div>
       </div>
-      <div className="w-full flex justify-center">
+      <div ref={chartContainerRef} className="min-h-0 w-full min-w-0 flex-1">
         {chartData.length > 0 ? (
-          <BarChart
-            xAxis={[{ scaleType: "band", data: chartData.map((item) => item.month) }]}
-            series={[{ data: chartData.map((item) => item.total), color: "#1b2a80" }]}
-            width={1000}
-            height={500}
-          />
+          chartWidth > 0 ? (
+            <BarChart
+              xAxis={[{ scaleType: "band", data: chartData.map((item) => item.month) }]}
+              series={[{ data: chartData.map((item) => item.total), color: "#1b2a80" }]}
+              width={chartWidth}
+              height={360}
+            />
+          ) : null
         ) : (
-          <div className="flex items-center justify-center h-[500px] text-gray-500">
+          <div className="flex h-full items-center justify-center text-center text-gray-500">
             No income data available for {selectedYear}
           </div>
         )}
