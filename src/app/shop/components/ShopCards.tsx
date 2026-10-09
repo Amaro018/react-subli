@@ -11,7 +11,9 @@ import DashboardIncomeChart from "./DashboardIncomeChart"
 import DashboardRecentOrders from "./DashboardRecentOrders"
 import DashboardPendingOrdersCalendar from "./DashboardPendingOrdersCalendar"
 import DashboardAttentionQueue from "./DashboardAttentionQueue"
+import DashboardInventoryHealth from "./DashboardInventoryHealth"
 import type { DashboardRecentOrder } from "./DashboardRecentOrders"
+import type { InventoryHealthProduct } from "./DashboardInventoryHealth"
 
 type Payment = {
   id: number
@@ -46,10 +48,14 @@ export default function ShopCards() {
   const [currentUser] = useQuery(getCurrentUser, null)
   const shopId = currentUser?.shop?.id
 
-  const [products] = useQuery(getProductByShopId, shopId ? { shopId } : { shopId: 0 }, {
+  const [
+    products,
+    { isLoading: isProductsLoading, isError: isProductsError, error: productsError },
+  ] = useQuery(getProductByShopId, shopId ? { shopId } : { shopId: 0 }, {
     enabled: !!shopId,
   })
   const productCount = products ? products.length : 0
+  const inventoryProducts = (products || []) as unknown as InventoryHealthProduct[]
 
   const [rentItemsRaw = [], { refetch: refetchRentItems }] = useQuery(
     getRentItemsByShop,
@@ -106,6 +112,7 @@ export default function ShopCards() {
       />
 
       <DashboardAttentionQueue items={pendingAndCalendarItems} />
+
       <DashboardPendingOrdersCalendar
         items={pendingAndCalendarItems}
         onOrderAccepted={refetchRentItems}
@@ -115,6 +122,18 @@ export default function ShopCards() {
         <DashboardRecentOrders items={recentOrders} />
         <DashboardIncomeChart payments={allPayments} />
       </div>
+
+      <DashboardInventoryHealth
+        products={inventoryProducts}
+        isLoading={isProductsLoading}
+        errorMessage={
+          isProductsError
+            ? productsError instanceof Error
+              ? productsError.message
+              : "Product data could not be loaded."
+            : null
+        }
+      />
     </div>
   )
 }
