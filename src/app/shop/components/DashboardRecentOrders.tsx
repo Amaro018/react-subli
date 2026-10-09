@@ -1,5 +1,6 @@
 import Link from "next/link"
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
+import { formatDateTime } from "./utils"
 
 export interface DashboardRecentOrder {
   id: number
@@ -46,10 +47,7 @@ const statusStyles: Record<string, string> = {
 }
 
 function formatDateRange(startDate: Date | string, endDate: Date | string) {
-  const dateOptions: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
-  const start = new Date(startDate).toLocaleDateString("en-US", dateOptions)
-  const end = new Date(endDate).toLocaleDateString("en-US", dateOptions)
-  return `${start} – ${end}`
+  return `${formatDateTime(startDate)} – ${formatDateTime(endDate)}`
 }
 
 function getRenterName(item: DashboardRecentOrder) {
@@ -86,7 +84,7 @@ export default function DashboardRecentOrders({ items }: DashboardRecentOrdersPr
           <p className="mt-1 text-sm text-gray-500">New rental activity will show up here.</p>
         </div>
       ) : (
-        <ul className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
+        <ul className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto scrollbar-seamless">
           {recentOrders.map((item) => {
             const statusLabel = item.status.replaceAll("_", " ")
             const statusStyle = statusStyles[item.status] || "bg-gray-100 text-gray-700"

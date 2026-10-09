@@ -17,6 +17,7 @@ import updateRentStatus from "../../mutations/updateRentStatus"
 import { toast } from "../../utils/toast"
 import { normalizeDeliveryMethod } from "../../utils/normalizeDeliveryMethod"
 import type { DashboardRecentOrder } from "./DashboardRecentOrders"
+import { formatDateTime } from "./utils"
 
 interface DashboardPendingOrdersCalendarProps {
   items: DashboardRecentOrder[]
@@ -41,10 +42,7 @@ function sameDay(first: Date, second: Date) {
 }
 
 function formatDateRange(startDate: Date | string, endDate: Date | string) {
-  const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
-  return `${new Date(startDate).toLocaleDateString("en-US", options)} – ${new Date(
-    endDate
-  ).toLocaleDateString("en-US", options)}`
+  return `${formatDateTime(startDate)} – ${formatDateTime(endDate)}`
 }
 
 function getRenterName(item: DashboardRecentOrder) {
@@ -184,7 +182,7 @@ export default function DashboardPendingOrdersCalendar({
             <p className="mt-1 text-sm text-gray-500">New requests will appear here.</p>
           </div>
         ) : (
-          <ul className="max-h-[26rem] space-y-2 overflow-y-auto pr-1">
+          <ul className="max-h-[26rem] space-y-2 overflow-y-auto pr-1 scrollbar-seamless">
             {pendingItems.map((item) => {
               const isSelected = selectedItem?.id === item.id
               const deliveryMethod = normalizeDeliveryMethod(item.deliveryMethod || "")
