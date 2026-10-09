@@ -29,17 +29,20 @@ const pesoFormatter = new Intl.NumberFormat("en-PH", {
   maximumFractionDigits: 2,
 })
 
-function getIncomePeriodStart(period: IncomePeriod, now: Date) {
-  const start = new Date(now)
-  start.setHours(0, 0, 0, 0)
+function getIncomePeriodRange(period: IncomePeriod, now: Date) {
+  const endExclusive = new Date(now)
+  endExclusive.setHours(0, 0, 0, 0)
+  endExclusive.setDate(endExclusive.getDate() + 1)
 
+  let start: Date
   if (period === "year") {
-    start.setMonth(0, 1)
+    start = new Date(now.getFullYear(), 0, 1)
   } else {
-    start.setDate(start.getDate() - (period === "30days" ? 29 : 89))
+    start = new Date(endExclusive)
+    start.setDate(start.getDate() - (period === "30days" ? 30 : 90))
   }
 
-  return start
+  return { start, endExclusive }
 }
 
 export default function DashboardMoneySummary({ payments }: DashboardMoneySummaryProps) {
@@ -49,10 +52,10 @@ export default function DashboardMoneySummary({ payments }: DashboardMoneySummar
   })
 
   const now = new Date()
-  const periodStart = getIncomePeriodStart(period, now)
+  const { start, endExclusive } = getIncomePeriodRange(period, now)
   const income = payments.reduce((total, payment) => {
     const paymentDate = new Date(payment.createdAt)
-    return paymentDate >= periodStart && paymentDate <= now ? total + payment.amount : total
+    return paymentDate >= start && paymentDate < endExclusive ? total + payment.amount : total
   }, 0)
 
   const outstandingBalance = invoices.reduce((total, invoice) => total + invoice.balanceDue, 0)
