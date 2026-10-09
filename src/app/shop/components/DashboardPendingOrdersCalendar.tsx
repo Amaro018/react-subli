@@ -16,6 +16,7 @@ import { useMutation } from "@blitzjs/rpc"
 import updateRentStatus from "../../mutations/updateRentStatus"
 import { toast } from "../../utils/toast"
 import { normalizeDeliveryMethod } from "../../utils/normalizeDeliveryMethod"
+import { getAvailableRentalQuantity } from "../../utils/rentalAvailability"
 import type { DashboardRecentOrder } from "./DashboardRecentOrders"
 import { formatDateTime } from "./utils"
 
@@ -51,6 +52,44 @@ function getRenterName(item: DashboardRecentOrder) {
   return name || item.rent?.user?.email || "Renter"
 }
 
+function getOrderAvailableQuantity(
+  item: DashboardRecentOrder,
+  items: DashboardRecentOrder[],
+  startDate: Date,
+  endDate: Date
+) {
+  const variantId = item.productVariant?.id
+  const stock = item.productVariant?.quantity
+  if (
+    variantId === undefined ||
+    stock === undefined ||
+    !Number.isFinite(startDate.getTime()) ||
+    !Number.isFinite(endDate.getTime()) ||
+    endDate <= startDate
+  ) {
+    return null
+  }
+
+  const variantItems = items.filter((rental) => rental.productVariant?.id === variantId)
+  const activeRentals = variantItems.filter((rental) => ACTIVE_STATUSES.has(rental.status))
+  const damagedQuantity = variantItems.reduce(
+    (total, rental) => total + (rental.returnedDamagedQty || 0),
+    0
+  )
+
+  return getAvailableRentalQuantity(
+    stock,
+    damagedQuantity,
+    activeRentals.map((rental) => ({
+      start: new Date(rental.startDate).getTime(),
+      end: new Date(rental.endDate).getTime(),
+      quantity: rental.quantity || 1,
+    })),
+    startDate,
+    endDate
+  )
+}
+
 export default function DashboardPendingOrdersCalendar({
   items,
   onOrderAccepted,
@@ -69,6 +108,17 @@ export default function DashboardPendingOrdersCalendar({
   })
   const selectedItem =
     pendingItems.find((item) => item.id === selectedItemId) ?? pendingItems[0] ?? null
+  const selectedAvailability = selectedItem
+    ? getOrderAvailableQuantity(
+        selectedItem,
+        items,
+        new Date(selectedItem.startDate),
+        new Date(selectedItem.endDate)
+      )
+    : null
+  const requestedQuantity = selectedItem?.quantity || 1
+  const hasEnoughAvailability =
+    selectedAvailability !== null && selectedAvailability >= requestedQuantity
 
   React.useEffect(() => {
     if (selectedItem && selectedItem.id !== selectedItemId) {
@@ -132,25 +182,14 @@ export default function DashboardPendingOrdersCalendar({
   }
 
   const getDayAvailability = (day: Date) => {
-    if (!selectedItem?.productVariant?.id) return null
-
-    const requestedStart = startOfDay(selectedItem.startDate)
-    const requestedEnd = startOfDay(selectedItem.endDate)
-    if (day < requestedStart || day > requestedEnd) return null
-
-    const variantItems = items.filter(
-      (item) =>
-        item.productVariant?.id === selectedItem.productVariant?.id &&
-        ACTIVE_STATUSES.has(item.status) &&
-        startOfDay(item.startDate) <= day &&
-        startOfDay(item.endDate) >= day
-    )
-    const bookedQuantity = variantItems.reduce((total, item) => total + (item.quantity || 0), 0)
-    const variantQuantity = selectedItem.productVariant.quantity || 0
-    const damagedQuantity = items
-      .filter((item) => item.productVariant?.id === selectedItem.productVariant?.id)
-      .reduce((total, item) => total + (item.returnedDamagedQty || 0), 0)
-    return Math.max(0, variantQuantity - bookedQuantity - damagedQuantity)
+    if (!selectedItem?.productVariant?.id || selectedItem.productVariant.quantity === undefined) {
+      return null
+    }
+    const dayStart = new Date(day)
+    dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(dayStart)
+    dayEnd.setDate(dayEnd.getDate() + 1)
+    return getOrderAvailableQuantity(selectedItem, items, dayStart, dayEnd)
   }
 
   const monthLabel = visibleMonth.toLocaleDateString("en-US", {
@@ -230,6 +269,14 @@ export default function DashboardPendingOrdersCalendar({
                       size="small"
                       variant="contained"
                       onClick={() => setItemToAccept(item)}
+                      disabled={!isSelected || !hasEnoughAvailability || isAccepting}
+                      title={
+                        !isSelected
+                          ? "Select this request to check availability."
+                          : !hasEnoughAvailability
+                          ? "This request exceeds the available stock for its dates."
+                          : undefined
+                      }
                       sx={{ textTransform: "none", backgroundColor: "#1b2a80" }}
                     >
                       Accept order
@@ -280,6 +327,23 @@ export default function DashboardPendingOrdersCalendar({
             </button>
           </div>
         </div>
+
+        {selectedItem && (
+          <div
+            role="status"
+            className={`mb-3 rounded-lg border px-3 py-2 text-sm ${
+              hasEnoughAvailability
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-800"
+            }`}
+          >
+            {selectedAvailability === null
+              ? "Availability could not be verified. Review this order before accepting."
+              : hasEnoughAvailability
+              ? `${selectedAvailability} available for ${requestedQuantity} requested.`
+              : `Conflict: only ${selectedAvailability} available for ${requestedQuantity} requested.`}
+          </div>
+        )}
 
         <div className="grid grid-cols-7 gap-1 text-center">
           {WEEKDAYS.map((weekday) => (
@@ -351,6 +415,9 @@ export default function DashboardPendingOrdersCalendar({
         <DialogTitle id="accept-dashboard-order-title">Accept rental request?</DialogTitle>
         <DialogContent>
           <DialogContentText>
+            {selectedAvailability !== null && selectedAvailability < requestedQuantity
+              ? `There is a stock conflict: only ${selectedAvailability} of ${requestedQuantity} requested units are available. `
+              : ""}
             Accept the request for &quot;
             {itemToAccept?.productVariant?.product?.name || "this rental item"}&quot;? The renter
             will be notified.
@@ -362,7 +429,7 @@ export default function DashboardPendingOrdersCalendar({
           </Button>
           <Button
             onClick={acceptSelectedOrder}
-            disabled={isAccepting}
+            disabled={isAccepting || !hasEnoughAvailability}
             variant="contained"
             sx={{ textTransform: "none", backgroundColor: "#1b2a80" }}
           >
